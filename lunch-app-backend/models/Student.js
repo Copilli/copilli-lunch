@@ -15,7 +15,7 @@ const studentSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['activo', 'con-fondos', 'sin-fondos', 'bloqueado'],
+    enum: ['periodo-activo', 'con-fondos', 'sin-fondos', 'bloqueado'], // 👈 enum correcto
     default: 'sin-fondos'
   },
   notes: String,
