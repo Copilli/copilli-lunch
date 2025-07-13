@@ -35,6 +35,8 @@ const App = () => {
     const base = import.meta.env.BASE_URL;
     if (!user) return;
 
+    console.log('Redirigiendo a:', user.role);
+
     if (user.role === 'admin') navigate(`${base}admin`);
     else if (user.role === 'oficina') navigate(`${base}oficina`);
     else if (user.role === 'cocina') navigate(`${base}cocina`);
