@@ -1,4 +1,3 @@
-// models/Student.js
 const mongoose = require('mongoose');
 
 const studentSchema = new mongoose.Schema({
@@ -14,7 +13,11 @@ const studentSchema = new mongoose.Schema({
     startDate: Date,
     endDate: Date
   },
-  status: { type: String, default: 'activo' },
+  status: {
+    type: String,
+    enum: ['activo', 'con-fondos', 'sin-fondos', 'bloqueado'],
+    default: 'sin-fondos'
+  },
   notes: String,
   photoUrl: { type: String, default: '' }
 });

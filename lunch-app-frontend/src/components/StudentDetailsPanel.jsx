@@ -6,6 +6,10 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [originalTokens, setOriginalTokens] = useState(0);
+  const [delta, setDelta] = useState(0);
+  const [reason, setReason] = useState('pago');
+  const [note, setNote] = useState('');
+  const user = JSON.parse(localStorage.getItem('user'));
 
   useEffect(() => {
     if (student) {
@@ -50,14 +54,14 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
 
     try {
       // PATCH if tokens changed
-      const delta = form.tokens - originalTokens;
-      if (delta !== 0) {
+      const tokenDelta = form.tokens - originalTokens;
+      if (tokenDelta !== 0) {
         await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/tokens`, {
-          delta,
+          delta: tokenDelta,
           reason: 'ajuste manual',
           note: 'ajuste desde panel admin',
-          performedBy: 'admin',
-          userRole: 'admin'
+          performedBy: user?.username || 'admin',
+          userRole: user?.role || 'admin'
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -74,6 +78,31 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
       alert('Error al guardar cambios.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTokenChange = async () => {
+    if ((reason === 'pago' || reason === 'justificado') && !note.trim()) {
+      alert('La nota es obligatoria para este motivo.');
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/tokens`, {
+        delta,
+        reason,
+        note,
+        performedBy: user?.username || 'admin',
+        userRole: user?.role || 'admin',
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert('Tokens actualizados.');
+      setDelta(0);
+      setNote('');
+    } catch (err) {
+      console.error(err);
+      alert('Error al actualizar tokens.');
     }
   };
 
@@ -137,8 +166,7 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
             placeholder="Nivel"
             value={form.group.level}
             onChange={(e) => handleChange('group.level', e.target.value)}
-          />{" "}
-          -{" "}
+          />{' '}-{' '}
           <input
             type="text"
             placeholder="Nombre"
@@ -196,7 +224,42 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
         {saving ? 'Guardando...' : 'Guardar cambios'}
       </button>
 
-      <button onClick={() => exportCSV(student, studentMovements)} style={{ marginLeft: '1rem' }}>
+      {/* Ajuste de tokens desde panel */}
+      <hr style={{ margin: '2rem 0' }} />
+      <h4>Ajustar tokens manualmente</h4>
+      <div>
+        <label>Cantidad (+/-):</label>
+        <input
+          type="number"
+          value={delta}
+          onChange={(e) => setDelta(parseInt(e.target.value))}
+          style={{ width: '60px', marginRight: '1rem' }}
+        />
+
+        <label>Motivo:</label>
+        <select value={reason} onChange={(e) => setReason(e.target.value)}>
+          <option value="pago">Pago</option>
+          <option value="justificado">Justificado</option>
+          {user?.role === 'admin' && <option value="ajuste manual">Ajuste manual</option>}
+        </select>
+      </div>
+
+      <div style={{ marginTop: '0.5rem' }}>
+        <label>Nota:</label>
+        <input
+          type="text"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Detalle o justificación"
+          style={{ width: '100%' }}
+        />
+      </div>
+
+      <button onClick={handleTokenChange} style={{ marginTop: '1rem' }}>
+        Aplicar cambio de tokens
+      </button>
+
+      <button onClick={() => exportCSV(student, studentMovements)} style={{ marginTop: '1rem', marginLeft: '1rem' }}>
         Exportar historial a CSV
       </button>
 

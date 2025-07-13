@@ -136,9 +136,24 @@ const CocinaPanel = ({ setUser }) => {
                     padding: '1rem',
                     borderRadius: 8,
                     cursor: status === 'green' ? 'default' : 'pointer',
-                    width: '200px'
+                    width: '200px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    textAlign: 'center'
                   }}
                 >
+                  <img
+                    src={student.photoUrl}
+                    alt={student.name}
+                    style={{
+                      width: '80px',
+                      height: '80px',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      marginBottom: '0.5rem'
+                    }}
+                  />
                   <strong>{student.name}</strong>
                   <p>ID: {student.studentId}</p>
                   <p>Tokens: {student.tokens}</p>

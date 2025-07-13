@@ -5,11 +5,15 @@ import axios from 'axios';
 const StudentOfficeActions = ({ student, onUpdate }) => {
   const [actionType, setActionType] = useState('tokens');
   const [tokenAmount, setTokenAmount] = useState(0);
+  const [reason, setReason] = useState('pago');
   const [note, setNote] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const user = JSON.parse(localStorage.getItem('user'));
+  const canUseAjusteManual = user?.role === 'admin';
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -17,11 +21,18 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
       const token = localStorage.getItem('token');
 
       if (actionType === 'tokens') {
-        await axios.post(`${import.meta.env.VITE_API_URL}/token-movements`, {
-          studentId: student.studentId,
-          change: tokenAmount,
-          reason: note?.toLowerCase().includes('ticket') ? 'pago' : 'justificado',
-          note
+        if ((reason === 'pago' || reason === 'justificado') && !note.trim()) {
+          alert('La nota es obligatoria para este motivo.');
+          setSubmitting(false);
+          return;
+        }
+
+        await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/tokens`, {
+          delta: tokenAmount,
+          reason,
+          note,
+          performedBy: user?.username || 'desconocido',
+          userRole: user?.role || 'oficina'
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -79,10 +90,19 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
             onChange={(e) => setTokenAmount(Number(e.target.value))}
             style={{ width: '100%' }}
           />
-          <label>Motivo o ticket (opcional):</label>
+
+          <label>Motivo:</label>
+          <select value={reason} onChange={(e) => setReason(e.target.value)}>
+            <option value="pago">Pago</option>
+            <option value="justificado">Justificado</option>
+            {canUseAjusteManual && <option value="ajuste manual">Ajuste manual</option>}
+          </select>
+
+          <label>Nota:</label>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
+            placeholder="Especifica detalles o ticket"
             style={{ width: '100%' }}
           />
         </div>

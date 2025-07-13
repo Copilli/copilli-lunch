@@ -72,7 +72,6 @@ router.post('/import-bulk', verifyToken, allowRoles('admin'), async (req, res) =
   }
 });
 
-
 // Actualizar tokens (sumar o restar)
 // PATCH /api/students/:id/tokens
 router.patch('/:id/tokens', async (req, res) => {
@@ -91,6 +90,10 @@ router.patch('/:id/tokens', async (req, res) => {
 
     const student = await Student.findById(req.params.id);
     if (!student) return res.status(404).json({ error: 'Estudiante no encontrado' });
+
+    if (student.status === 'bloqueado' && delta < 0) {
+      return res.status(403).json({ error: 'Este estudiante está bloqueado y no puede registrar consumo en negativo.' });
+    }
 
     // Aplicar cambio
     student.tokens += delta;
@@ -143,6 +146,13 @@ router.post('/:id/use', async (req, res) => {
       });
     }
 
+    // ✅ Validar si el estudiante está bloqueado
+    if (student.status === 'bloqueado') {
+      return res.status(403).json({
+        error: 'Este estudiante está bloqueado y no puede registrar consumo sin un periodo activo.'
+      });
+    }
+
     // No tiene periodo → usar o endeudar tokens
     student.tokens -= 1;
     await student.save();
@@ -169,6 +179,28 @@ router.post('/:id/use', async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'Error al registrar consumo' });
+  }
+});
+
+// PATCH /api/students/:id/period
+router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (req, res) => {
+  try {
+    const { startDate, endDate } = req.body;
+
+    const student = await Student.findById(req.params.id);
+    if (!student) return res.status(404).json({ error: 'Estudiante no encontrado' });
+
+    student.hasSpecialPeriod = true;
+    student.specialPeriod = {
+      startDate: new Date(startDate),
+      endDate: new Date(endDate)
+    };
+
+    await student.save();
+    res.json({ message: 'Periodo especial actualizado', specialPeriod: student.specialPeriod });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al actualizar el periodo' });
   }
 });
 

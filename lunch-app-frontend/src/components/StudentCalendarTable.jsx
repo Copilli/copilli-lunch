@@ -27,14 +27,6 @@ const StudentCalendarTable = ({ students, movements, month, year }) => {
   const selectedYear = year ?? dayjs().year();
   const days = getDaysInMonth(selectedMonth, selectedYear);
 
-  // Map de movimientos por studentId
-  const movementMap = {};
-  movements.forEach(m => {
-    const date = dayjs(m.timestamp).format('YYYY-MM-DD');
-    if (!movementMap[m.studentId]) movementMap[m.studentId] = {};
-    movementMap[m.studentId][date] = m;
-  });
-
   return (
     <div style={{ overflowX: 'auto' }}>
       <table border="1" style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -47,29 +39,44 @@ const StudentCalendarTable = ({ students, movements, month, year }) => {
           </tr>
         </thead>
         <tbody>
-          {students.map(student => (
-            <tr key={student.studentId}>
-              <td style={{ fontWeight: 'bold' }}>{student.name}</td>
-              {days.map(d => {
-                const date = dayjs(`${selectedYear}-${selectedMonth}-${d}`).format('YYYY-MM-DD');
-                const movement = movementMap[student.studentId]?.[date];
-                const inPeriod = isInPeriod(date, student.specialPeriod);
+          {students.map(student => {
+            // reconstrucción de tokens por día
+            let runningTokens = 0;
+            const studentMovs = movements
+              .filter(m => m.studentId === student.studentId)
+              .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-                let bg = '';
-                if (movement && movement.reason === 'uso') {
-                  bg = movement.change < 0 ? '#ffb3b3' : '#add8e6'; // rojo o azul
-                } else if (inPeriod) {
-                  bg = '#c1f0c1'; // verde
-                }
+            const tokenMap = {};
+            studentMovs.forEach(m => {
+              const date = dayjs(m.timestamp).format('YYYY-MM-DD');
+              runningTokens += m.change;
+              tokenMap[date] = { ...m, runningTokens };
+            });
 
-                return (
-                  <td key={d} style={{ backgroundColor: bg, textAlign: 'center' }}>
-                    {bg ? '✓' : ''}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
+            return (
+              <tr key={student.studentId}>
+                <td style={{ fontWeight: 'bold' }}>{student.name}</td>
+                {days.map(d => {
+                  const date = dayjs(`${selectedYear}-${selectedMonth}-${d}`).format('YYYY-MM-DD');
+                  const movement = tokenMap[date];
+                  const inPeriod = isInPeriod(date, student.specialPeriod);
+
+                  let bg = '';
+                  if (movement && movement.reason === 'uso') {
+                    bg = movement.runningTokens < 0 ? '#ffb3b3' : '#add8e6';
+                  } else if (inPeriod) {
+                    bg = '#c1f0c1';
+                  }
+
+                  return (
+                    <td key={d} style={{ backgroundColor: bg, textAlign: 'center' }}>
+                      {bg ? '✓' : ''}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
