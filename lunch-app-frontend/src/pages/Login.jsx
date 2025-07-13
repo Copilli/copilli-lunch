@@ -33,7 +33,7 @@ const Login = ({ onLogin }) => {
   };
 
   return (
-    <div className="login-container" style={{ maxWidth: 400, margin: 'auto', padding: '2rem' }}>
+    <div className="app-container login-container" style={{ maxWidth: 400, margin: 'auto', padding: '2rem' }}>
       <h2>Iniciar sesión</h2>
       <form onSubmit={handleSubmit}>
         <label>Usuario:</label>

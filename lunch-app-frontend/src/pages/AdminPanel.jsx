@@ -66,7 +66,7 @@ const AdminPanel = ({ setUser }) => {
   }, [movements]);
 
   return (
-    <div style={{ padding: '2rem' }}>
+    <div className="app-container" style={{ padding: '2rem' }}>
       <h2>Panel de Administración</h2>
       <TopNavBar setUser={setUser}>
         <SearchBar search={search} setSearch={setSearch} />
