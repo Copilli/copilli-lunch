@@ -9,8 +9,18 @@ const App = () => {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem('user');
-    if (stored) setUser(JSON.parse(stored));
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    axios
+      .get(`${import.meta.env.VITE_API_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => setUser(res.data))
+      .catch(() => {
+        localStorage.removeItem('token');
+        setUser(null);
+      });
   }, []);
 
   if (!user) {

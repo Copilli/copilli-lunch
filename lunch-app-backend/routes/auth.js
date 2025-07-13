@@ -3,8 +3,9 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { verifyToken } = require('../middleware/auth');
 
-// POST /api/login
+// POST /api/auth/login
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
@@ -20,7 +21,18 @@ router.post('/login', async (req, res) => {
     { expiresIn: '8h' }
   );
 
-  res.json({ token, username: user.username, role: user.role });
+  res.json({ token });
+});
+
+// GET /api/auth/me
+router.get('/me', verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-passwordHash');
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al obtener usuario' });
+  }
 });
 
 module.exports = router;
