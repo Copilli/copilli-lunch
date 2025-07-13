@@ -19,13 +19,22 @@ const AdminPanel = ({ setUser }) => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [calendarMonth, setCalendarMonth] = useState(dayjs().month() + 1);
   const [calendarYear, setCalendarYear] = useState(dayjs().year());
-
+  const [periodLogs, setPeriodLogs] = useState([]);
+  
   const fetchStudents = async () => {
     const token = localStorage.getItem('token');
     const res = await axios.get(`${import.meta.env.VITE_API_URL}/students`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     setStudents(res.data);
+  };
+
+  const fetchPeriodLogs = async (studentId) => {
+    const token = localStorage.getItem('token');
+    const res = await axios.get(`${import.meta.env.VITE_API_URL}/students/${studentId}/period-logs`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setPeriodLogs(res.data);
   };
 
   const fetchMovements = async () => {
@@ -86,6 +95,7 @@ const AdminPanel = ({ setUser }) => {
             setSelectedLevel(student.group.level);
             setSelectedGroup(student.group.name);
             setSelectedStudent(student);
+            fetchPeriodLogs(student._id);
           }}
         />
       </TopNavBar>
@@ -120,6 +130,7 @@ const AdminPanel = ({ setUser }) => {
           <StudentCalendarTable
             students={[selectedStudent]}
             movements={relevantMovements}
+            periodLogs={periodLogs}
             month={calendarMonth}
             year={calendarYear}
           />
@@ -176,6 +187,7 @@ const AdminPanel = ({ setUser }) => {
           <StudentCalendarTable
             students={studentsInGroup}
             movements={relevantMovements}
+            periodLogs={periodLogs}
             month={calendarMonth}
             year={calendarYear}
           />

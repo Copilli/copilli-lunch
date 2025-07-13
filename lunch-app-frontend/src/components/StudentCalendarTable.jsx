@@ -14,15 +14,14 @@ const getDaysInMonth = (month, year) => {
   return days;
 };
 
-const isInPeriod = (date, period) => {
-  if (!period || !period.startDate || !period.endDate) return false;
-  return (
+const isInAnyPeriod = (date, logs = []) => {
+  return logs.some(period =>
     dayjs(date).isSameOrAfter(dayjs(period.startDate), 'day') &&
     dayjs(date).isSameOrBefore(dayjs(period.endDate), 'day')
   );
 };
 
-const StudentCalendarTable = ({ students, movements, month, year }) => {
+const StudentCalendarTable = ({ students, movements, periodLogsMap = {}, month, year }) => {
   const selectedMonth = month ?? dayjs().month() + 1;
   const selectedYear = year ?? dayjs().year();
   const days = getDaysInMonth(selectedMonth, selectedYear);
@@ -40,18 +39,19 @@ const StudentCalendarTable = ({ students, movements, month, year }) => {
         </thead>
         <tbody>
           {students.map(student => {
-            // reconstrucción de tokens por día
-            let runningTokens = 0;
             const studentMovs = movements
               .filter(m => m.studentId === student.studentId)
               .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
             const tokenMap = {};
+            let runningTokens = 0;
             studentMovs.forEach(m => {
               const date = dayjs(m.timestamp).format('YYYY-MM-DD');
               runningTokens += m.change;
               tokenMap[date] = { ...m, runningTokens };
             });
+
+            const logs = periodLogsMap[student.studentId] || [];
 
             return (
               <tr key={student.studentId}>
@@ -59,7 +59,7 @@ const StudentCalendarTable = ({ students, movements, month, year }) => {
                 {days.map(d => {
                   const date = dayjs(`${selectedYear}-${selectedMonth}-${d}`).format('YYYY-MM-DD');
                   const movement = tokenMap[date];
-                  const inPeriod = isInPeriod(date, student.specialPeriod);
+                  const inPeriod = isInAnyPeriod(date, logs);
 
                   let bg = '';
                   if (movement && movement.reason === 'uso') {

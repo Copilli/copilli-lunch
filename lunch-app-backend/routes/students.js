@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const Student = require('../models/Student');
 const TokenMovement = require('../models/TokenMovement');
+const PeriodLog = require('../models/PeriodLog');
+
 const dayjs = require('dayjs');
 const { verifyToken, allowRoles } = require('../middleware/auth');
 
@@ -16,7 +18,7 @@ router.get('/', async (req, res) => {
     const filter = {};
 
     if (name) {
-      filter.name = new RegExp(name, 'i'); // búsqueda insensible a mayúsculas
+      filter.name = new RegExp(name, 'i');
     }
 
     if (groupName) {
@@ -45,11 +47,9 @@ router.post('/', async (req, res) => {
   }
 });
 
-// POST /api/students/import-bulk
 router.post('/import-bulk', verifyToken, allowRoles('admin'), async (req, res) => {
   try {
     const students = req.body.students;
-
     if (!Array.isArray(students)) {
       return res.status(400).json({ error: 'Formato incorrecto. Se esperaba un arreglo de estudiantes.' });
     }
@@ -58,22 +58,18 @@ router.post('/import-bulk', verifyToken, allowRoles('admin'), async (req, res) =
 
     for (const stu of students) {
       try {
-        // ✅ Validación de status
         if (!VALID_STATUSES.includes(stu.status)) {
           throw new Error(`Status inválido para ${stu.studentId}: ${stu.status}`);
         }
 
-        // ✅ Validación de grupo
         if (!stu.group || !VALID_LEVELS.includes(stu.group.level) || !stu.group.name) {
           throw new Error(`Grupo inválido o incompleto para ${stu.studentId}`);
         }
 
-        // ✅ Validación de tokens
         if (typeof stu.tokens !== 'number' || isNaN(stu.tokens)) {
           throw new Error(`Tokens inválidos para ${stu.studentId}: ${stu.tokens}`);
         }
 
-        // ✅ Validación de fechas si hay periodo
         if (stu.hasSpecialPeriod) {
           const start = dayjs(stu.specialPeriod?.startDate);
           const end = dayjs(stu.specialPeriod?.endDate);
@@ -82,7 +78,6 @@ router.post('/import-bulk', verifyToken, allowRoles('admin'), async (req, res) =
           }
         }
 
-        // ✅ Crear o actualizar
         const existing = await Student.findOne({ studentId: stu.studentId });
 
         if (existing) {
@@ -104,7 +99,6 @@ router.post('/import-bulk', verifyToken, allowRoles('admin'), async (req, res) =
   }
 });
 
-// PATCH /api/students/:id/tokens
 router.patch('/:id/tokens', async (req, res) => {
   try {
     const {
@@ -112,7 +106,7 @@ router.patch('/:id/tokens', async (req, res) => {
       reason = 'ajuste manual',
       note = '',
       performedBy,
-      userRole = 'oficina' // puedes ajustar según autenticación
+      userRole = 'oficina'
     } = req.body;
 
     if (typeof delta !== 'number') {
@@ -126,11 +120,9 @@ router.patch('/:id/tokens', async (req, res) => {
       return res.status(403).json({ error: 'Este estudiante está bloqueado y no puede registrar consumo en negativo.' });
     }
 
-    // Aplicar cambio
     student.tokens += delta;
     await student.save();
 
-    // Registrar movimiento
     const movement = new TokenMovement({
       studentId: student.studentId,
       change: delta,
@@ -152,7 +144,6 @@ router.patch('/:id/tokens', async (req, res) => {
   }
 });
 
-// POST /api/students/:id/use
 router.post('/:id/use', async (req, res) => {
   try {
     const { performedBy } = req.body;
@@ -161,10 +152,7 @@ router.post('/:id/use', async (req, res) => {
 
     const today = dayjs().startOf('day');
 
-    // Validar si tiene periodo activo
-    const inPeriod =
-      student.hasSpecialPeriod &&
-      student.specialPeriod &&
+    const inPeriod = student.hasSpecialPeriod && student.specialPeriod &&
       dayjs(student.specialPeriod.startDate).isSameOrBefore(today) &&
       dayjs(student.specialPeriod.endDate).isSameOrAfter(today);
 
@@ -177,14 +165,10 @@ router.post('/:id/use', async (req, res) => {
       });
     }
 
-    // ✅ Validar si el estudiante está bloqueado
     if (student.status === 'bloqueado') {
-      return res.status(403).json({
-        error: 'Este estudiante está bloqueado y no puede registrar consumo sin un periodo activo.'
-      });
+      return res.status(403).json({ error: 'Este estudiante está bloqueado y no puede registrar consumo sin un periodo activo.' });
     }
 
-    // No tiene periodo → usar o endeudar tokens
     student.tokens -= 1;
     await student.save();
 
@@ -202,10 +186,7 @@ router.post('/:id/use', async (req, res) => {
     res.json({
       canEat: true,
       method: student.tokens >= 0 ? 'token' : 'deuda',
-      message:
-        student.tokens >= 0
-          ? 'Usó un token. Puede desayunar.'
-          : 'No tenía tokens. Se registró deuda.',
+      message: student.tokens >= 0 ? 'Usó un token. Puede desayunar.' : 'No tenía tokens. Se registró deuda.',
       tokens: student.tokens
     });
   } catch (err) {
@@ -213,35 +194,29 @@ router.post('/:id/use', async (req, res) => {
   }
 });
 
-// PATCH /api/students/:id/period
 router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (req, res) => {
   try {
-    const { startDate, endDate, performedBy, userRole } = req.body;
+    const { startDate, endDate, reason, note, performedBy, userRole } = req.body;
     const student = await Student.findById(req.params.id);
     if (!student) return res.status(404).json({ error: 'Estudiante no encontrado' });
 
     const today = dayjs().startOf('day');
 
-    // 🔴 Solicitud para eliminar el periodo actual
     if (!startDate || !endDate) {
       const existingStart = dayjs(student.specialPeriod?.startDate);
       const existingEnd = dayjs(student.specialPeriod?.endDate);
 
-      const isCurrentActive =
-        student.hasSpecialPeriod &&
+      const isCurrentActive = student.hasSpecialPeriod &&
         existingStart.isSameOrBefore(today) &&
         existingEnd.isSameOrAfter(today);
 
       if (!isCurrentActive) {
-        return res.status(403).json({
-          error: 'Solo se puede eliminar el periodo especial si está actualmente activo.'
-        });
+        return res.status(403).json({ error: 'Solo se puede eliminar el periodo especial si está actualmente activo.' });
       }
 
       student.hasSpecialPeriod = false;
       student.specialPeriod = { startDate: null, endDate: null };
 
-      // También actualizar status si estaba en 'periodo-activo'
       if (student.status === 'periodo-activo') {
         student.status = 'sin-fondos';
       }
@@ -268,43 +243,42 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
     const start = dayjs(startDate).startOf('day');
     const end = dayjs(endDate).startOf('day');
 
-    // ❌ Periodo inválido
     if (!start.isValid() || !end.isValid() || end.isBefore(start)) {
       return res.status(400).json({ error: 'Fechas del periodo inválidas.' });
     }
 
-    // ❌ Periodo ya pasado
     if (end.isBefore(today)) {
       return res.status(400).json({ error: 'No se puede asignar un periodo que ya terminó.' });
     }
 
-    // ❌ Solapamiento con periodo actual
-    if (
-      student.hasSpecialPeriod &&
-      student.specialPeriod?.startDate &&
-      student.specialPeriod?.endDate
-    ) {
+    if (student.hasSpecialPeriod && student.specialPeriod?.startDate && student.specialPeriod?.endDate) {
       const existingStart = dayjs(student.specialPeriod.startDate).startOf('day');
       const existingEnd = dayjs(student.specialPeriod.endDate).startOf('day');
 
-      const overlap =
-        (start.isSameOrBefore(existingEnd) && end.isSameOrAfter(existingStart));
-
+      const overlap = start.isSameOrBefore(existingEnd) && end.isSameOrAfter(existingStart);
       if (overlap) {
         return res.status(400).json({ error: 'El nuevo periodo se solapa con uno ya existente.' });
       }
     }
 
-    // ✅ Guardar nuevo periodo
     student.specialPeriod = { startDate: start.toDate(), endDate: end.toDate() };
     student.hasSpecialPeriod = end.isSameOrAfter(today);
-
-    // Actualiza status si el periodo está activo hoy
     if (student.hasSpecialPeriod) {
       student.status = 'periodo-activo';
     }
 
     await student.save();
+
+    const log = new PeriodLog({
+      studentId: student.studentId,
+      startDate: start.toDate(),
+      endDate: end.toDate(),
+      note: note || '',
+      reason: reason || 'nuevo periodo',
+      performedBy: performedBy || 'sistema',
+      userRole: userRole || 'sistema'
+    });
+    await log.save();
 
     res.json({
       message: 'Periodo especial actualizado',
@@ -317,7 +291,16 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
   }
 });
 
-// Editar estudiante
+router.get('/:id/period-logs', verifyToken, async (req, res) => {
+  try {
+    const logs = await PeriodLog.find({ studentId: req.params.id }).sort({ startDate: 1 });
+    res.json(logs);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener historial de periodos' });
+  }
+});
+
 router.put('/:id', verifyToken, allowRoles('admin'), async (req, res) => {
   try {
     const updated = await Student.findByIdAndUpdate(req.params.id, req.body, { new: true });

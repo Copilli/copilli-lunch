@@ -34,6 +34,8 @@ const authRoutes = require('./routes/auth');
 const studentRoutes = require('./routes/students');
 const paymentRoutes = require('./routes/payments');
 const tokenMovementsRoutes = require('./routes/tokenMovements');
+const PeriodLog = require('./models/PeriodLog');
+const TokenMovement = require('./models/TokenMovement');
 
 if (
   !authRoutes ||
@@ -80,6 +82,47 @@ cron.schedule('5 0 * * *', async () => {
     console.log(`[CRON] Periodos desactivados: ${result.modifiedCount}`);
   } catch (err) {
     console.error('[CRON] Error al desactivar periodos vencidos:', err.message);
+  }
+});
+
+// Cron job diario para activar nuevos periodos registrados en PeriodLog
+cron.schedule('1 0 * * *', async () => {
+  console.log('[CRON] Activando nuevos periodos desde PeriodLog...');
+  try {
+    const today = dayjs().startOf('day').toDate();
+
+    const logs = await PeriodLog.find({ startDate: { $eq: today } });
+
+    let updatedCount = 0;
+    for (const log of logs) {
+      const student = await Student.findOne({ studentId: log.studentId });
+      if (!student) continue;
+
+      student.specialPeriod = {
+        startDate: log.startDate,
+        endDate: log.endDate
+      };
+      student.hasSpecialPeriod = true;
+      student.status = 'periodo-activo';
+      await student.save();
+
+      // Registrar en TokenMovement
+      const movement = new TokenMovement({
+        studentId: student.studentId,
+        change: 0,
+        reason: 'periodo-activado',
+        note: 'Periodo activado automáticamente desde PeriodLog',
+        performedBy: 'sistema',
+        userRole: 'sistema'
+      });
+      await movement.save();
+
+      updatedCount++;
+    }
+
+    console.log(`[CRON] Periodos activados para ${updatedCount} estudiante(s).`);
+  } catch (err) {
+    console.error('[CRON] Error al activar nuevos periodos:', err.message);
   }
 });
 
