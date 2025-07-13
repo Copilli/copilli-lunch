@@ -5,6 +5,9 @@ const TokenMovement = require('../models/TokenMovement');
 const dayjs = require('dayjs');
 const { verifyToken, allowRoles } = require('../middleware/auth');
 
+const VALID_STATUSES = ['periodo-activo', 'con-fondos', 'sin-fondos', 'bloqueado'];
+const VALID_LEVELS = ['preescolar', 'primaria', 'secundaria'];
+
 // Obtener todos los estudiantes o buscar por nombre/grupo
 router.get('/', async (req, res) => {
   try {
@@ -51,17 +54,46 @@ router.post('/import-bulk', verifyToken, allowRoles('admin'), async (req, res) =
       return res.status(400).json({ error: 'Formato incorrecto. Se esperaba un arreglo de estudiantes.' });
     }
 
-    const results = { created: 0, updated: 0 };
+    const results = { created: 0, updated: 0, errores: [] };
 
     for (const stu of students) {
-      const existing = await Student.findOne({ studentId: stu.studentId });
+      try {
+        // ✅ Validación de status
+        if (!VALID_STATUSES.includes(stu.status)) {
+          throw new Error(`Status inválido para ${stu.studentId}: ${stu.status}`);
+        }
 
-      if (existing) {
-        await Student.updateOne({ studentId: stu.studentId }, { $set: stu });
-        results.updated += 1;
-      } else {
-        await Student.create(stu);
-        results.created += 1;
+        // ✅ Validación de grupo
+        if (!stu.group || !VALID_LEVELS.includes(stu.group.level) || !stu.group.name) {
+          throw new Error(`Grupo inválido o incompleto para ${stu.studentId}`);
+        }
+
+        // ✅ Validación de tokens
+        if (typeof stu.tokens !== 'number' || isNaN(stu.tokens)) {
+          throw new Error(`Tokens inválidos para ${stu.studentId}: ${stu.tokens}`);
+        }
+
+        // ✅ Validación de fechas si hay periodo
+        if (stu.hasSpecialPeriod) {
+          const start = dayjs(stu.specialPeriod?.startDate);
+          const end = dayjs(stu.specialPeriod?.endDate);
+          if (!start.isValid() || !end.isValid()) {
+            throw new Error(`Fechas inválidas para ${stu.studentId}`);
+          }
+        }
+
+        // ✅ Crear o actualizar
+        const existing = await Student.findOne({ studentId: stu.studentId });
+
+        if (existing) {
+          await Student.updateOne({ studentId: stu.studentId }, { $set: stu });
+          results.updated += 1;
+        } else {
+          await Student.create(stu);
+          results.created += 1;
+        }
+      } catch (innerErr) {
+        results.errores.push(innerErr.message);
       }
     }
 
@@ -187,17 +219,35 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
   try {
     const { startDate, endDate } = req.body;
 
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'Ambas fechas son requeridas' });
+    }
+
+    const today = dayjs().startOf('day');
+    const end = dayjs(endDate).startOf('day');
+
+    // ❌ No permitir periodos que ya terminaron
+    if (end.isBefore(today)) {
+      return res.status(400).json({ error: 'No se puede asignar un periodo que ya terminó.' });
+    }
+
     const student = await Student.findById(req.params.id);
     if (!student) return res.status(404).json({ error: 'Estudiante no encontrado' });
 
-    student.hasSpecialPeriod = true;
     student.specialPeriod = {
       startDate: new Date(startDate),
       endDate: new Date(endDate)
     };
 
+    // ✅ Activar o desactivar automáticamente
+    student.hasSpecialPeriod = end.isSameOrAfter(today);
+
     await student.save();
-    res.json({ message: 'Periodo especial actualizado', specialPeriod: student.specialPeriod });
+    res.json({
+      message: 'Periodo especial actualizado',
+      hasSpecialPeriod: student.hasSpecialPeriod,
+      specialPeriod: student.specialPeriod
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al actualizar el periodo' });
