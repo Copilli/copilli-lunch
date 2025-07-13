@@ -2,6 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const cron = require('node-cron');
+const dayjs = require('dayjs');
+const Student = require('./models/Student');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -58,6 +61,26 @@ app.get('/', (req, res) => {
 // Manejo de rutas no encontradas
 app.use((req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada' });
+});
+
+// Cron job diario para desactivar periodos vencidos
+cron.schedule('5 0 * * *', async () => {
+  console.log('[CRON] Verificando periodos especiales vencidos...');
+  try {
+    const today = dayjs().startOf('day').toDate();
+    const result = await Student.updateMany(
+      {
+        hasSpecialPeriod: true,
+        'specialPeriod.endDate': { $lt: today }
+      },
+      {
+        $set: { hasSpecialPeriod: false }
+      }
+    );
+    console.log(`[CRON] Periodos desactivados: ${result.modifiedCount}`);
+  } catch (err) {
+    console.error('[CRON] Error al desactivar periodos vencidos:', err.message);
+  }
 });
 
 // Iniciar servidor
