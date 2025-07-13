@@ -20,23 +20,23 @@ const AdminPanel = ({ setUser }) => {
   const [calendarMonth, setCalendarMonth] = useState(dayjs().month() + 1);
   const [calendarYear, setCalendarYear] = useState(dayjs().year());
 
+  const fetchStudents = async () => {
+    const token = localStorage.getItem('token');
+    const res = await axios.get(`${import.meta.env.VITE_API_URL}/students`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setStudents(res.data);
+  };
+
+  const fetchMovements = async () => {
+    const token = localStorage.getItem('token');
+    const res = await axios.get(`${import.meta.env.VITE_API_URL}/token-movements`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setMovements(res.data);
+  };
+
   useEffect(() => {
-    const fetchStudents = async () => {
-      const token = localStorage.getItem('token');
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/students`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setStudents(res.data);
-    };
-
-    const fetchMovements = async () => {
-      const token = localStorage.getItem('token');
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/token-movements`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setMovements(res.data);
-    };
-
     fetchStudents();
     fetchMovements();
   }, []);
