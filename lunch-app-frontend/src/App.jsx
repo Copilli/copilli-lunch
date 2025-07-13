@@ -8,10 +8,14 @@ import CocinaPanel from './pages/CocinaPanel';
 
 const App = () => {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true); // Para no mostrar nada mientras carga
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
 
     axios
       .get(`${import.meta.env.VITE_API_URL}/auth/me`, {
@@ -21,18 +25,18 @@ const App = () => {
       .catch(() => {
         localStorage.removeItem('token');
         setUser(null);
-      });
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  if (!user) {
-    return <Login onLogin={setUser} />;
-  }
+  if (loading) return null; // o un spinner si prefieres
 
   return (
     <Routes>
-      {user.role === 'admin' && <Route path="*" element={<AdminPanel />} />}
-      {user.role === 'oficina' && <Route path="*" element={<OficinaPanel />} />}
-      {user.role === 'cocina' && <Route path="*" element={<CocinaPanel />} />}
+      <Route path="/" element={<Login onLogin={setUser} />} />
+      {user?.role === 'admin' && <Route path="/admin" element={<AdminPanel />} />}
+      {user?.role === 'oficina' && <Route path="/oficina" element={<OficinaPanel />} />}
+      {user?.role === 'cocina' && <Route path="/cocina" element={<CocinaPanel />} />}
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
