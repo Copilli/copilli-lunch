@@ -27,11 +27,11 @@ const TopNavBar = ({ children, setUser }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser?.(null);
-    navigate('/', { replace: true }); // redirige al inicio
+    navigate(`${import.meta.env.base}`, { replace: true }); // redirige al inicio
   };
 
   const handleHome = () => {
-    window.location.href = '/';
+    window.location.href = `${import.meta.env.base}`;
   };
 
   return (
