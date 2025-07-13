@@ -18,14 +18,15 @@ const isInPeriod = (date, period) => {
 };
 
 const StudentCalendarTable = ({ students, movements, month, year }) => {
-    const selectedMonth = month ?? dayjs().month() + 1;
-    const selectedYear = year ?? dayjs().year();
-    const days = getDaysInMonth(selectedMonth, selectedYear);
+  const selectedMonth = month ?? dayjs().month() + 1;
+  const selectedYear = year ?? dayjs().year();
+  const days = getDaysInMonth(selectedMonth, selectedYear);
+  const now = dayjs(); // ✅ define 'now'
 
   // Map de movimientos por studentId
   const movementMap = {};
   movements.forEach(m => {
-    const date = dayjs(`${selectedYear}-${selectedMonth}-${d}`).format('YYYY-MM-DD');
+    const date = dayjs(m.timestamp).format('YYYY-MM-DD');
     if (!movementMap[m.studentId]) movementMap[m.studentId] = {};
     movementMap[m.studentId][date] = m;
   });
@@ -46,7 +47,7 @@ const StudentCalendarTable = ({ students, movements, month, year }) => {
             <tr key={student.studentId}>
               <td style={{ fontWeight: 'bold' }}>{student.name}</td>
               {days.map(d => {
-                const date = dayjs(`${now.year()}-${now.month() + 1}-${d}`).format('YYYY-MM-DD');
+                const date = dayjs(`${selectedYear}-${selectedMonth}-${d}`).format('YYYY-MM-DD');
                 const movement = movementMap[student.studentId]?.[date];
                 const inPeriod = isInPeriod(date, student.specialPeriod);
 
