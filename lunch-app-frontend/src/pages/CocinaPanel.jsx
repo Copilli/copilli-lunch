@@ -12,15 +12,15 @@ const CocinaPanel = ({ setUser }) => {
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
 
-  useEffect(() => {
-    const fetchStudents = async () => {
-      const token = localStorage.getItem('token');
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/students`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setStudents(res.data);
-    };
+  const fetchStudents = async () => {
+    const token = localStorage.getItem('token');
+    const res = await axios.get(`${import.meta.env.VITE_API_URL}/students`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setStudents(res.data);
+  };
 
+  useEffect(() => {
     fetchStudents();
   }, []);
 
@@ -52,15 +52,18 @@ const CocinaPanel = ({ setUser }) => {
       dayjs(today).isSameOrBefore(dayjs(student.specialPeriod.endDate));
 
     if (inPeriod) return 'periodo-activo';
-    if (student.tokens > 0) return 'con-fondos';
     if (student.status === 'bloqueado') return 'bloqueado';
+    if (student.tokens > 0) return 'con-fondos';
     return 'sin-fondos';
   };
 
   const handleClick = async (student) => {
     const status = getStatus(student);
 
-    if (status === 'periodo-activo') return;
+    if (status === 'periodo-activo') {
+      alert('Tiene un periodo activo. No se requiere token.');
+      return;
+    }
 
     if (status === 'bloqueado') {
       alert('Este alumno está bloqueado. No se puede registrar consumo.');
@@ -77,17 +80,14 @@ const CocinaPanel = ({ setUser }) => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${import.meta.env.VITE_API_URL}/token-movements`, {
-        studentId: student.studentId,
-        change: -1,
-        reason: 'uso',
-        note: 'consumo cocina'
+      await axios.post(`${import.meta.env.VITE_API_URL}/students/${student._id}/use`, {
+        performedBy: localStorage.getItem('username') || 'cocina'
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       alert('Registro guardado');
-      window.location.reload();
+      await fetchStudents(); // Actualizar lista sin recargar
     } catch (err) {
       console.error(err);
       alert('Error al registrar consumo');
@@ -114,7 +114,6 @@ const CocinaPanel = ({ setUser }) => {
       <TopNavBar setUser={setUser}>
         <SearchBar search={search} setSearch={setSearch} />
       </TopNavBar>
-
 
       {!search && !selectedLevel && (
         <div>

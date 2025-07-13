@@ -56,6 +56,7 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
         }
       }));
     } else if (field === 'status') {
+      if (isReadOnly) return;
       if (value === 'sin-fondos' && form.tokens > 0) {
         alert('No puedes establecer el estado como "sin fondos" si el estudiante tiene tokens.');
         setForm(prev => ({
@@ -234,6 +235,7 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
               value={form.status}
               onChange={(e) => handleChange('status', e.target.value)}
               style={{ width: '100%' }}
+              disabled={isReadOnly}
             >
               <option value="con-fondos">Con fondos</option>
               <option value="sin-fondos">Sin fondos</option>
@@ -250,6 +252,9 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
             style={{ width: '100%', backgroundColor: '#f9f9f9', color: 'gray' }}
           />
         </p>
+        <p style={{ fontStyle: 'italic', fontSize: '0.9rem', color: '#555' }}>
+          Para modificar los tokens, utiliza la sección "Ajustar tokens manualmente" más abajo.
+        </p>
         <p>
           <strong>Periodo especial activo:</strong><br />
           <input
@@ -258,9 +263,6 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
             onChange={(e) => handleChange('hasSpecialPeriod', e.target.checked)}
             disabled={isReadOnly}
           />
-        </p>
-        <p style={{ fontStyle: 'italic', fontSize: '0.9rem', color: '#555' }}>
-          Para modificar los tokens, utiliza la sección "Ajustar tokens manualmente" más abajo.
         </p>
         {form.hasSpecialPeriod && (
           <>
