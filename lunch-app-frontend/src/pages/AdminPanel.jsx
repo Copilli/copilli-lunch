@@ -76,7 +76,7 @@ const AdminPanel = ({ setUser }) => {
         <SearchBar search={search} setSearch={setSearch} />
       </TopNavBar>
 
-      <StudentImportPanel onSuccess={() => window.location.reload()} />
+      <StudentImportPanel onSuccess={fetchStudents} />
 
       {!search && !selectedLevel && (
         <div>
