@@ -98,6 +98,7 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
   return (
     <div style={{ marginTop: '2rem', padding: '1rem', border: '1px solid #ccc', borderRadius: 8 }}>
       <h4>Acciones de oficina</h4>
+
       <label>Tipo de acción: </label>
       <select value={actionType} onChange={(e) => setActionType(e.target.value)}>
         <option value="tokens">Agregar tokens</option>
@@ -139,6 +140,7 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
           />
+
           <label>Fecha fin:</label>
           <input
             type="date"
@@ -178,6 +180,9 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
           {actionType === 'period' && (
             <p>Periodo: {startDate} a {endDate}</p>
           )}
+          <p><strong>Motivo:</strong> {reason}</p>
+          <p><strong>Nota:</strong> {note}</p>
+
           <button onClick={handleSubmit} disabled={submitting}>
             {submitting ? 'Guardando...' : 'Sí, registrar'}
           </button>
