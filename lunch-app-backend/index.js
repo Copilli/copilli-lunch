@@ -52,7 +52,6 @@ app.use('/api/auth', authRoutes);
 
 // Rutas protegidas
 app.use('/api/students', studentRoutes);
-app.use('/api/payments', paymentRoutes);
 app.use('/api/token-movements', tokenMovementsRoutes);
 
 // Ruta base
