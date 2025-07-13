@@ -63,7 +63,7 @@ const StudentCalendarTable = ({ students, movements, month, year }) => {
 
                   let bg = '';
                   if (movement && movement.reason === 'uso') {
-                    bg = movement.runningTokens < 0 ? '#ffb3b3' : '#add8e6';
+                    bg = movement.change < 0 && movement.runningTokens < 0 ? '#ffb3b3' : '#add8e6';
                   } else if (inPeriod) {
                     bg = '#c1f0c1';
                   }

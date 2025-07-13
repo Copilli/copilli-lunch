@@ -20,11 +20,14 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
 
   if (!student || !form) return null;
 
+  const isReadOnly = user?.role === 'oficina';
+
   const studentMovements = movements
     .filter(m => m.studentId === student.studentId)
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
   const handleChange = (field, value) => {
+    if (isReadOnly) return;
     if (field.startsWith('group.')) {
       setForm(prev => ({
         ...prev,
@@ -39,6 +42,7 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
   };
 
   const handleSpecialPeriodChange = (field, value) => {
+    if (isReadOnly) return;
     setForm(prev => ({
       ...prev,
       specialPeriod: {
@@ -53,7 +57,6 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
     const token = localStorage.getItem('token');
 
     try {
-      // PATCH if tokens changed
       const tokenDelta = form.tokens - originalTokens;
       if (tokenDelta !== 0) {
         await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/tokens`, {
@@ -67,7 +70,6 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
         });
       }
 
-      // PUT to update the rest
       await axios.put(`${import.meta.env.VITE_API_URL}/students/${student._id}`, form, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -86,6 +88,12 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
       alert('La nota es obligatoria para este motivo.');
       return;
     }
+
+    if (form.status === 'bloqueado' && delta < 0) {
+      alert('Este alumno está bloqueado. No se pueden reducir tokens.');
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
       await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/tokens`, {
@@ -145,6 +153,7 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
           onChange={(e) => handleChange('photoUrl', e.target.value)}
           placeholder="URL de la foto"
           style={{ flex: 1 }}
+          disabled={isReadOnly}
         />
       </div>
 
@@ -157,6 +166,7 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
             value={form.name}
             onChange={(e) => handleChange('name', e.target.value)}
             style={{ width: '100%' }}
+            disabled={isReadOnly}
           />
         </p>
         <p>
@@ -166,21 +176,29 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
             placeholder="Nivel"
             value={form.group.level}
             onChange={(e) => handleChange('group.level', e.target.value)}
+            disabled={isReadOnly}
           />{' '}-{' '}
           <input
             type="text"
             placeholder="Nombre"
             value={form.group.name}
             onChange={(e) => handleChange('group.name', e.target.value)}
+            disabled={isReadOnly}
           />
         </p>
         <p>
           <strong>Status:</strong><br />
-          <input
-            type="text"
+          <select
             value={form.status}
             onChange={(e) => handleChange('status', e.target.value)}
-          />
+            style={{ width: '100%' }}
+            disabled={isReadOnly}
+          >
+            <option value="periodo-activo">Periodo activo</option>
+            <option value="con-fondos">Con fondos</option>
+            <option value="sin-fondos">Sin fondos</option>
+            <option value="bloqueado">Bloqueado</option>
+          </select>
         </p>
         <p>
           <strong>Tokens:</strong><br />
@@ -188,6 +206,7 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
             type="number"
             value={form.tokens}
             onChange={(e) => handleChange('tokens', parseInt(e.target.value))}
+            disabled={isReadOnly}
           />
         </p>
         <p>
@@ -196,6 +215,7 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
             type="checkbox"
             checked={form.hasSpecialPeriod}
             onChange={(e) => handleChange('hasSpecialPeriod', e.target.checked)}
+            disabled={isReadOnly}
           />
         </p>
         {form.hasSpecialPeriod && (
@@ -206,6 +226,7 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
                 type="date"
                 value={dayjs(form.specialPeriod?.startDate).format('YYYY-MM-DD')}
                 onChange={(e) => handleSpecialPeriodChange('startDate', e.target.value)}
+                disabled={isReadOnly}
               />
             </p>
             <p>
@@ -214,50 +235,54 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
                 type="date"
                 value={dayjs(form.specialPeriod?.endDate).format('YYYY-MM-DD')}
                 onChange={(e) => handleSpecialPeriodChange('endDate', e.target.value)}
+                disabled={isReadOnly}
               />
             </p>
           </>
         )}
       </div>
 
-      <button onClick={handleSave} disabled={saving}>
-        {saving ? 'Guardando...' : 'Guardar cambios'}
-      </button>
+      {!isReadOnly && (
+        <>
+          <button onClick={handleSave} disabled={saving}>
+            {saving ? 'Guardando...' : 'Guardar cambios'}
+          </button>
 
-      {/* Ajuste de tokens desde panel */}
-      <hr style={{ margin: '2rem 0' }} />
-      <h4>Ajustar tokens manualmente</h4>
-      <div>
-        <label>Cantidad (+/-):</label>
-        <input
-          type="number"
-          value={delta}
-          onChange={(e) => setDelta(parseInt(e.target.value))}
-          style={{ width: '60px', marginRight: '1rem' }}
-        />
+          <hr style={{ margin: '2rem 0' }} />
+          <h4>Ajustar tokens manualmente</h4>
+          <div>
+            <label>Cantidad (+/-):</label>
+            <input
+              type="number"
+              value={delta}
+              onChange={(e) => setDelta(parseInt(e.target.value))}
+              style={{ width: '60px', marginRight: '1rem' }}
+            />
 
-        <label>Motivo:</label>
-        <select value={reason} onChange={(e) => setReason(e.target.value)}>
-          <option value="pago">Pago</option>
-          <option value="justificado">Justificado</option>
-          {user?.role === 'admin' && <option value="ajuste manual">Ajuste manual</option>}
-        </select>
-      </div>
+            <label>Motivo:</label>
+            <select value={reason} onChange={(e) => setReason(e.target.value)}>
+              <option value="pago">Pago</option>
+              <option value="justificado">Justificado</option>
+              {user?.role === 'admin' && <option value="ajuste manual">Ajuste manual</option>}
+            </select>
+          </div>
 
-      <div style={{ marginTop: '0.5rem' }}>
-        <label>Nota:</label>
-        <input
-          type="text"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="Detalle o justificación"
-          style={{ width: '100%' }}
-        />
-      </div>
+          <div style={{ marginTop: '0.5rem' }}>
+            <label>Nota:</label>
+            <input
+              type="text"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Detalle o justificación"
+              style={{ width: '100%' }}
+            />
+          </div>
 
-      <button onClick={handleTokenChange} style={{ marginTop: '1rem' }}>
-        Aplicar cambio de tokens
-      </button>
+          <button onClick={handleTokenChange} style={{ marginTop: '1rem' }}>
+            Aplicar cambio de tokens
+          </button>
+        </>
+      )}
 
       <button onClick={() => exportCSV(student, studentMovements)} style={{ marginTop: '1rem', marginLeft: '1rem' }}>
         Exportar historial a CSV

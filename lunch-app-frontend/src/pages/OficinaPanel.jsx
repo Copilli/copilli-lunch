@@ -41,6 +41,10 @@ const OficinaPanel = ({ setUser }) => {
     fetchMovements();
   }, []);
 
+  useEffect(() => {
+    setSelectedStudent(null);
+  }, [selectedGroup, selectedLevel]);
+
   const levels = ['preescolar', 'primaria', 'secundaria'];
 
   const filtered = search

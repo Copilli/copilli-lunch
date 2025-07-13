@@ -1,10 +1,22 @@
 import dayjs from 'dayjs';
 
+const statusColors = {
+  'periodo-activo': '#c1f0c1',   // verde claro
+  'con-fondos': '#add8e6',       // azul claro
+  'sin-fondos': '#f5f5f5',       // gris claro
+  'bloqueado': '#f8d7da'         // rojo claro
+};
+
+const statusLabels = {
+  'periodo-activo': 'Periodo activo',
+  'con-fondos': 'Con fondos',
+  'sin-fondos': 'Sin fondos',
+  'bloqueado': 'Bloqueado'
+};
+
 const StudentSummaryCard = ({ student, onSelect }) => {
-  const inPeriod =
-    student.hasSpecialPeriod &&
-    dayjs().isSameOrAfter(dayjs(student.specialPeriod.startDate)) &&
-    dayjs().isSameOrBefore(dayjs(student.specialPeriod.endDate));
+  const bg = statusColors[student.status] || '#ffffff';
+  const label = statusLabels[student.status] || student.status;
 
   return (
     <div
@@ -16,7 +28,7 @@ const StudentSummaryCard = ({ student, onSelect }) => {
         display: 'flex',
         gap: '1rem',
         alignItems: 'center',
-        backgroundColor: '#f5f5f5'
+        backgroundColor: bg
       }}
     >
       <img
@@ -28,7 +40,7 @@ const StudentSummaryCard = ({ student, onSelect }) => {
         <p><strong>{student.name}</strong></p>
         <p>ID: {student.studentId}</p>
         <p>Tokens: {student.tokens}</p>
-        <p>Periodo: {inPeriod ? '✅ Activo' : '—'}</p>
+        <p>Estado: {label}</p>
       </div>
       <button onClick={() => onSelect(student)}>Ver detalles</button>
     </div>

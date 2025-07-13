@@ -51,17 +51,24 @@ const CocinaPanel = ({ setUser }) => {
       dayjs(today).isSameOrAfter(dayjs(student.specialPeriod.startDate)) &&
       dayjs(today).isSameOrBefore(dayjs(student.specialPeriod.endDate));
 
-    if (inPeriod) return 'green';
-    if (student.tokens > 0) return 'blue';
-    return 'red';
+    if (inPeriod) return 'periodo-activo';
+    if (student.tokens > 0) return 'con-fondos';
+    if (student.status === 'bloqueado') return 'bloqueado';
+    return 'sin-fondos';
   };
 
   const handleClick = async (student) => {
     const status = getStatus(student);
-    if (status === 'green') return;
+
+    if (status === 'periodo-activo') return;
+
+    if (status === 'bloqueado') {
+      alert('Este alumno está bloqueado. No se puede registrar consumo.');
+      return;
+    }
 
     const confirm = window.confirm(
-      status === 'blue'
+      status === 'con-fondos'
         ? `¿Deseas descontar un token? Total final: ${student.tokens - 1}`
         : `No tiene tokens ni periodo activo. ¿Deseas registrar el desayuno en negativo? Total final: ${student.tokens - 1}`
     );
@@ -88,9 +95,17 @@ const CocinaPanel = ({ setUser }) => {
   };
 
   const statusColor = {
-    green: '#c6f6c6',
-    blue: '#cce5ff',
-    red: '#f8d7da'
+    'periodo-activo': '#c6f6c6',
+    'con-fondos': '#cce5ff',
+    'sin-fondos': '#f8d7da',
+    'bloqueado': '#c2c2c2'
+  };
+
+  const statusLabels = {
+    'periodo-activo': 'Periodo activo',
+    'con-fondos': 'Con fondos',
+    'sin-fondos': 'Sin fondos',
+    'bloqueado': 'Bloqueado'
   };
 
   return (
@@ -135,7 +150,7 @@ const CocinaPanel = ({ setUser }) => {
                     backgroundColor: statusColor[status],
                     padding: '1rem',
                     borderRadius: 8,
-                    cursor: status === 'green' ? 'default' : 'pointer',
+                    cursor: status === 'periodo-activo' ? 'default' : 'pointer',
                     width: '200px',
                     display: 'flex',
                     flexDirection: 'column',
@@ -157,7 +172,7 @@ const CocinaPanel = ({ setUser }) => {
                   <strong>{student.name}</strong>
                   <p>ID: {student.studentId}</p>
                   <p>Tokens: {student.tokens}</p>
-                  <p>Status: {status.toUpperCase()}</p>
+                  <p>Status: {statusLabels[status]}</p>
                 </div>
               );
             })}
