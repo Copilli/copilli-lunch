@@ -1,19 +1,37 @@
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const TopNavBar = ({ children, setUser }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = JSON.parse(localStorage.getItem('user'));
+
+  // 🔁 Redirección automática si se entra en "/"
+  useEffect(() => {
+    if (location.pathname === '/') {
+      if (!user) {
+        navigate('/login', { replace: true });
+      } else if (user.role === 'admin') {
+        navigate('/admin', { replace: true });
+      } else if (user.role === 'oficina') {
+        navigate('/oficina', { replace: true });
+      } else if (user.role === 'cocina') {
+        navigate('/cocina', { replace: true });
+      } else {
+        navigate('/login', { replace: true });
+      }
+    }
+  }, [location.pathname, navigate, user]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    setUser(null); // 🔁 borra el usuario de estado React
-    navigate('/', { replace: true }); // redirige al login (React Router usa el basename)
+    setUser?.(null);
+    navigate('/', { replace: true }); // redirige al inicio
   };
 
   const handleHome = () => {
     if (!user) return navigate('/');
-
     if (user.role === 'admin') navigate('/admin');
     else if (user.role === 'oficina') navigate('/oficina');
     else if (user.role === 'cocina') navigate('/cocina');

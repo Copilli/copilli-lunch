@@ -59,19 +59,20 @@ const CocinaPanel = ({ setUser }) => {
 
   const handleClick = async (student) => {
     const status = getStatus(student);
+    const hasTokens = student.tokens > 0;
 
     if (status === 'periodo-activo') {
       alert('Tiene un periodo activo. No se requiere token.');
       return;
     }
 
-    if (status === 'bloqueado') {
-      alert('Este alumno está bloqueado. No se puede registrar consumo.');
+    if (status === 'bloqueado' && !hasTokens) {
+      alert('Este alumno está bloqueado y no tiene tokens. No se puede registrar consumo.');
       return;
     }
 
     const confirm = window.confirm(
-      status === 'con-fondos'
+      hasTokens
         ? `¿Deseas descontar un token? Total final: ${student.tokens - 1}`
         : `No tiene tokens ni periodo activo. ¿Deseas registrar el desayuno en negativo? Total final: ${student.tokens - 1}`
     );
@@ -112,7 +113,16 @@ const CocinaPanel = ({ setUser }) => {
     <div className="app-container" style={{ padding: '2rem' }}>
       <h2>Panel de Cocina</h2>
       <TopNavBar setUser={setUser}>
-        <SearchBar search={search} setSearch={setSearch} />
+        <SearchBar
+          search={search}
+          setSearch={setSearch}
+          students={students}
+          onSelect={(student) => {
+            setSelectedLevel(student.group.level);
+            setSelectedGroup(student.group.name);
+            setSelectedStudent?.(student); // Solo si hay detalles en el panel
+          }}
+        />
       </TopNavBar>
 
       {!search && !selectedLevel && (

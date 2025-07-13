@@ -73,7 +73,16 @@ const AdminPanel = ({ setUser }) => {
     <div className="app-container" style={{ padding: '2rem' }}>
       <h2>Panel de Administración</h2>
       <TopNavBar setUser={setUser}>
-        <SearchBar search={search} setSearch={setSearch} />
+        <SearchBar
+          search={search}
+          setSearch={setSearch}
+          students={students}
+          onSelect={(student) => {
+            setSelectedLevel(student.group.level);
+            setSelectedGroup(student.group.name);
+            setSelectedStudent?.(student); // Solo si hay detalles en el panel
+          }}
+        />
       </TopNavBar>
 
       <StudentImportPanel onSuccess={fetchStudents} />
