@@ -9,6 +9,8 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
   const [delta, setDelta] = useState(0);
   const [reason, setReason] = useState('pago');
   const [note, setNote] = useState('');
+  const [periodReason, setPeriodReason] = useState('nuevo periodo');
+  const [periodNote, setPeriodNote] = useState('');
   const [lastValidStatus, setLastValidStatus] = useState(null);
   const user = JSON.parse(localStorage.getItem('user'));
 
@@ -32,6 +34,7 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
   if (!student || !form) return null;
 
   const isReadOnly = user?.role === 'oficina';
+  const isAdmin = user?.role === 'admin';
 
   const studentMovements = movements
     .filter(m => m.studentId === student.studentId)
@@ -65,7 +68,6 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
         }));
         return;
       }
-
       setLastValidStatus(value);
       setForm(prev => ({
         ...prev,
@@ -88,12 +90,17 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
   };
 
   const handleSave = async () => {
+    if (form.hasSpecialPeriod && (!periodReason.trim() || !periodNote.trim())) {
+      alert('Para asignar un periodo especial se requiere un motivo y una nota.');
+      return;
+    }
+
     setSaving(true);
     const token = localStorage.getItem('token');
 
     try {
       const tokenDelta = form.tokens - originalTokens;
-      if (tokenDelta !== 0) {
+      if (tokenDelta !== 0 && isAdmin) {
         await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/tokens`, {
           delta: tokenDelta,
           reason: 'ajuste manual',
@@ -108,6 +115,19 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
       await axios.put(`${import.meta.env.VITE_API_URL}/students/${student._id}`, form, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
+      if (form.hasSpecialPeriod) {
+        await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/period`, {
+          startDate: form.specialPeriod.startDate,
+          endDate: form.specialPeriod.endDate,
+          reason: periodReason,
+          note: periodNote,
+          performedBy: user?.username || 'admin',
+          userRole: user?.role || 'admin'
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
 
       alert('Estudiante actualizado.');
     } catch (err) {
@@ -149,9 +169,11 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
     }
   };
 
-  const exportCSV = (student, movimientos) => {
+  const exportCSV = () => {
+    if (isReadOnly) return;
+
     const header = 'Fecha,Motivo,Nota,Responsable,Cambio\n';
-    const rows = movimientos.map(m => {
+    const rows = studentMovements.map(m => {
       const fecha = dayjs(m.timestamp).format('YYYY-MM-DD HH:mm');
       const motivo = m.reason;
       const nota = m.note?.replace(/,/g, ';') || '';
@@ -212,7 +234,7 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
             value={form.group.level}
             onChange={(e) => handleChange('group.level', e.target.value)}
             disabled={isReadOnly}
-          />{' '}-{' '}
+          /> - 
           <input
             type="text"
             placeholder="Nombre"
@@ -252,9 +274,11 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
             style={{ width: '100%', backgroundColor: '#f9f9f9', color: 'gray' }}
           />
         </p>
-        <p style={{ fontStyle: 'italic', fontSize: '0.9rem', color: '#555' }}>
-          Para modificar los tokens, utiliza la sección "Ajustar tokens manualmente" más abajo.
-        </p>
+        {isAdmin && (
+          <p style={{ fontStyle: 'italic', fontSize: '0.9rem', color: '#555' }}>
+            Para modificar los tokens, utiliza la sección "Ajustar tokens manualmente" más abajo.
+          </p>
+        )}
         <p>
           <strong>Periodo especial activo:</strong><br />
           <input
@@ -264,6 +288,7 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
             disabled={isReadOnly}
           />
         </p>
+
         {form.hasSpecialPeriod && (
           <>
             <p>
@@ -284,6 +309,30 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
                 disabled={isReadOnly}
               />
             </p>
+            {!isReadOnly && (
+              <>
+                <p>
+                  <strong>Motivo del periodo:</strong><br />
+                  <input
+                    type="text"
+                    value={periodReason}
+                    onChange={(e) => setPeriodReason(e.target.value)}
+                    placeholder="Motivo"
+                    style={{ width: '100%' }}
+                  />
+                </p>
+                <p>
+                  <strong>Nota del periodo:</strong><br />
+                  <textarea
+                    value={periodNote}
+                    onChange={(e) => setPeriodNote(e.target.value)}
+                    placeholder="Justificación o comentario"
+                    rows={2}
+                    style={{ width: '100%' }}
+                  />
+                </p>
+              </>
+            )}
           </>
         )}
       </div>
@@ -309,7 +358,7 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
             <select value={reason} onChange={(e) => setReason(e.target.value)}>
               <option value="pago">Pago</option>
               <option value="justificado">Justificado</option>
-              {user?.role === 'admin' && <option value="ajuste manual">Ajuste manual</option>}
+              {isAdmin && <option value="ajuste manual">Ajuste manual</option>}
             </select>
           </div>
 
@@ -330,13 +379,17 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
         </>
       )}
 
-      <button onClick={() => exportCSV(student, studentMovements)} style={{ marginTop: '1rem', marginLeft: '1rem' }}>
-        Exportar historial a CSV
-      </button>
+      {!isReadOnly && (
+        <button
+          onClick={() => exportCSV()}
+          style={{ marginTop: '1rem', marginLeft: '1rem' }}
+        >
+          Exportar historial a CSV
+        </button>
+      )}
 
       <hr style={{ margin: '1rem 0' }} />
       <h4>Historial de movimientos</h4>
-
       {studentMovements.length === 0 && <p>No hay transacciones registradas.</p>}
       {studentMovements.map((m, i) => (
         <div key={i} style={{
