@@ -5,7 +5,6 @@ const TokenMovement = require('../models/TokenMovement');
 const dayjs = require('dayjs');
 const { verifyToken, allowRoles } = require('../middleware/auth');
 
-
 // Obtener todos los estudiantes o buscar por nombre/grupo
 router.get('/', async (req, res) => {
   try {
@@ -173,8 +172,8 @@ router.post('/:id/use', async (req, res) => {
   }
 });
 
-// Editar estudiante (opcional)
-router.put('/:id', async (req, res) => {
+// Editar estudiante
+router.put('/:id', verifyToken, allowRoles('admin'), async (req, res) => {
   try {
     const updated = await Student.findByIdAndUpdate(req.params.id, req.body, { new: true });
     res.json(updated);

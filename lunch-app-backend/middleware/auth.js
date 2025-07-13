@@ -9,7 +9,7 @@ function verifyToken(req, res, next) {
   const token = auth.split(' ')[1];
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // username, id, role
+    req.user = decoded; // Ej: { id, username, role }
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Token inválido o expirado' });

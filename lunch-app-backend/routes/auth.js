@@ -22,3 +22,5 @@ router.post('/login', async (req, res) => {
 
   res.json({ token, username: user.username, role: user.role });
 });
+
+module.exports = router;

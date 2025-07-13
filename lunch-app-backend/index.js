@@ -3,16 +3,24 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 
-const { verifyToken, allowRoles } = require('./middleware/auth');
-
 const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middlewares globales
 app.use(cors());
 app.use(express.json());
 
 // Conexión a MongoDB
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('MongoDB conectado'))
-  .catch((err) => console.error('Error de conexión:', err));
+mongoose
+  .connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+  })
+  .then(() => console.log('✅ MongoDB conectado'))
+  .catch(err => {
+    console.error('❌ Error de conexión a MongoDB:', err.message);
+    process.exit(1);
+  });
 
 // Rutas
 const authRoutes = require('./routes/auth');
@@ -20,16 +28,33 @@ const studentRoutes = require('./routes/students');
 const paymentRoutes = require('./routes/payments');
 const tokenMovementsRoutes = require('./routes/tokenMovements');
 
-// Ruta pública: login
-app.use('/api/login', authRoutes);
+if (
+  !authRoutes ||
+  !studentRoutes ||
+  !paymentRoutes ||
+  !tokenMovementsRoutes
+) {
+  console.error('❌ Uno de los archivos de rutas no se pudo cargar. Verifica los nombres y exports.');
+  process.exit(1);
+}
 
-// Middleware de autenticación para el resto
-app.use('/api', verifyToken);
+// Ruta pública para login
+app.use('/api/login', authRoutes);
 
 // Rutas protegidas
 app.use('/api/students', studentRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/token-movements', tokenMovementsRoutes);
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
+// Ruta base
+app.get('/', (req, res) => {
+  res.send('API de desayunos funcionando ✅');
+});
+
+// Manejo de rutas no encontradas
+app.use((req, res) => {
+  res.status(404).json({ error: 'Ruta no encontrada' });
+});
+
+// Iniciar servidor
+app.listen(PORT, () => console.log(`🚀 Servidor corriendo en puerto ${PORT}`));
