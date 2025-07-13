@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const SearchBar = ({ search, setSearch, students, onSelect }) => {
   const [suggestions, setSuggestions] = useState([]);
+  const containerRef = useRef(null);
 
   useEffect(() => {
     if (!search.trim()) {
@@ -21,7 +22,7 @@ const SearchBar = ({ search, setSearch, students, onSelect }) => {
   const handleSelect = (student) => {
     setSearch('');
     setSuggestions([]);
-    onSelect(student); // Navega a detalles
+    if (onSelect) onSelect(student);
   };
 
   const handleKeyDown = (e) => {
@@ -30,8 +31,21 @@ const SearchBar = ({ search, setSearch, students, onSelect }) => {
     }
   };
 
+  // Cierra las sugerencias si se da clic fuera del componente
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setSuggestions([]);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   return (
-    <div style={{ position: 'relative', marginBottom: '1rem' }}>
+    <div ref={containerRef} style={{ position: 'relative', marginBottom: '1rem' }}>
       <input
         type="text"
         placeholder="Buscar por nombre o ID..."
@@ -65,6 +79,12 @@ const SearchBar = ({ search, setSearch, students, onSelect }) => {
                 padding: '0.25rem 0.5rem',
                 cursor: 'pointer',
                 borderBottom: '1px solid #eee',
+              }}
+              onMouseOver={(e) => {
+                e.target.style.backgroundColor = '#f1f1f1';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.backgroundColor = 'white';
               }}
             >
               <strong>{s.name}</strong> ({s.studentId})

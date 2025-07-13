@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import TopNavBar from '../components/TopNavBar';
@@ -11,6 +11,7 @@ const CocinaPanel = ({ setUser }) => {
   const [search, setSearch] = useState('');
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [selectedStudent, setSelectedStudent] = useState(null);
 
   const fetchStudents = async () => {
     const token = localStorage.getItem('token');
@@ -88,7 +89,9 @@ const CocinaPanel = ({ setUser }) => {
       });
 
       alert('Registro guardado');
-      await fetchStudents(); // Actualizar lista sin recargar
+      await fetchStudents();
+      setSelectedStudent(null);
+      setSearch('');
     } catch (err) {
       console.error(err);
       alert('Error al registrar consumo');
@@ -120,77 +123,114 @@ const CocinaPanel = ({ setUser }) => {
           onSelect={(student) => {
             setSelectedLevel(student.group.level);
             setSelectedGroup(student.group.name);
-            setSelectedStudent?.(student); // Solo si hay detalles en el panel
+            setSelectedStudent(student);
           }}
         />
       </TopNavBar>
 
-      {!search && !selectedLevel && (
-        <div>
-          {levels.map(level => (
-            <LevelCard key={level} level={level} onClick={setSelectedLevel} />
-          ))}
-        </div>
-      )}
-
-      {selectedLevel && !selectedGroup && (
-        <div>
-          <h3>Grupos en {selectedLevel}</h3>
-          {groupsInLevel.map(group => (
-            <GroupCard key={group} group={group} onClick={setSelectedGroup} />
-          ))}
-          <button onClick={() => setSelectedLevel(null)} style={{ marginTop: '1rem' }}>
-            ← Volver a niveles
-          </button>
-        </div>
-      )}
-
-      {selectedGroup && (
-        <div>
-          <h3>Estudiantes en {selectedLevel} - Grupo {selectedGroup}</h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-            {studentsInGroup.map(student => {
-              const status = getStatus(student);
-              return (
-                <div
-                  key={student.studentId}
-                  onClick={() => handleClick(student)}
-                  style={{
-                    backgroundColor: statusColor[status],
-                    padding: '1rem',
-                    borderRadius: 8,
-                    cursor: status === 'periodo-activo' ? 'default' : 'pointer',
-                    width: '200px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    textAlign: 'center'
-                  }}
-                >
-                  <img
-                    src={student.photoUrl}
-                    alt={student.name}
-                    style={{
-                      width: '80px',
-                      height: '80px',
-                      borderRadius: '50%',
-                      objectFit: 'cover',
-                      marginBottom: '0.5rem'
-                    }}
-                  />
-                  <strong>{student.name}</strong>
-                  <p>ID: {student.studentId}</p>
-                  <p>Tokens: {student.tokens}</p>
-                  <p>Status: {statusLabels[status]}</p>
-                </div>
-              );
-            })}
+      {selectedStudent ? (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>
+          <div
+            onClick={() => handleClick(selectedStudent)}
+            style={{
+              backgroundColor: statusColor[getStatus(selectedStudent)],
+              padding: '1rem',
+              borderRadius: 8,
+              cursor: 'pointer',
+              width: '200px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center'
+            }}
+          >
+            <img
+              src={selectedStudent.photoUrl}
+              alt={selectedStudent.name}
+              style={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '50%',
+                objectFit: 'cover',
+                marginBottom: '0.5rem'
+              }}
+            />
+            <strong>{selectedStudent.name}</strong>
+            <p>ID: {selectedStudent.studentId}</p>
+            <p>Tokens: {selectedStudent.tokens}</p>
+            <p>Status: {statusLabels[getStatus(selectedStudent)]}</p>
           </div>
-
-          <button onClick={() => setSelectedGroup(null)} style={{ marginTop: '1rem' }}>
-            ← Volver a grupos
-          </button>
         </div>
+      ) : (
+        <>
+          {!search && !selectedLevel && (
+            <div>
+              {levels.map(level => (
+                <LevelCard key={level} level={level} onClick={setSelectedLevel} />
+              ))}
+            </div>
+          )}
+
+          {selectedLevel && !selectedGroup && (
+            <div>
+              <h3>Grupos en {selectedLevel}</h3>
+              {groupsInLevel.map(group => (
+                <GroupCard key={group} group={group} onClick={setSelectedGroup} />
+              ))}
+              <button onClick={() => setSelectedLevel(null)} style={{ marginTop: '1rem' }}>
+                ← Volver a niveles
+              </button>
+            </div>
+          )}
+
+          {selectedGroup && (
+            <div>
+              <h3>Estudiantes en {selectedLevel} - Grupo {selectedGroup}</h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+                {studentsInGroup.map(student => {
+                  const status = getStatus(student);
+                  return (
+                    <div
+                      key={student.studentId}
+                      onClick={() => handleClick(student)}
+                      style={{
+                        backgroundColor: statusColor[status],
+                        padding: '1rem',
+                        borderRadius: 8,
+                        cursor: status === 'periodo-activo' ? 'default' : 'pointer',
+                        width: '200px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        textAlign: 'center'
+                      }}
+                    >
+                      <img
+                        src={student.photoUrl}
+                        alt={student.name}
+                        style={{
+                          width: '80px',
+                          height: '80px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          marginBottom: '0.5rem'
+                        }}
+                      />
+                      <strong>{student.name}</strong>
+                      <p>ID: {student.studentId}</p>
+                      <p>Tokens: {student.tokens}</p>
+                      <p>Status: {statusLabels[status]}</p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <button onClick={() => setSelectedGroup(null)} style={{ marginTop: '1rem' }}>
+                ← Volver a grupos
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

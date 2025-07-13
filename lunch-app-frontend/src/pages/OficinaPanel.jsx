@@ -80,13 +80,12 @@ const OficinaPanel = ({ setUser }) => {
           onSelect={(student) => {
             setSelectedLevel(student.group.level);
             setSelectedGroup(student.group.name);
-            setSelectedStudent?.(student); // Solo si hay detalles en el panel
+            setSelectedStudent(student);
           }}
         />
       </TopNavBar>
 
-
-      {!search && !selectedLevel && (
+      {!search && !selectedLevel && !selectedStudent && (
         <div>
           {levels.map(level => (
             <LevelCard key={level} level={level} onClick={setSelectedLevel} />
@@ -147,26 +146,28 @@ const OficinaPanel = ({ setUser }) => {
             ))}
           </div>
 
+          <button onClick={() => setSelectedGroup(null)} style={{ marginTop: '1rem' }}>
+            ← Volver a grupos
+          </button>
+        </div>
+      )}
+
+      {selectedStudent && (
+        <>
           <StudentDetailsPanel
             student={selectedStudent}
             movements={movements}
             onClose={() => setSelectedStudent(null)}
           />
 
-          {selectedStudent && (
-            <StudentOfficeActions
-              student={selectedStudent}
-              onUpdate={() => {
-                fetchStudents();
-                fetchMovements();
-              }}
-            />
-          )}
-
-          <button onClick={() => setSelectedGroup(null)} style={{ marginTop: '1rem' }}>
-            ← Volver a grupos
-          </button>
-        </div>
+          <StudentOfficeActions
+            student={selectedStudent}
+            onUpdate={() => {
+              fetchStudents();
+              fetchMovements();
+            }}
+          />
+        </>
       )}
     </div>
   );

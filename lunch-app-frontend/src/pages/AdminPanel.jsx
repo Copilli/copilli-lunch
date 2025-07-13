@@ -69,6 +69,10 @@ const AdminPanel = ({ setUser }) => {
     return movements.filter(m => m.reason === 'uso');
   }, [movements]);
 
+  const showGroupView = !search && selectedLevel && selectedGroup;
+  const showLevelView = !search && selectedLevel && !selectedGroup;
+  const showStartView = !search && !selectedLevel;
+
   return (
     <div className="app-container" style={{ padding: '2rem' }}>
       <h2>Panel de Administración</h2>
@@ -80,14 +84,14 @@ const AdminPanel = ({ setUser }) => {
           onSelect={(student) => {
             setSelectedLevel(student.group.level);
             setSelectedGroup(student.group.name);
-            setSelectedStudent?.(student); // Solo si hay detalles en el panel
+            setSelectedStudent(student);
           }}
         />
       </TopNavBar>
 
       <StudentImportPanel onSuccess={fetchStudents} />
 
-      {!search && !selectedLevel && (
+      {showStartView && (
         <div>
           {levels.map(level => (
             <LevelCard key={level} level={level} onClick={setSelectedLevel} />
@@ -95,7 +99,7 @@ const AdminPanel = ({ setUser }) => {
         </div>
       )}
 
-      {selectedLevel && !selectedGroup && (
+      {showLevelView && (
         <div>
           <h3>Grupos en {selectedLevel}</h3>
           {groupsInLevel.map(group => (
@@ -107,7 +111,7 @@ const AdminPanel = ({ setUser }) => {
         </div>
       )}
 
-      {selectedGroup && (
+      {showGroupView && (
         <div>
           <h3>Estudiantes en {selectedLevel} - Grupo {selectedGroup}</h3>
           <p>{studentsInGroup.length} estudiante(s)</p>
