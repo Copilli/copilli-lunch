@@ -9,6 +9,7 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
   const [delta, setDelta] = useState(0);
   const [reason, setReason] = useState('pago');
   const [note, setNote] = useState('');
+  const [lastValidStatus, setLastValidStatus] = useState(null);
   const user = JSON.parse(localStorage.getItem('user'));
 
   useEffect(() => {
@@ -24,6 +25,7 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
       });
 
       setOriginalTokens(student.tokens);
+      setLastValidStatus(student.status);
     }
   }, [student]);
 
@@ -52,6 +54,21 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
           startDate: null,
           endDate: null
         }
+      }));
+    } else if (field === 'status') {
+      if (value === 'sin-fondos' && form.tokens > 0) {
+        alert('No puedes establecer el estado como "sin fondos" si el estudiante tiene tokens.');
+        setForm(prev => ({
+          ...prev,
+          status: lastValidStatus
+        }));
+        return;
+      }
+
+      setLastValidStatus(value);
+      setForm(prev => ({
+        ...prev,
+        status: value
       }));
     } else {
       setForm(prev => ({ ...prev, [field]: value }));
