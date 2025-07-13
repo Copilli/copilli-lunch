@@ -37,9 +37,19 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
           headers: { Authorization: `Bearer ${token}` }
         });
       } else if (actionType === 'period') {
+        if (!note.trim() || !reason.trim()) {
+          alert('Debes proporcionar un motivo y una nota para el periodo.');
+          setSubmitting(false);
+          return;
+        }
+
         await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/period`, {
           startDate,
-          endDate
+          endDate,
+          reason,
+          note,
+          performedBy: user?.username || 'desconocido',
+          userRole: user?.role || 'oficina'
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -121,6 +131,23 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
+          />
+
+          <label>Motivo:</label>
+          <input
+            type="text"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Motivo del periodo"
+            style={{ width: '100%' }}
+          />
+
+          <label>Nota:</label>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Justificación o comentario"
+            style={{ width: '100%' }}
           />
         </div>
       )}

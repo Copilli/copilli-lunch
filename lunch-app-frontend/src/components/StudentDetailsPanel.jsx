@@ -62,17 +62,11 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
       if (isReadOnly) return;
       if (value === 'sin-fondos' && form.tokens > 0) {
         alert('No puedes establecer el estado como "sin fondos" si el estudiante tiene tokens.');
-        setForm(prev => ({
-          ...prev,
-          status: lastValidStatus
-        }));
+        setForm(prev => ({ ...prev, status: lastValidStatus }));
         return;
       }
       setLastValidStatus(value);
-      setForm(prev => ({
-        ...prev,
-        status: value
-      }));
+      setForm(prev => ({ ...prev, status: value }));
     } else {
       setForm(prev => ({ ...prev, [field]: value }));
     }
@@ -170,7 +164,7 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
   };
 
   const exportCSV = () => {
-    if (isReadOnly) return;
+    if (!isAdmin) return;
 
     const header = 'Fecha,Motivo,Nota,Responsable,Cambio\n';
     const rows = studentMovements.map(m => {
@@ -216,120 +210,50 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
 
       <div style={{ marginTop: '1rem' }}>
         <p><strong>ID:</strong> {form.studentId}</p>
-        <p>
-          <strong>Nombre:</strong><br />
-          <input
-            type="text"
-            value={form.name}
-            onChange={(e) => handleChange('name', e.target.value)}
-            style={{ width: '100%' }}
-            disabled={isReadOnly}
-          />
+        <p><strong>Nombre:</strong><br />
+          <input type="text" value={form.name} onChange={(e) => handleChange('name', e.target.value)} style={{ width: '100%' }} disabled={isReadOnly} />
         </p>
-        <p>
-          <strong>Grupo:</strong><br />
-          <input
-            type="text"
-            placeholder="Nivel"
-            value={form.group.level}
-            onChange={(e) => handleChange('group.level', e.target.value)}
-            disabled={isReadOnly}
-          /> - 
-          <input
-            type="text"
-            placeholder="Nombre"
-            value={form.group.name}
-            onChange={(e) => handleChange('group.name', e.target.value)}
-            disabled={isReadOnly}
-          />
+        <p><strong>Grupo:</strong><br />
+          <input type="text" placeholder="Nivel" value={form.group.level} onChange={(e) => handleChange('group.level', e.target.value)} disabled={isReadOnly} /> -
+          <input type="text" placeholder="Nombre" value={form.group.name} onChange={(e) => handleChange('group.name', e.target.value)} disabled={isReadOnly} />
         </p>
-        <p>
-          <strong>Status:</strong><br />
+        <p><strong>Status:</strong><br />
           {form.hasSpecialPeriod ? (
-            <input
-              type="text"
-              value="periodo-activo"
-              disabled
-              style={{ width: '100%', fontStyle: 'italic', color: 'gray' }}
-            />
+            <input type="text" value="periodo-activo" disabled style={{ width: '100%', fontStyle: 'italic', color: 'gray' }} />
           ) : (
-            <select
-              value={form.status}
-              onChange={(e) => handleChange('status', e.target.value)}
-              style={{ width: '100%' }}
-              disabled={isReadOnly}
-            >
+            <select value={form.status} onChange={(e) => handleChange('status', e.target.value)} style={{ width: '100%' }} disabled={isReadOnly}>
               <option value="con-fondos">Con fondos</option>
               <option value="sin-fondos">Sin fondos</option>
               <option value="bloqueado">Bloqueado</option>
             </select>
           )}
         </p>
-        <p>
-          <strong>Tokens actuales:</strong><br />
-          <input
-            type="number"
-            value={form.tokens}
-            disabled
-            style={{ width: '100%', backgroundColor: '#f9f9f9', color: 'gray' }}
-          />
+        <p><strong>Tokens actuales:</strong><br />
+          <input type="number" value={form.tokens} disabled style={{ width: '100%', backgroundColor: '#f9f9f9', color: 'gray' }} />
         </p>
         {isAdmin && (
           <p style={{ fontStyle: 'italic', fontSize: '0.9rem', color: '#555' }}>
             Para modificar los tokens, utiliza la sección "Ajustar tokens manualmente" más abajo.
           </p>
         )}
-        <p>
-          <strong>Periodo especial activo:</strong><br />
-          <input
-            type="checkbox"
-            checked={form.hasSpecialPeriod}
-            onChange={(e) => handleChange('hasSpecialPeriod', e.target.checked)}
-            disabled={isReadOnly}
-          />
+        <p><strong>Periodo especial activo:</strong><br />
+          <input type="checkbox" checked={form.hasSpecialPeriod} onChange={(e) => handleChange('hasSpecialPeriod', e.target.checked)} disabled={isReadOnly} />
         </p>
-
         {form.hasSpecialPeriod && (
           <>
-            <p>
-              <strong>Inicio:</strong><br />
-              <input
-                type="date"
-                value={dayjs(form.specialPeriod?.startDate).format('YYYY-MM-DD')}
-                onChange={(e) => handleSpecialPeriodChange('startDate', e.target.value)}
-                disabled={isReadOnly}
-              />
+            <p><strong>Inicio:</strong><br />
+              <input type="date" value={dayjs(form.specialPeriod?.startDate).format('YYYY-MM-DD')} onChange={(e) => handleSpecialPeriodChange('startDate', e.target.value)} disabled={isReadOnly} />
             </p>
-            <p>
-              <strong>Fin:</strong><br />
-              <input
-                type="date"
-                value={dayjs(form.specialPeriod?.endDate).format('YYYY-MM-DD')}
-                onChange={(e) => handleSpecialPeriodChange('endDate', e.target.value)}
-                disabled={isReadOnly}
-              />
+            <p><strong>Fin:</strong><br />
+              <input type="date" value={dayjs(form.specialPeriod?.endDate).format('YYYY-MM-DD')} onChange={(e) => handleSpecialPeriodChange('endDate', e.target.value)} disabled={isReadOnly} />
             </p>
             {!isReadOnly && (
               <>
-                <p>
-                  <strong>Motivo del periodo:</strong><br />
-                  <input
-                    type="text"
-                    value={periodReason}
-                    onChange={(e) => setPeriodReason(e.target.value)}
-                    placeholder="Motivo"
-                    style={{ width: '100%' }}
-                  />
+                <p><strong>Motivo del periodo:</strong><br />
+                  <input type="text" value={periodReason} onChange={(e) => setPeriodReason(e.target.value)} placeholder="Motivo" style={{ width: '100%' }} />
                 </p>
-                <p>
-                  <strong>Nota del periodo:</strong><br />
-                  <textarea
-                    value={periodNote}
-                    onChange={(e) => setPeriodNote(e.target.value)}
-                    placeholder="Justificación o comentario"
-                    rows={2}
-                    style={{ width: '100%' }}
-                  />
+                <p><strong>Nota del periodo:</strong><br />
+                  <textarea value={periodNote} onChange={(e) => setPeriodNote(e.target.value)} placeholder="Justificación o comentario" rows={2} style={{ width: '100%' }} />
                 </p>
               </>
             )}
@@ -339,21 +263,13 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
 
       {!isReadOnly && (
         <>
-          <button onClick={handleSave} disabled={saving}>
-            {saving ? 'Guardando...' : 'Guardar cambios'}
-          </button>
+          <button onClick={handleSave} disabled={saving}>{saving ? 'Guardando...' : 'Guardar cambios'}</button>
 
           <hr style={{ margin: '2rem 0' }} />
           <h4>Ajustar tokens manualmente</h4>
           <div>
             <label>Cantidad (+/-):</label>
-            <input
-              type="number"
-              value={delta}
-              onChange={(e) => setDelta(parseInt(e.target.value))}
-              style={{ width: '60px', marginRight: '1rem' }}
-            />
-
+            <input type="number" value={delta} onChange={(e) => setDelta(parseInt(e.target.value))} style={{ width: '60px', marginRight: '1rem' }} />
             <label>Motivo:</label>
             <select value={reason} onChange={(e) => setReason(e.target.value)}>
               <option value="pago">Pago</option>
@@ -361,29 +277,16 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
               {isAdmin && <option value="ajuste manual">Ajuste manual</option>}
             </select>
           </div>
-
           <div style={{ marginTop: '0.5rem' }}>
             <label>Nota:</label>
-            <input
-              type="text"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Detalle o justificación"
-              style={{ width: '100%' }}
-            />
+            <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Detalle o justificación" style={{ width: '100%' }} />
           </div>
-
-          <button onClick={handleTokenChange} style={{ marginTop: '1rem' }}>
-            Aplicar cambio de tokens
-          </button>
+          <button onClick={handleTokenChange} style={{ marginTop: '1rem' }}>Aplicar cambio de tokens</button>
         </>
       )}
 
-      {!isReadOnly && (
-        <button
-          onClick={() => exportCSV()}
-          style={{ marginTop: '1rem', marginLeft: '1rem' }}
-        >
+      {isAdmin && (
+        <button onClick={exportCSV} style={{ marginTop: '1rem', marginLeft: '1rem' }}>
           Exportar historial a CSV
         </button>
       )}
