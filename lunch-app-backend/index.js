@@ -32,7 +32,6 @@ mongoose
 // Rutas
 const authRoutes = require('./routes/auth');
 const studentRoutes = require('./routes/students');
-const paymentRoutes = require('./routes/payments');
 const tokenMovementsRoutes = require('./routes/tokenMovements');
 const PeriodLog = require('./models/PeriodLog');
 const TokenMovement = require('./models/TokenMovement');
