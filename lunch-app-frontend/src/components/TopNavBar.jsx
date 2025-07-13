@@ -7,7 +7,7 @@ const TopNavBar = ({ children }) => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    navigate('/', { replace: true });
+    window.location.href = import.meta.env.BASE_URL;
   };
 
   const handleHome = () => {
