@@ -242,12 +242,12 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
           )}
         </p>
         <p>
-          <strong>Tokens:</strong><br />
+          <strong>Tokens actuales:</strong><br />
           <input
             type="number"
             value={form.tokens}
-            onChange={(e) => handleChange('tokens', parseInt(e.target.value))}
-            disabled={isReadOnly}
+            disabled
+            style={{ width: '100%', backgroundColor: '#f9f9f9', color: 'gray' }}
           />
         </p>
         <p>
@@ -258,6 +258,9 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
             onChange={(e) => handleChange('hasSpecialPeriod', e.target.checked)}
             disabled={isReadOnly}
           />
+        </p>
+        <p style={{ fontStyle: 'italic', fontSize: '0.9rem', color: '#555' }}>
+          Para modificar los tokens, utiliza la sección "Ajustar tokens manualmente" más abajo.
         </p>
         {form.hasSpecialPeriod && (
           <>
