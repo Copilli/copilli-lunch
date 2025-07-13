@@ -3,7 +3,7 @@ const router = express.Router();
 const Student = require('../models/Student');
 const TokenMovement = require('../models/TokenMovement');
 const dayjs = require('dayjs');
-const { verifyToken } = require('./middleware/auth');
+const { verifyToken, allowRoles } = require('../middleware/auth');
 
 
 // Obtener todos los estudiantes o buscar por nombre/grupo

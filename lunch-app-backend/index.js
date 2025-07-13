@@ -3,7 +3,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 
-const { verifyToken } = require('./middleware/auth');
+const { verifyToken, allowRoles } = require('./middleware/auth');
 
 const app = express();
 app.use(cors());
