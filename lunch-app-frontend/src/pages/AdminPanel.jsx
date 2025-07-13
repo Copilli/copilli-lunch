@@ -70,6 +70,7 @@ const AdminPanel = ({ setUser }) => {
   }, [movements]);
 
   const showGroupView = !search && selectedLevel && selectedGroup;
+  const showSelectedStudent = search && selectedStudent;
   const showLevelView = !search && selectedLevel && !selectedGroup;
   const showStartView = !search && !selectedLevel;
 
@@ -107,6 +108,44 @@ const AdminPanel = ({ setUser }) => {
           ))}
           <button onClick={() => setSelectedLevel(null)} style={{ marginTop: '1rem' }}>
             ← Volver a niveles
+          </button>
+        </div>
+      )}
+
+      {showSelectedStudent && (
+        <div>
+          <h3>Resultado de búsqueda</h3>
+          <p><strong>{selectedStudent.name}</strong> ({selectedStudent.studentId})</p>
+
+          <StudentCalendarTable
+            students={[selectedStudent]}
+            movements={relevantMovements}
+            month={calendarMonth}
+            year={calendarYear}
+          />
+
+          <div style={{ marginTop: '2rem' }}>
+            <h4>Resumen por alumno</h4>
+            <StudentSummaryCard
+              student={selectedStudent}
+              onSelect={() => {}} // deshabilitado
+            />
+          </div>
+
+          <StudentDetailsPanel
+            student={selectedStudent}
+            movements={movements}
+            onClose={() => {
+              setSelectedStudent(null);
+              setSearch('');
+            }}
+          />
+
+          <button onClick={() => {
+            setSearch('');
+            setSelectedStudent(null);
+          }} style={{ marginTop: '1rem' }}>
+            ← Limpiar búsqueda
           </button>
         </div>
       )}

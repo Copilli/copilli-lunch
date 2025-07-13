@@ -15,6 +15,19 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
   const user = JSON.parse(localStorage.getItem('user'));
   const canUseAjusteManual = user?.role === 'admin';
 
+  useEffect(() => {
+    if (!student) {
+      setActionType('tokens');
+      setTokenAmount(0);
+      setReason('pago');
+      setNote('');
+      setStartDate('');
+      setEndDate('');
+      setConfirming(false);
+      setSubmitting(false);
+    }
+  }, [student]);
+
   const handleSubmit = async () => {
     setSubmitting(true);
     try {

@@ -108,43 +108,100 @@ const OficinaPanel = ({ setUser }) => {
       {selectedGroup && (
         <div>
           <h3>Estudiantes en {selectedLevel} - Grupo {selectedGroup}</h3>
-          <p>{studentsInGroup.length} estudiante(s)</p>
 
-          <div style={{ marginBottom: '1rem' }}>
-            <label>Mes: </label>
-            <select value={calendarMonth} onChange={e => setCalendarMonth(Number(e.target.value))}>
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  {dayjs().month(i).format('MMMM')}
-                </option>
-              ))}
-            </select>
+          {selectedStudent ? (
+            <>
+              <p>Mostrando resultados para: <strong>{selectedStudent.name}</strong> ({selectedStudent.studentId})</p>
 
-            <label style={{ marginLeft: '1rem' }}>Año: </label>
-            <select value={calendarYear} onChange={e => setCalendarYear(Number(e.target.value))}>
-              {Array.from({ length: 5 }, (_, i) => calendarYear - 2 + i).map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-          </div>
-
-          <StudentCalendarTable
-            students={studentsInGroup}
-            movements={relevantMovements}
-            month={calendarMonth}
-            year={calendarYear}
-          />
-
-          <div style={{ marginTop: '2rem' }}>
-            <h4>Resumen por alumno</h4>
-            {studentsInGroup.map(student => (
-              <StudentSummaryCard
-                key={student.studentId}
-                student={student}
-                onSelect={setSelectedStudent}
+              <StudentCalendarTable
+                students={[selectedStudent]}
+                movements={relevantMovements}
+                month={calendarMonth}
+                year={calendarYear}
               />
-            ))}
-          </div>
+
+              <div style={{ marginTop: '2rem' }}>
+                <h4>Resumen por alumno</h4>
+                <StudentSummaryCard
+                  student={selectedStudent}
+                  onSelect={() => {}}
+                />
+              </div>
+
+              <StudentDetailsPanel
+                student={selectedStudent}
+                movements={movements}
+                onClose={() => setSelectedStudent(null)}
+              />
+
+              {/** Solo en Oficina */}
+              {panelName === 'oficina' && (
+                <StudentOfficeActions
+                  student={selectedStudent}
+                  onUpdate={() => {
+                    fetchStudents();
+                    fetchMovements();
+                  }}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              <p>{studentsInGroup.length} estudiante(s)</p>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label>Mes: </label>
+                <select value={calendarMonth} onChange={e => setCalendarMonth(Number(e.target.value))}>
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      {dayjs().month(i).format('MMMM')}
+                    </option>
+                  ))}
+                </select>
+
+                <label style={{ marginLeft: '1rem' }}>Año: </label>
+                <select value={calendarYear} onChange={e => setCalendarYear(Number(e.target.value))}>
+                  {Array.from({ length: 5 }, (_, i) => calendarYear - 2 + i).map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+
+              <StudentCalendarTable
+                students={studentsInGroup}
+                movements={relevantMovements}
+                month={calendarMonth}
+                year={calendarYear}
+              />
+
+              <div style={{ marginTop: '2rem' }}>
+                <h4>Resumen por alumno</h4>
+                {studentsInGroup.map(student => (
+                  <StudentSummaryCard
+                    key={student.studentId}
+                    student={student}
+                    onSelect={setSelectedStudent}
+                  />
+                ))}
+              </div>
+
+              <StudentDetailsPanel
+                student={selectedStudent}
+                movements={movements}
+                onClose={() => setSelectedStudent(null)}
+              />
+
+              {panelName === 'oficina' && selectedStudent && (
+                <StudentOfficeActions
+                  student={selectedStudent}
+                  onUpdate={() => {
+                    fetchStudents();
+                    fetchMovements();
+                  }}
+                />
+              )}
+            </>
+          )}
 
           <button onClick={() => setSelectedGroup(null)} style={{ marginTop: '1rem' }}>
             ← Volver a grupos
