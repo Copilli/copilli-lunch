@@ -1,12 +1,14 @@
 import { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
+import TopNavBar from '../components/TopNavBar';
 import SearchBar from '../components/SearchBar';
 import LevelCard from '../components/LevelCard';
 import GroupCard from '../components/GroupCard';
 import StudentCalendarTable from '../components/StudentCalendarTable';
 import StudentDetailsPanel from '../components/StudentDetailsPanel';
 import StudentSummaryCard from '../components/StudentSummaryCard';
+import StudentImportPanel from '../components/StudentImportPanel';
 
 const AdminPanel = () => {
   const [students, setStudents] = useState([]);
@@ -66,7 +68,11 @@ const AdminPanel = () => {
   return (
     <div style={{ padding: '2rem' }}>
       <h2>Panel de Administración</h2>
-      <SearchBar search={search} setSearch={setSearch} />
+      <TopNavBar>
+        <SearchBar search={search} setSearch={setSearch} />
+      </TopNavBar>
+
+      <StudentImportPanel onSuccess={() => window.location.reload()} />
 
       {!search && !selectedLevel && (
         <div>

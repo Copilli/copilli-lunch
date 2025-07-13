@@ -95,7 +95,10 @@ const CocinaPanel = () => {
   return (
     <div style={{ padding: '2rem' }}>
       <h2>Panel de Cocina</h2>
-      <SearchBar search={search} setSearch={setSearch} />
+      <TopNavBar>
+        <SearchBar search={search} setSearch={setSearch} />
+      </TopNavBar>
+
 
       {!search && !selectedLevel && (
         <div>

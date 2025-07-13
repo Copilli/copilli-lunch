@@ -5,10 +5,12 @@ import dayjs from 'dayjs';
 const StudentDetailsPanel = ({ student, movements, onClose }) => {
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [originalTokens, setOriginalTokens] = useState(0);
 
   useEffect(() => {
     if (student) {
       setForm({ ...student });
+      setOriginalTokens(student.tokens);
     }
   }, [student]);
 
@@ -32,17 +34,40 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
     }
   };
 
+  const handleSpecialPeriodChange = (field, value) => {
+    setForm(prev => ({
+      ...prev,
+      specialPeriod: {
+        ...prev.specialPeriod,
+        [field]: value
+      }
+    }));
+  };
+
   const handleSave = async () => {
     setSaving(true);
+    const token = localStorage.getItem('token');
+
     try {
-      const token = localStorage.getItem('token');
-      await axios.put(
-        `${import.meta.env.VITE_API_URL}/students/${student._id}`,
-        form,
-        {
+      // PATCH if tokens changed
+      const delta = form.tokens - originalTokens;
+      if (delta !== 0) {
+        await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/tokens`, {
+          delta,
+          reason: 'ajuste manual',
+          note: 'ajuste desde panel admin',
+          performedBy: 'admin',
+          userRole: 'admin'
+        }, {
           headers: { Authorization: `Bearer ${token}` }
-        }
-      );
+        });
+      }
+
+      // PUT to update the rest
+      await axios.put(`${import.meta.env.VITE_API_URL}/students/${student._id}`, form, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
       alert('Estudiante actualizado.');
     } catch (err) {
       console.error(err);
@@ -129,6 +154,42 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
             onChange={(e) => handleChange('status', e.target.value)}
           />
         </p>
+        <p>
+          <strong>Tokens:</strong><br />
+          <input
+            type="number"
+            value={form.tokens}
+            onChange={(e) => handleChange('tokens', parseInt(e.target.value))}
+          />
+        </p>
+        <p>
+          <strong>Periodo especial activo:</strong><br />
+          <input
+            type="checkbox"
+            checked={form.hasSpecialPeriod}
+            onChange={(e) => handleChange('hasSpecialPeriod', e.target.checked)}
+          />
+        </p>
+        {form.hasSpecialPeriod && (
+          <>
+            <p>
+              <strong>Inicio:</strong><br />
+              <input
+                type="date"
+                value={dayjs(form.specialPeriod?.startDate).format('YYYY-MM-DD')}
+                onChange={(e) => handleSpecialPeriodChange('startDate', e.target.value)}
+              />
+            </p>
+            <p>
+              <strong>Fin:</strong><br />
+              <input
+                type="date"
+                value={dayjs(form.specialPeriod?.endDate).format('YYYY-MM-DD')}
+                onChange={(e) => handleSpecialPeriodChange('endDate', e.target.value)}
+              />
+            </p>
+          </>
+        )}
       </div>
 
       <button onClick={handleSave} disabled={saving}>
