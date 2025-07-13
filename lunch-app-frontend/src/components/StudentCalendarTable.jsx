@@ -21,7 +21,6 @@ const StudentCalendarTable = ({ students, movements, month, year }) => {
   const selectedMonth = month ?? dayjs().month() + 1;
   const selectedYear = year ?? dayjs().year();
   const days = getDaysInMonth(selectedMonth, selectedYear);
-  const now = dayjs(); // ✅ define 'now'
 
   // Map de movimientos por studentId
   const movementMap = {};
