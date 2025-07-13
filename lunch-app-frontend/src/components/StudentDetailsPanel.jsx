@@ -13,7 +13,16 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
 
   useEffect(() => {
     if (student) {
-      setForm({ ...student });
+      const today = dayjs().startOf('day');
+      const periodEnd = dayjs(student.specialPeriod?.endDate).startOf('day');
+      const isExpired = student.hasSpecialPeriod && periodEnd.isBefore(today);
+
+      setForm({
+        ...student,
+        hasSpecialPeriod: isExpired ? false : student.hasSpecialPeriod,
+        specialPeriod: isExpired ? { startDate: null, endDate: null } : student.specialPeriod
+      });
+
       setOriginalTokens(student.tokens);
     }
   }, [student]);
@@ -27,13 +36,21 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
   const handleChange = (field, value) => {
-    if (isReadOnly) return;
     if (field.startsWith('group.')) {
       setForm(prev => ({
         ...prev,
         group: {
           ...prev.group,
           [field.split('.')[1]]: value
+        }
+      }));
+    } else if (field === 'hasSpecialPeriod' && value === false) {
+      setForm(prev => ({
+        ...prev,
+        hasSpecialPeriod: false,
+        specialPeriod: {
+          startDate: null,
+          endDate: null
         }
       }));
     } else {
@@ -188,17 +205,24 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
         </p>
         <p>
           <strong>Status:</strong><br />
-          <select
-            value={form.status}
-            onChange={(e) => handleChange('status', e.target.value)}
-            style={{ width: '100%' }}
-            disabled={isReadOnly}
-          >
-            <option value="periodo-activo">Periodo activo</option>
-            <option value="con-fondos">Con fondos</option>
-            <option value="sin-fondos">Sin fondos</option>
-            <option value="bloqueado">Bloqueado</option>
-          </select>
+          {form.hasSpecialPeriod ? (
+            <input
+              type="text"
+              value="periodo-activo"
+              disabled
+              style={{ width: '100%', fontStyle: 'italic', color: 'gray' }}
+            />
+          ) : (
+            <select
+              value={form.status}
+              onChange={(e) => handleChange('status', e.target.value)}
+              style={{ width: '100%' }}
+            >
+              <option value="con-fondos">Con fondos</option>
+              <option value="sin-fondos">Sin fondos</option>
+              <option value="bloqueado">Bloqueado</option>
+            </select>
+          )}
         </p>
         <p>
           <strong>Tokens:</strong><br />
