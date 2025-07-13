@@ -39,7 +39,6 @@ const TokenMovement = require('./models/TokenMovement');
 if (
   !authRoutes ||
   !studentRoutes ||
-  !paymentRoutes ||
   !tokenMovementsRoutes
 ) {
   console.error('❌ Uno de los archivos de rutas no se pudo cargar. Verifica los nombres y exports.');
