@@ -7,7 +7,9 @@ const StudentImportPanel = ({ onSuccess }) => {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handleFileUpload = async () => {
+  const handleFileUpload = async (e) => {
+    e.preventDefault(); // ✅ evita recarga de página
+
     const file = fileInputRef.current.files[0];
     if (!file) return;
 
@@ -42,16 +44,28 @@ const StudentImportPanel = ({ onSuccess }) => {
   return (
     <div style={{ marginBottom: '2rem', border: '1px solid #ccc', padding: '1rem', borderRadius: 8 }}>
       <h3>Importar estudiantes desde CSV</h3>
-      <input type="file" accept=".csv" ref={fileInputRef} />
-      <button onClick={handleFileUpload} disabled={loading} style={{ marginLeft: '1rem' }}>
-        {loading ? 'Importando...' : 'Importar'}
-      </button>
+      <form onSubmit={handleFileUpload}>
+        <input type="file" accept=".csv" ref={fileInputRef} />
+        <button type="submit" disabled={loading} style={{ marginLeft: '1rem' }}>
+          {loading ? 'Importando...' : 'Importar'}
+        </button>
+      </form>
 
       {result && (
         <div style={{ marginTop: '1rem' }}>
           <strong>Resultado:</strong>
           <p>✔️ {result.created} estudiantes creados</p>
           <p>♻️ {result.updated} estudiantes actualizados</p>
+          {result.errores?.length > 0 && (
+            <details style={{ marginTop: '0.5rem' }}>
+              <summary>⚠️ Errores ({result.errores.length})</summary>
+              <ul>
+                {result.errores.map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
+              </ul>
+            </details>
+          )}
         </div>
       )}
     </div>
