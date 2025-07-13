@@ -134,16 +134,13 @@ const OficinaPanel = ({ setUser }) => {
                 onClose={() => setSelectedStudent(null)}
               />
 
-              {/** Solo en Oficina */}
-              {panelName === 'oficina' && (
-                <StudentOfficeActions
-                  student={selectedStudent}
-                  onUpdate={() => {
-                    fetchStudents();
-                    fetchMovements();
-                  }}
-                />
-              )}
+              <StudentOfficeActions
+                student={selectedStudent}
+                onUpdate={() => {
+                  fetchStudents();
+                  fetchMovements();
+                }}
+              />
             </>
           ) : (
             <>
@@ -190,16 +187,6 @@ const OficinaPanel = ({ setUser }) => {
                 movements={movements}
                 onClose={() => setSelectedStudent(null)}
               />
-
-              {panelName === 'oficina' && selectedStudent && (
-                <StudentOfficeActions
-                  student={selectedStudent}
-                  onUpdate={() => {
-                    fetchStudents();
-                    fetchMovements();
-                  }}
-                />
-              )}
             </>
           )}
 
@@ -208,7 +195,6 @@ const OficinaPanel = ({ setUser }) => {
           </button>
         </div>
       )}
-
       {selectedStudent && (
         <>
           <StudentDetailsPanel
