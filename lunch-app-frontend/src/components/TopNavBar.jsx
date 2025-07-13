@@ -2,23 +2,21 @@ import { useNavigate } from 'react-router-dom';
 
 const TopNavBar = ({ children }) => {
   const navigate = useNavigate();
-  const base = import.meta.env.BASE_URL; // "/copilli-launch/"
-
   const user = JSON.parse(localStorage.getItem('user'));
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    navigate(base);
+    navigate('/', { replace: true });
   };
 
   const handleHome = () => {
-    if (!user) return navigate(base);
+    if (!user) return navigate('/');
 
-    if (user.role === 'admin') navigate(`${base}admin`);
-    else if (user.role === 'oficina') navigate(`${base}oficina`);
-    else if (user.role === 'cocina') navigate(`${base}cocina`);
-    else navigate(base);
+    if (user.role === 'admin') navigate('/admin');
+    else if (user.role === 'oficina') navigate('/oficina');
+    else if (user.role === 'cocina') navigate('/cocina');
+    else navigate('/');
   };
 
   return (
