@@ -37,18 +37,7 @@ const App = () => {
         path="/"
         element={
           user ? (
-            <Navigate
-              to={
-                user.role === 'admin'
-                  ? `${import.meta.env.BASE_URL}admin`
-                  : user.role === 'oficina'
-                  ? `${import.meta.env.BASE_URL}oficina`
-                  : user.role === 'cocina'
-                  ? `${import.meta.env.BASE_URL}cocina`
-                  : import.meta.env.BASE_URL
-              }
-              replace
-            />
+            <Navigate to={`/${user.role}`} replace />
           ) : (
             <Login onLogin={setUser} />
           )
