@@ -42,14 +42,20 @@ const StudentImportPanel = ({ onSuccess }) => {
   };
 
   return (
-    <div style={{ marginBottom: '2rem', border: '1px solid #ccc', padding: '1rem', borderRadius: 8 }}>
+    <form
+      onSubmit={handleFileUpload}
+      style={{
+        marginBottom: '2rem',
+        border: '1px solid #ccc',
+        padding: '1rem',
+        borderRadius: 8
+      }}
+    >
       <h3>Importar estudiantes desde CSV</h3>
-      <form onSubmit={handleFileUpload}>
-        <input type="file" accept=".csv" ref={fileInputRef} />
-        <button type="submit" disabled={loading} style={{ marginLeft: '1rem' }}>
-          {loading ? 'Importando...' : 'Importar'}
-        </button>
-      </form>
+      <input type="file" accept=".csv" ref={fileInputRef} />
+      <button type="submit" disabled={loading} style={{ marginLeft: '1rem' }}>
+        {loading ? 'Importando...' : 'Importar'}
+      </button>
 
       {result && (
         <div style={{ marginTop: '1rem' }}>
@@ -68,7 +74,7 @@ const StudentImportPanel = ({ onSuccess }) => {
           )}
         </div>
       )}
-    </div>
+    </form>
   );
 };
 
