@@ -31,11 +31,7 @@ const TopNavBar = ({ children, setUser }) => {
   };
 
   const handleHome = () => {
-    if (!user) return navigate('/');
-    if (user.role === 'admin') navigate('/admin');
-    else if (user.role === 'oficina') navigate('/oficina');
-    else if (user.role === 'cocina') navigate('/cocina');
-    else navigate('/');
+    window.location.href = '/';
   };
 
   return (
