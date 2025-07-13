@@ -134,19 +134,17 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
           />
 
           <label>Motivo:</label>
-          <input
-            type="text"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Motivo del periodo"
-            style={{ width: '100%' }}
-          />
+          <select value={reason} onChange={(e) => setReason(e.target.value)}>
+            <option value="pago">Pago</option>
+            <option value="justificado">Justificado</option>
+            {canUseAjusteManual && <option value="ajuste manual">Ajuste manual</option>}
+          </select>
 
           <label>Nota:</label>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Justificación o comentario"
+            placeholder="Especifica detalles o ticket"
             style={{ width: '100%' }}
           />
         </div>

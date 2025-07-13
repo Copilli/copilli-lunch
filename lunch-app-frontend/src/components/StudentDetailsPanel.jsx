@@ -12,6 +12,7 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
   const [periodReason, setPeriodReason] = useState('nuevo periodo');
   const [periodNote, setPeriodNote] = useState('');
   const [lastValidStatus, setLastValidStatus] = useState(null);
+  const [visibleMovements, setVisibleMovements] = useState(5);
   const user = JSON.parse(localStorage.getItem('user'));
 
   useEffect(() => {
@@ -28,6 +29,7 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
 
       setOriginalTokens(student.tokens);
       setLastValidStatus(student.status);
+      setVisibleMovements(5);
     }
   }, [student]);
 
@@ -185,6 +187,10 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
     document.body.removeChild(link);
   };
 
+  const handleLoadMore = () => {
+    setVisibleMovements(prev => prev + 5);
+  };
+
   return (
     <div style={{ marginTop: '2rem', padding: '1rem', border: '1px solid #ccc', borderRadius: 8 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -291,10 +297,10 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
         </button>
       )}
 
-      <hr style={{ margin: '1rem 0' }} />
+        <hr style={{ margin: '1rem 0' }} />
       <h4>Historial de movimientos</h4>
       {studentMovements.length === 0 && <p>No hay transacciones registradas.</p>}
-      {studentMovements.map((m, i) => (
+      {studentMovements.slice(0, visibleMovements).map((m, i) => (
         <div key={i} style={{
           border: '1px solid #ddd',
           borderRadius: 6,
@@ -309,6 +315,11 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
           <p><strong>Cambio:</strong> {m.change > 0 ? '+' : ''}{m.change}</p>
         </div>
       ))}
+      {visibleMovements < studentMovements.length && (
+        <button onClick={handleLoadMore} style={{ marginTop: '1rem' }}>
+          Cargar más
+        </button>
+      )}
     </div>
   );
 };
