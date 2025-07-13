@@ -7,7 +7,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middlewares globales
-app.use(cors());
+app.use(cors({
+  origin: 'https://copilli.github.io',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 // Conexión a MongoDB
