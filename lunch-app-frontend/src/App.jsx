@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import AdminPanel from './pages/AdminPanel';
 import OficinaPanel from './pages/OficinaPanel';
@@ -9,7 +9,6 @@ import CocinaPanel from './pages/CocinaPanel';
 const App = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -30,24 +29,31 @@ const App = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  // Redirigir al panel según el rol una vez que el usuario está autenticado
-  useEffect(() => {
-    const base = import.meta.env.BASE_URL;
-    if (!user) return;
-
-    console.log('Redirigiendo a:', user.role);
-
-    if (user.role === 'admin') navigate(`${base}admin`);
-    else if (user.role === 'oficina') navigate(`${base}oficina`);
-    else if (user.role === 'cocina') navigate(`${base}cocina`);
-    else navigate(base);
-  }, [user]);
-
   if (loading) return null;
 
   return (
     <Routes>
-      <Route path="/" element={<Login onLogin={setUser} />} />
+      <Route
+        path="/"
+        element={
+          user ? (
+            <Navigate
+              to={
+                user.role === 'admin'
+                  ? `${import.meta.env.BASE_URL}admin`
+                  : user.role === 'oficina'
+                  ? `${import.meta.env.BASE_URL}oficina`
+                  : user.role === 'cocina'
+                  ? `${import.meta.env.BASE_URL}cocina`
+                  : import.meta.env.BASE_URL
+              }
+              replace
+            />
+          ) : (
+            <Login onLogin={setUser} />
+          )
+        }
+      />
       <Route path="/admin" element={<AdminPanel />} />
       <Route path="/oficina" element={<OficinaPanel />} />
       <Route path="/cocina" element={<CocinaPanel />} />
