@@ -21,14 +21,42 @@ const StudentImportPanel = ({ onSuccess }) => {
       skipEmptyLines: true,
       complete: async (results) => {
         try {
+          const transformed = results.data.map(row => {
+            const {
+              'group.level': level,
+              'group.name': name,
+              'specialPeriod.startDate': startDate,
+              'specialPeriod.endDate': endDate,
+              ...rest
+            } = row;
+
+            return {
+              ...rest,
+              tokens: parseInt(row.tokens || 0),
+              hasSpecialPeriod: row.hasSpecialPeriod === 'TRUE' || row.hasSpecialPeriod === true,
+              group: {
+                level: level?.toLowerCase(),
+                name
+              },
+              specialPeriod:
+                row.hasSpecialPeriod === 'TRUE' || row.hasSpecialPeriod === true
+                  ? {
+                      startDate: startDate || null,
+                      endDate: endDate || null
+                    }
+                  : undefined
+            };
+          });
+
           const token = localStorage.getItem('token');
           const res = await axios.post(
             `${import.meta.env.VITE_API_URL}/students/import-bulk`,
-            { students: results.data },
+            { students: transformed },
             {
               headers: { Authorization: `Bearer ${token}` }
             }
           );
+
           setResult(res.data);
           if (onSuccess) onSuccess();
         } catch (err) {
