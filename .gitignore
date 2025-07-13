@@ -1,0 +1,30 @@
+# Node modules
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Entorno de desarrollo
+.env
+
+# Archivos temporales
+*.tmp
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Editor config
+.vscode/
+.idea/
+
+# Sistema operativo
+*.bak
+*.orig
+
+# Archivos de salida (opcional)
+dist/
+build/
+coverage/
