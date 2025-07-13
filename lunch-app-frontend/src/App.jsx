@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import AdminPanel from './pages/AdminPanel';
 import OficinaPanel from './pages/OficinaPanel';
@@ -29,14 +29,12 @@ const App = () => {
   }
 
   return (
-    <BrowserRouter>
-      <Routes>
-        {user.role === 'admin' && <Route path="*" element={<AdminPanel />} />}
-        {user.role === 'oficina' && <Route path="*" element={<OficinaPanel />} />}
-        {user.role === 'cocina' && <Route path="*" element={<CocinaPanel />} />}
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </BrowserRouter>
+    <Routes>
+      {user.role === 'admin' && <Route path="*" element={<AdminPanel />} />}
+      {user.role === 'oficina' && <Route path="*" element={<OficinaPanel />} />}
+      {user.role === 'cocina' && <Route path="*" element={<CocinaPanel />} />}
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
   );
 };
 
