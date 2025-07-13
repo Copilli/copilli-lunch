@@ -10,7 +10,7 @@ import StudentDetailsPanel from '../components/StudentDetailsPanel';
 import StudentSummaryCard from '../components/StudentSummaryCard';
 import StudentImportPanel from '../components/StudentImportPanel';
 
-const AdminPanel = () => {
+const AdminPanel = ({ setUser }) => {
   const [students, setStudents] = useState([]);
   const [movements, setMovements] = useState([]);
   const [search, setSearch] = useState('');
@@ -68,7 +68,7 @@ const AdminPanel = () => {
   return (
     <div style={{ padding: '2rem' }}>
       <h2>Panel de Administración</h2>
-      <TopNavBar>
+      <TopNavBar setUser={setUser}>
         <SearchBar search={search} setSearch={setSearch} />
       </TopNavBar>
 

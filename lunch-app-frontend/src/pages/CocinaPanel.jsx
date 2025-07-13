@@ -6,7 +6,7 @@ import SearchBar from '../components/SearchBar';
 import LevelCard from '../components/LevelCard';
 import GroupCard from '../components/GroupCard';
 
-const CocinaPanel = () => {
+const CocinaPanel = ({ setUser }) => {
   const [students, setStudents] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedLevel, setSelectedLevel] = useState(null);
@@ -96,7 +96,7 @@ const CocinaPanel = () => {
   return (
     <div style={{ padding: '2rem' }}>
       <h2>Panel de Cocina</h2>
-      <TopNavBar>
+      <TopNavBar setUser={setUser}>
         <SearchBar search={search} setSearch={setSearch} />
       </TopNavBar>
 

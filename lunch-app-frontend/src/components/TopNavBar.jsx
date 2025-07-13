@@ -1,13 +1,14 @@
 import { useNavigate } from 'react-router-dom';
 
-const TopNavBar = ({ children }) => {
+const TopNavBar = ({ children, setUser }) => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user'));
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    window.location.href = import.meta.env.BASE_URL;
+    setUser(null); // 🔁 borra el usuario de estado React
+    navigate('/', { replace: true }); // redirige al login (React Router usa el basename)
   };
 
   const handleHome = () => {

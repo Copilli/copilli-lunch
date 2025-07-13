@@ -10,7 +10,7 @@ import StudentSummaryCard from '../components/StudentSummaryCard';
 import StudentDetailsPanel from '../components/StudentDetailsPanel';
 import StudentOfficeActions from '../components/StudentOfficeActions';
 
-const OficinaPanel = () => {
+const OficinaPanel = ({ setUser }) => {
   const [students, setStudents] = useState([]);
   const [movements, setMovements] = useState([]);
   const [search, setSearch] = useState('');
@@ -68,7 +68,7 @@ const OficinaPanel = () => {
   return (
     <div style={{ padding: '2rem' }}>
       <h2>Panel de Oficina</h2>
-      <TopNavBar>
+      <TopNavBar setUser={setUser}>
         <SearchBar search={search} setSearch={setSearch} />
       </TopNavBar>
 

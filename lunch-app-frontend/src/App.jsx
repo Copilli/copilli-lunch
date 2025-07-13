@@ -33,19 +33,35 @@ const App = () => {
 
   return (
     <Routes>
+      {/* Si no hay usuario, mostrar login */}
       <Route
         path="/"
         element={
           user ? (
-            <Navigate to={`/${user.role}`} replace />
+            <Navigate
+              to={
+                user.role === 'admin'
+                  ? '/admin'
+                  : user.role === 'oficina'
+                  ? '/oficina'
+                  : user.role === 'cocina'
+                  ? '/cocina'
+                  : '/'
+              }
+              replace
+            />
           ) : (
             <Login onLogin={setUser} />
           )
         }
       />
-      <Route path="/admin" element={<AdminPanel />} />
-      <Route path="/oficina" element={<OficinaPanel />} />
-      <Route path="/cocina" element={<CocinaPanel />} />
+
+      {/* Rutas protegidas */}
+      <Route path="/admin" element={<AdminPanel setUser={setUser} />} />
+      <Route path="/oficina" element={<OficinaPanel setUser={setUser} />} />
+      <Route path="/cocina" element={<CocinaPanel setUser={setUser} />} />
+
+      {/* Cualquier otra ruta redirige al login */}
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
