@@ -39,7 +39,7 @@ if (
 }
 
 // Ruta pública para login
-app.use('/api/login', authRoutes);
+app.use('/api/auth', authRoutes);
 
 // Rutas protegidas
 app.use('/api/students', studentRoutes);
