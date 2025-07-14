@@ -1,9 +1,14 @@
+import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
+
+//
+// 🔧 Utilidades
+//
 
 const getDaysInMonth = (month, year) => {
   const days = [];
@@ -15,18 +20,24 @@ const getDaysInMonth = (month, year) => {
 };
 
 const isInAnyPeriod = (date, logs = []) => {
-  return logs.some(period =>
-    dayjs(date).isSameOrAfter(dayjs(period.startDate), 'day') &&
-    dayjs(date).isSameOrBefore(dayjs(period.endDate), 'day')
-  );
+  return logs.some(period => {
+    if (!period.startDate || !period.endDate) return false;
+    const d = dayjs(date).startOf('day');
+    const start = dayjs(period.startDate).startOf('day');
+    const end = dayjs(period.endDate).startOf('day');
+    return d.isSameOrAfter(start) && d.isSameOrBefore(end);
+  });
 };
 
+//
+// 📦 Componente 1: Solo pinta la tabla
+//
+
 const StudentCalendarTable = ({ students, movements, periodLogs = [], month, year }) => {
-  const selectedMonth = month ?? dayjs().month() + 1;
-  const selectedYear = year ?? dayjs().year();
+  const selectedMonth = month;
+  const selectedYear = year;
   const days = getDaysInMonth(selectedMonth, selectedYear);
 
-  // Construye el mapa de logs por studentId
   const periodLogsMap = Array.isArray(periodLogs)
     ? periodLogs.reduce((acc, log) => {
         if (!acc[log.studentId]) acc[log.studentId] = [];
@@ -48,10 +59,6 @@ const StudentCalendarTable = ({ students, movements, periodLogs = [], month, yea
         </thead>
         <tbody>
           {students.map(student => {
-            // Debug: muestra los ids
-            // console.log('Student:', student.studentId, 'Movements:', movements.map(m => m.studentId));
-
-            // Fuerza ambos a string para evitar problemas de tipo
             const studentMovs = movements
               .filter(m => String(m.studentId) === String(student.studentId))
               .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
@@ -97,4 +104,76 @@ const StudentCalendarTable = ({ students, movements, periodLogs = [], month, yea
   );
 };
 
-export default StudentCalendarTable;
+//
+// 🚀 Componente 2: Hace fetch de datos y muestra la tabla
+//
+
+const StudentCalendarContainer = ({ month, year }) => {
+  const [students, setStudents] = useState([]);
+  const [movements, setMovements] = useState([]);
+  const [periodLogs, setPeriodLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const token = localStorage.getItem('token');
+
+  const fetchAllPeriodLogs = async (students) => {
+    const allLogs = await Promise.all(
+      students.map(async (s) => {
+        try {
+          const res = await fetch(`/api/students/${s.studentId}/period-logs`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          const logs = await res.json();
+          return logs.map(log => ({ ...log, studentId: s.studentId }));
+        } catch (err) {
+          console.error(`Error al obtener logs de ${s.studentId}`, err);
+          return [];
+        }
+      })
+    );
+    return allLogs.flat();
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const sRes = await fetch('/api/students', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const mRes = await fetch('/api/token-movements', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const studentsData = await sRes.json();
+        const movementsData = await mRes.json();
+        const periodLogsData = await fetchAllPeriodLogs(studentsData);
+
+        setStudents(studentsData);
+        setMovements(movementsData);
+        setPeriodLogs(periodLogsData);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error al cargar los datos:', err);
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [token]);
+
+  if (loading) return <p>Cargando calendario...</p>;
+
+  return (
+    <StudentCalendarTable
+      students={students}
+      movements={movements}
+      periodLogs={periodLogs}
+      month={month}
+      year={year}
+    />
+  );
+};
+
+export default StudentCalendarContainer;
