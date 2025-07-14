@@ -113,7 +113,7 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
       )}
 
       <div className="mt-4 p-3 border rounded">
-        <h4>Acciones de desayunos</h4>
+        <h4>Ajustar desayunos</h4>
 
         <div className="mb-3">
           <label className="form-label">Tipo de acción:</label>

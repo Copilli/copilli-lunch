@@ -142,37 +142,6 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
     }
   };
 
-  const handleTokenChange = async () => {
-    if ((reason === 'pago' || reason === 'justificado') && !note.trim()) {
-      alert('La nota es obligatoria para este motivo.');
-      return;
-    }
-
-    if (form.status === 'bloqueado' && delta < 0) {
-      alert('Este alumno está bloqueado. No se pueden reducir tokens.');
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('token');
-      await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/tokens`, {
-        delta,
-        reason,
-        note,
-        performedBy: user?.username || 'admin',
-        userRole: user?.role || 'admin'
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      alert('Tokens actualizados.');
-      setDelta(0);
-      setNote('');
-    } catch (err) {
-      console.error(err);
-      alert('Error al actualizar tokens.');
-    }
-  };
-
   const exportCSV = () => {
     if (!isAdmin) return;
 
@@ -297,7 +266,7 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
 
           {isAdmin && (
             <div className="form-text mb-3">
-              Para modificar los tokens, utiliza la sección "Ajustar tokens manualmente" más abajo.
+              Para modificar los tokens, utiliza la sección "Ajustar desayunos" más abajo.
             </div>
           )}
 
@@ -337,6 +306,18 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
                   />
                 </div>
               </div>
+            </>
+          )}
+
+          {isAdmin && (
+            <>
+              <div className="form-text mb-3">
+                Para modificar un periodo, utiliza la sección "Ajustar desayunos" más abajo. Si quieres eliminar el periodo actual solo desmarca la opción "Tiene periodo especial activo".
+              </div>
+
+              <button className="btn btn-primary mb-3" onClick={handleSave} disabled={saving}>
+                  {saving ? 'Guardando...' : 'Guardar cambios'}
+              </button>
             </>
           )}
         </div>
