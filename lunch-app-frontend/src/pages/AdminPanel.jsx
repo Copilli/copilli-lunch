@@ -8,6 +8,7 @@ import GroupCard from '../components/GroupCard';
 import StudentCalendarTable from '../components/StudentCalendarTable';
 import StudentDetailsPanel from '../components/StudentDetailsPanel';
 import StudentSummaryCard from '../components/StudentSummaryCard';
+import StudentImportPanel from '../components/StudentImportPanel'; // <--- Importa aquí
 
 const AdminPanel = ({ setUser }) => {
   const [students, setStudents] = useState([]);
@@ -101,10 +102,9 @@ const AdminPanel = ({ setUser }) => {
       </TopNavBar>
 
       {/* Import solo visible para admin */}
-      {user?.role === 'admin' && (() => {
-        const StudentImportPanel = require('../components/StudentImportPanel').default;
-        return <StudentImportPanel onSuccess={fetchStudents} />;
-      })()}
+      {user?.role === 'admin' && (
+        <StudentImportPanel onSuccess={fetchStudents} />
+      )}
 
       {showStartView && (
         <div className="row">

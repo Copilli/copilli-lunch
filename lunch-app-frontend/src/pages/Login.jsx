@@ -33,28 +33,35 @@ const Login = ({ onLogin }) => {
   };
 
   return (
-    <div className="app-container login-container" style={{ maxWidth: 400, margin: 'auto', padding: '2rem' }}>
-      <h2>Iniciar sesión</h2>
-      <form onSubmit={handleSubmit}>
-        <label>Usuario:</label>
-        <input
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          required
-        />
-        <br />
-        <label>Contraseña:</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        <br />
-        <button type="submit">Entrar</button>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-      </form>
+    <div className="app-container login-container d-flex align-items-center justify-content-center min-vh-100 bg-light">
+      <div className="card shadow-sm p-4" style={{ maxWidth: 400, width: '100%' }}>
+        <h2 className="mb-4 text-center">Iniciar sesión</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-3">
+            <label className="form-label">Usuario:</label>
+            <input
+              type="text"
+              className="form-control"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              autoFocus
+            />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Contraseña:</label>
+            <input
+              type="password"
+              className="form-control"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+          {error && <div className="alert alert-danger py-2">{error}</div>}
+          <button type="submit" className="btn btn-primary w-100">Entrar</button>
+        </form>
+      </div>
     </div>
   );
 };
