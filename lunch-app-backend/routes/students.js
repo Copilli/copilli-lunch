@@ -5,6 +5,12 @@ const TokenMovement = require('../models/TokenMovement');
 const PeriodLog = require('../models/PeriodLog');
 
 const dayjs = require('dayjs');
+const isSameOrBefore = require('dayjs/plugin/isSameOrBefore');
+const isSameOrAfter = require('dayjs/plugin/isSameOrAfter');
+
+dayjs.extend(isSameOrBefore);
+dayjs.extend(isSameOrAfter);
+
 const { verifyToken, allowRoles } = require('../middleware/auth');
 
 const VALID_STATUSES = ['periodo-activo', 'con-fondos', 'sin-fondos', 'bloqueado'];
