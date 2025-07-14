@@ -45,27 +45,20 @@ const SearchBar = ({ search, setSearch, students, onSelect }) => {
   }, []);
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', marginBottom: '1rem' }}>
+    <div ref={containerRef} className="position-relative mb-3" style={{ maxWidth: 400 }}>
       <input
         type="text"
         placeholder="Buscar por nombre o ID..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         onKeyDown={handleKeyDown}
-        style={{ width: '100%', padding: '0.5rem' }}
+        className="form-control"
       />
 
       {suggestions.length > 0 && (
         <ul
+          className="list-group position-absolute w-100"
           style={{
-            listStyle: 'none',
-            margin: 0,
-            padding: '0.5rem',
-            position: 'absolute',
-            width: '100%',
-            backgroundColor: '#fff',
-            border: '1px solid #ccc',
-            borderRadius: 4,
             zIndex: 1000,
             maxHeight: '200px',
             overflowY: 'auto',
@@ -75,17 +68,8 @@ const SearchBar = ({ search, setSearch, students, onSelect }) => {
             <li
               key={s.studentId}
               onClick={() => handleSelect(s)}
-              style={{
-                padding: '0.25rem 0.5rem',
-                cursor: 'pointer',
-                borderBottom: '1px solid #eee',
-              }}
-              onMouseOver={(e) => {
-                e.target.style.backgroundColor = '#f1f1f1';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.backgroundColor = 'white';
-              }}
+              className="list-group-item list-group-item-action"
+              style={{ cursor: 'pointer' }}
             >
               <strong>{s.name}</strong> ({s.studentId})
             </li>

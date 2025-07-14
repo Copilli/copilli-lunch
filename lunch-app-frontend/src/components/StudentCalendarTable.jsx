@@ -21,10 +21,19 @@ const isInAnyPeriod = (date, logs = []) => {
   );
 };
 
-const StudentCalendarTable = ({ students, movements, periodLogsMap = {}, month, year }) => {
+const StudentCalendarTable = ({ students, movements, periodLogs = [], month, year }) => {
   const selectedMonth = month ?? dayjs().month() + 1;
   const selectedYear = year ?? dayjs().year();
   const days = getDaysInMonth(selectedMonth, selectedYear);
+
+  // Construye el mapa de logs por studentId
+  const periodLogsMap = Array.isArray(periodLogs)
+    ? periodLogs.reduce((acc, log) => {
+        if (!acc[log.studentId]) acc[log.studentId] = [];
+        acc[log.studentId].push(log);
+        return acc;
+      }, {})
+    : periodLogs;
 
   return (
     <div className="table-responsive">
@@ -39,8 +48,12 @@ const StudentCalendarTable = ({ students, movements, periodLogsMap = {}, month, 
         </thead>
         <tbody>
           {students.map(student => {
+            // Debug: muestra los ids
+            // console.log('Student:', student.studentId, 'Movements:', movements.map(m => m.studentId));
+
+            // Fuerza ambos a string para evitar problemas de tipo
             const studentMovs = movements
-              .filter(m => m.studentId === student.studentId)
+              .filter(m => String(m.studentId) === String(student.studentId))
               .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
             const tokenMap = {};
@@ -58,9 +71,6 @@ const StudentCalendarTable = ({ students, movements, periodLogsMap = {}, month, 
                   const dayStr = String(d).padStart(2, '0');
                   const monthStr = String(selectedMonth).padStart(2, '0');
                   const currentDate = dayjs(`${selectedYear}-${monthStr}-${dayStr}`).startOf('day').format('YYYY-MM-DD');
-
-                  // Debug: Verifica si currentDate coincide con alguna clave de tokenMap
-                  console.log('currentDate:', currentDate, 'tokenMap keys:', Object.keys(tokenMap));
 
                   const movement = tokenMap[currentDate];
                   const inPeriod = isInAnyPeriod(currentDate, logs);

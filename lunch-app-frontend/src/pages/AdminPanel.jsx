@@ -8,7 +8,6 @@ import GroupCard from '../components/GroupCard';
 import StudentCalendarTable from '../components/StudentCalendarTable';
 import StudentDetailsPanel from '../components/StudentDetailsPanel';
 import StudentSummaryCard from '../components/StudentSummaryCard';
-import StudentImportPanel from '../components/StudentImportPanel';
 
 const AdminPanel = ({ setUser }) => {
   const [students, setStudents] = useState([]);
@@ -20,7 +19,8 @@ const AdminPanel = ({ setUser }) => {
   const [calendarMonth, setCalendarMonth] = useState(dayjs().month() + 1);
   const [calendarYear, setCalendarYear] = useState(dayjs().year());
   const [periodLogs, setPeriodLogs] = useState([]);
-  
+  const user = JSON.parse(localStorage.getItem('user'));
+
   const fetchStudents = async () => {
     const token = localStorage.getItem('token');
     const res = await axios.get(`${import.meta.env.VITE_API_URL}/students`, {
@@ -84,8 +84,8 @@ const AdminPanel = ({ setUser }) => {
   const showStartView = !search && !selectedLevel;
 
   return (
-    <div className="app-container" style={{ padding: '2rem' }}>
-      <h2>Panel de Administración</h2>
+    <div className="app-container container py-4">
+      <h2 className="mb-4">Panel de Administración</h2>
       <TopNavBar setUser={setUser}>
         <SearchBar
           search={search}
@@ -100,12 +100,18 @@ const AdminPanel = ({ setUser }) => {
         />
       </TopNavBar>
 
-      <StudentImportPanel onSuccess={fetchStudents} />
+      {/* Import solo visible para admin */}
+      {user?.role === 'admin' && (() => {
+        const StudentImportPanel = require('../components/StudentImportPanel').default;
+        return <StudentImportPanel onSuccess={fetchStudents} />;
+      })()}
 
       {showStartView && (
-        <div>
+        <div className="row">
           {levels.map(level => (
-            <LevelCard key={level} level={level} onClick={setSelectedLevel} />
+            <div className="col-md-4 mb-3" key={level}>
+              <LevelCard level={level} onClick={setSelectedLevel} />
+            </div>
           ))}
         </div>
       )}
@@ -113,10 +119,14 @@ const AdminPanel = ({ setUser }) => {
       {showLevelView && (
         <div>
           <h3>Grupos en {selectedLevel}</h3>
-          {groupsInLevel.map(group => (
-            <GroupCard key={group} group={group} onClick={setSelectedGroup} />
-          ))}
-          <button onClick={() => setSelectedLevel(null)} style={{ marginTop: '1rem' }}>
+          <div className="row">
+            {groupsInLevel.map(group => (
+              <div className="col-md-3 mb-2" key={group}>
+                <GroupCard group={group} onClick={setSelectedGroup} />
+              </div>
+            ))}
+          </div>
+          <button className="btn btn-secondary mt-3" onClick={() => setSelectedLevel(null)}>
             ← Volver a niveles
           </button>
         </div>
@@ -209,7 +219,7 @@ const AdminPanel = ({ setUser }) => {
             onClose={() => setSelectedStudent(null)}
           />
 
-          <button onClick={() => setSelectedGroup(null)} style={{ marginTop: '1rem' }}>
+          <button className="btn btn-secondary mt-3" onClick={() => setSelectedGroup(null)}>
             ← Volver a grupos
           </button>
         </div>

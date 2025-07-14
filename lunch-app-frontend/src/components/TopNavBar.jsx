@@ -35,21 +35,14 @@ const TopNavBar = ({ children, setUser }) => {
   };
 
   return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: '1rem',
-      backgroundColor: '#f0f0f0',
-      borderBottom: '1px solid #ccc'
-    }}>
+    <div className="d-flex justify-content-between align-items-center p-3 bg-light border-bottom">
       <div>
-        <button onClick={handleHome} style={{ marginRight: '1rem' }}>
+        <button className="btn btn-outline-primary me-2" onClick={handleHome}>
           Inicio
         </button>
-        <button onClick={handleLogout}>Cerrar sesión</button>
+        <button className="btn btn-outline-danger" onClick={handleLogout}>Cerrar sesión</button>
       </div>
-      <div>{children}</div>
+      <div style={{ minWidth: 300 }}>{children}</div>
     </div>
   );
 };
