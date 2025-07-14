@@ -198,15 +198,14 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
     setVisibleMovements(prev => prev + 5);
   };
 
-  return (
-  <div className="container mt-4">
-    <div className="card shadow-sm mb-4">
+return (
+  <>
+    <div className="card mt-4">
       <div className="card-header d-flex justify-content-between align-items-center">
         <h4 className="mb-0">Detalle del alumno</h4>
         <button className="btn btn-outline-secondary btn-sm" onClick={onClose}>Cerrar</button>
       </div>
       <div className="card-body">
-
         <div className="row mb-3">
           <div className="col-auto">
             <img
@@ -244,24 +243,22 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
           />
         </div>
 
-        <div className="mb-3 row">
+        <div className="row mb-3">
           <div className="col-md-6">
             <label className="form-label">Nivel:</label>
             <input
               type="text"
               className="form-control"
-              placeholder="Nivel"
               value={form.group.level}
               onChange={(e) => handleChange('group.level', e.target.value)}
               disabled={isReadOnly}
             />
           </div>
           <div className="col-md-6">
-            <label className="form-label">Nombre del grupo:</label>
+            <label className="form-label">Grupo:</label>
             <input
               type="text"
               className="form-control"
-              placeholder="Grupo"
               value={form.group.name}
               onChange={(e) => handleChange('group.name', e.target.value)}
               disabled={isReadOnly}
@@ -270,7 +267,7 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
         </div>
 
         <div className="mb-3">
-          <label className="form-label">Status:</label>
+          <label className="form-label">Estado:</label>
           {form.hasSpecialPeriod ? (
             <input
               type="text"
@@ -294,12 +291,7 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
 
         <div className="mb-3">
           <label className="form-label">Tokens actuales:</label>
-          <input
-            type="number"
-            className="form-control bg-light text-muted"
-            value={form.tokens}
-            disabled
-          />
+          <input type="number" className="form-control bg-light text-muted" value={form.tokens} disabled />
         </div>
 
         {isAdmin && (
@@ -324,7 +316,7 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
 
         {form.hasSpecialPeriod && (
           <>
-            <div className="mb-3 row">
+            <div className="row mb-3">
               <div className="col-md-6">
                 <label className="form-label">Inicio:</label>
                 <input
@@ -375,8 +367,80 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
         )}
       </div>
     </div>
-  </div>
-  );
+
+    <div className="card mt-4">
+      <div className="card-body">
+        {!isReadOnly && (
+          <>
+            <button className="btn btn-primary mb-3" onClick={handleSave} disabled={saving}>
+              {saving ? 'Guardando...' : 'Guardar cambios'}
+            </button>
+
+            <h5 className="mb-3">Ajustar tokens manualmente</h5>
+            <div className="mb-3">
+              <label className="form-label">Cantidad (+/-):</label>
+              <input
+                type="number"
+                className="form-control d-inline-block"
+                style={{ width: '100px' }}
+                value={delta}
+                onChange={(e) => setDelta(parseInt(e.target.value))}
+              />
+            </div>
+            <div className="mb-3">
+              <label className="form-label">Motivo:</label>
+              <select className="form-select" value={reason} onChange={(e) => setReason(e.target.value)}>
+                <option value="pago">Pago</option>
+                <option value="justificado">Justificado</option>
+                {isAdmin && <option value="ajuste manual">Ajuste manual</option>}
+              </select>
+            </div>
+            <div className="mb-3">
+              <label className="form-label">Nota:</label>
+              <input
+                type="text"
+                className="form-control"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Detalle o justificación"
+              />
+            </div>
+            <button className="btn btn-outline-primary" onClick={handleTokenChange}>
+              Aplicar cambio de tokens
+            </button>
+          </>
+        )}
+
+        {isAdmin && (
+          <button className="btn btn-outline-success mt-4" onClick={exportCSV}>
+            Exportar historial a CSV
+          </button>
+        )}
+      </div>
+    </div>
+
+    <div className="card mt-4">
+      <div className="card-body">
+        <h5 className="mb-3">Historial de movimientos</h5>
+        {studentMovements.length === 0 && <p>No hay transacciones registradas.</p>}
+        {studentMovements.slice(0, visibleMovements).map((m, i) => (
+          <div key={i} className="border rounded p-3 mb-2 bg-light">
+            <p><strong>Fecha:</strong> {dayjs(m.timestamp).format('DD/MM/YYYY HH:mm')}</p>
+            <p><strong>Motivo:</strong> {m.reason}</p>
+            {m.note && <p><strong>Nota:</strong> {m.note}</p>}
+            <p><strong>Responsable:</strong> {m.performedBy} ({m.userRole})</p>
+            <p><strong>Cambio:</strong> {m.change > 0 ? '+' : ''}{m.change}</p>
+          </div>
+        ))}
+        {visibleMovements < studentMovements.length && (
+          <button className="btn btn-outline-secondary mt-2" onClick={handleLoadMore}>
+            Cargar más
+          </button>
+        )}
+      </div>
+    </div>
+  </>
+);
 };
 
 export default StudentDetailsPanel;
