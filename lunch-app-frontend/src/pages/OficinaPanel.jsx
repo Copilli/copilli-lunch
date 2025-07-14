@@ -8,7 +8,6 @@ import GroupCard from '../components/GroupCard';
 import StudentCalendarTable from '../components/StudentCalendarTable';
 import StudentSummaryCard from '../components/StudentSummaryCard';
 import StudentDetailsPanel from '../components/StudentDetailsPanel';
-import StudentOfficeActions from '../components/StudentOfficeActions';
 
 const OficinaPanel = ({ setUser }) => {
   const [students, setStudents] = useState([]);
@@ -143,14 +142,8 @@ const OficinaPanel = ({ setUser }) => {
                 student={selectedStudent}
                 movements={movements}
                 onClose={() => setSelectedStudent(null)}
-              />
-
-              <StudentOfficeActions
-                student={selectedStudent}
-                onUpdate={() => {
-                  fetchStudents();
-                  fetchMovements();
-                }}
+                fetchStudents={fetchStudents}
+                fetchMovements={fetchMovements}
               />
             </>
           ) : (
@@ -198,6 +191,8 @@ const OficinaPanel = ({ setUser }) => {
                 student={selectedStudent}
                 movements={movements}
                 onClose={() => setSelectedStudent(null)}
+                fetchStudents={fetchStudents}
+                fetchMovements={fetchMovements}
               />
             </>
           )}

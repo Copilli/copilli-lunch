@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
+import StudentOfficeActions from './StudentOfficeActions';
 
 const statusLabels = {
   'con-fondos': 'success',
@@ -9,7 +10,7 @@ const statusLabels = {
   'periodo-activo': 'primary'
 };
 
-const StudentDetailsPanel = ({ student, movements, onClose }) => {
+const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetchMovements }) => {
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [originalTokens, setOriginalTokens] = useState(0);
@@ -198,249 +199,190 @@ const StudentDetailsPanel = ({ student, movements, onClose }) => {
     setVisibleMovements(prev => prev + 5);
   };
 
-return (
-  <>
-    <div className="card mt-4">
-      <div className="card-header d-flex justify-content-between align-items-center">
-        <h4 className="mb-0">Detalle del alumno</h4>
-        <button className="btn btn-outline-secondary btn-sm" onClick={onClose}>Cerrar</button>
-      </div>
-      <div className="card-body">
-        <div className="row mb-3">
-          <div className="col-auto">
-            <img
-              src={form.photoUrl}
-              alt={form.name}
-              className="rounded-circle"
-              style={{ width: 100, height: 100, objectFit: 'cover' }}
-            />
-          </div>
-          <div className="col">
-            <label className="form-label">URL de la foto:</label>
-            <input
-              type="text"
-              className="form-control"
-              value={form.photoUrl}
-              onChange={(e) => handleChange('photoUrl', e.target.value)}
-              disabled={isReadOnly}
-            />
-          </div>
+  return (
+    <>
+      <div className="card mt-4">
+        <div className="card-header d-flex justify-content-between align-items-center">
+          <h4 className="mb-0">Detalle del alumno</h4>
+          <button className="btn btn-outline-secondary btn-sm" onClick={onClose}>Cerrar</button>
         </div>
-
-        <div className="mb-3">
-          <label className="form-label">ID del estudiante:</label>
-          <input type="text" className="form-control" value={form.studentId} disabled />
-        </div>
-
-        <div className="mb-3">
-          <label className="form-label">Nombre:</label>
-          <input
-            type="text"
-            className="form-control"
-            value={form.name}
-            onChange={(e) => handleChange('name', e.target.value)}
-            disabled={isReadOnly}
-          />
-        </div>
-
-        <div className="row mb-3">
-          <div className="col-md-6">
-            <label className="form-label">Nivel:</label>
-            <input
-              type="text"
-              className="form-control"
-              value={form.group.level}
-              onChange={(e) => handleChange('group.level', e.target.value)}
-              disabled={isReadOnly}
-            />
-          </div>
-          <div className="col-md-6">
-            <label className="form-label">Grupo:</label>
-            <input
-              type="text"
-              className="form-control"
-              value={form.group.name}
-              onChange={(e) => handleChange('group.name', e.target.value)}
-              disabled={isReadOnly}
-            />
-          </div>
-        </div>
-
-        <div className="mb-3">
-          <label className="form-label">Estado:</label>
-          {form.hasSpecialPeriod ? (
-            <input
-              type="text"
-              className="form-control-plaintext text-muted fst-italic"
-              value="periodo-activo"
-              disabled
-            />
-          ) : (
-            <select
-              className="form-select"
-              value={form.status}
-              onChange={(e) => handleChange('status', e.target.value)}
-              disabled={isReadOnly}
-            >
-              <option value="con-fondos">Con fondos</option>
-              <option value="sin-fondos">Sin fondos</option>
-              <option value="bloqueado">Bloqueado</option>
-            </select>
-          )}
-        </div>
-
-        <div className="mb-3">
-          <label className="form-label">Tokens actuales:</label>
-          <input type="number" className="form-control bg-light text-muted" value={form.tokens} disabled />
-        </div>
-
-        {isAdmin && (
-          <div className="form-text mb-3">
-            Para modificar los tokens, utiliza la sección "Ajustar tokens manualmente" más abajo.
-          </div>
-        )}
-
-        <div className="form-check mb-3">
-          <input
-            className="form-check-input"
-            type="checkbox"
-            id="hasSpecialPeriod"
-            checked={form.hasSpecialPeriod}
-            onChange={(e) => handleChange('hasSpecialPeriod', e.target.checked)}
-            disabled={isReadOnly}
-          />
-          <label className="form-check-label" htmlFor="hasSpecialPeriod">
-            ¿Tiene periodo especial activo?
-          </label>
-        </div>
-
-        {form.hasSpecialPeriod && (
-          <>
-            <div className="row mb-3">
-              <div className="col-md-6">
-                <label className="form-label">Inicio:</label>
-                <input
-                  type="date"
-                  className="form-control"
-                  value={dayjs(form.specialPeriod?.startDate).format('YYYY-MM-DD')}
-                  onChange={(e) => handleSpecialPeriodChange('startDate', e.target.value)}
-                  disabled={isReadOnly}
-                />
-              </div>
-              <div className="col-md-6">
-                <label className="form-label">Fin:</label>
-                <input
-                  type="date"
-                  className="form-control"
-                  value={dayjs(form.specialPeriod?.endDate).format('YYYY-MM-DD')}
-                  onChange={(e) => handleSpecialPeriodChange('endDate', e.target.value)}
-                  disabled={isReadOnly}
-                />
-              </div>
-            </div>
-
-            {!isReadOnly && (
-              <>
-                <div className="mb-3">
-                  <label className="form-label">Motivo del periodo:</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Motivo"
-                    value={periodReason}
-                    onChange={(e) => setPeriodReason(e.target.value)}
-                  />
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">Nota:</label>
-                  <textarea
-                    className="form-control"
-                    rows="2"
-                    placeholder="Justificación o comentario"
-                    value={periodNote}
-                    onChange={(e) => setPeriodNote(e.target.value)}
-                  ></textarea>
-                </div>
-              </>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-
-    <div className="card mt-4">
-      <div className="card-body">
-        {!isReadOnly && (
-          <>
-            <button className="btn btn-primary mb-3" onClick={handleSave} disabled={saving}>
-              {saving ? 'Guardando...' : 'Guardar cambios'}
-            </button>
-
-            <h5 className="mb-3">Ajustar tokens manualmente</h5>
-            <div className="mb-3">
-              <label className="form-label">Cantidad (+/-):</label>
-              <input
-                type="number"
-                className="form-control d-inline-block"
-                style={{ width: '100px' }}
-                value={delta}
-                onChange={(e) => setDelta(parseInt(e.target.value))}
+        <div className="card-body">
+          <div className="row mb-3">
+            <div className="col-auto">
+              <img
+                src={form.photoUrl}
+                alt={form.name}
+                className="rounded-circle"
+                style={{ width: 100, height: 100, objectFit: 'cover' }}
               />
             </div>
-            <div className="mb-3">
-              <label className="form-label">Motivo:</label>
-              <select className="form-select" value={reason} onChange={(e) => setReason(e.target.value)}>
-                <option value="pago">Pago</option>
-                <option value="justificado">Justificado</option>
-                {isAdmin && <option value="ajuste manual">Ajuste manual</option>}
-              </select>
-            </div>
-            <div className="mb-3">
-              <label className="form-label">Nota:</label>
+            <div className="col">
+              <label className="form-label">URL de la foto:</label>
               <input
                 type="text"
                 className="form-control"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Detalle o justificación"
+                value={form.photoUrl}
+                onChange={(e) => handleChange('photoUrl', e.target.value)}
+                disabled={isReadOnly}
               />
             </div>
-            <button className="btn btn-outline-primary" onClick={handleTokenChange}>
-              Aplicar cambio de tokens
-            </button>
-          </>
-        )}
-
-        {isAdmin && (
-          <button className="btn btn-outline-success mt-4" onClick={exportCSV}>
-            Exportar historial a CSV
-          </button>
-        )}
-      </div>
-    </div>
-
-    <div className="card mt-4">
-      <div className="card-body">
-        <h5 className="mb-3">Historial de movimientos</h5>
-        {studentMovements.length === 0 && <p>No hay transacciones registradas.</p>}
-        {studentMovements.slice(0, visibleMovements).map((m, i) => (
-          <div key={i} className="border rounded p-3 mb-2 bg-light">
-            <p><strong>Fecha:</strong> {dayjs(m.timestamp).format('DD/MM/YYYY HH:mm')}</p>
-            <p><strong>Motivo:</strong> {m.reason}</p>
-            {m.note && <p><strong>Nota:</strong> {m.note}</p>}
-            <p><strong>Responsable:</strong> {m.performedBy} ({m.userRole})</p>
-            <p><strong>Cambio:</strong> {m.change > 0 ? '+' : ''}{m.change}</p>
           </div>
-        ))}
-        {visibleMovements < studentMovements.length && (
-          <button className="btn btn-outline-secondary mt-2" onClick={handleLoadMore}>
-            Cargar más
-          </button>
-        )}
+
+          <div className="mb-3">
+            <label className="form-label">ID del estudiante:</label>
+            <input type="text" className="form-control" value={form.studentId} disabled />
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label">Nombre:</label>
+            <input
+              type="text"
+              className="form-control"
+              value={form.name}
+              onChange={(e) => handleChange('name', e.target.value)}
+              disabled={isReadOnly}
+            />
+          </div>
+
+          <div className="row mb-3">
+            <div className="col-md-6">
+              <label className="form-label">Nivel:</label>
+              <input
+                type="text"
+                className="form-control"
+                value={form.group.level}
+                onChange={(e) => handleChange('group.level', e.target.value)}
+                disabled={isReadOnly}
+              />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label">Grupo:</label>
+              <input
+                type="text"
+                className="form-control"
+                value={form.group.name}
+                onChange={(e) => handleChange('group.name', e.target.value)}
+                disabled={isReadOnly}
+              />
+            </div>
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label">Estado:</label>
+            {form.hasSpecialPeriod ? (
+              <input
+                type="text"
+                className="form-control-plaintext text-muted fst-italic"
+                value="periodo-activo"
+                disabled
+              />
+            ) : (
+              <select
+                className="form-select"
+                value={form.status}
+                onChange={(e) => handleChange('status', e.target.value)}
+                disabled={isReadOnly}
+              >
+                <option value="con-fondos">Con fondos</option>
+                <option value="sin-fondos">Sin fondos</option>
+                <option value="bloqueado">Bloqueado</option>
+              </select>
+            )}
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label">Tokens actuales:</label>
+            <input type="number" className="form-control bg-light text-muted" value={form.tokens} disabled />
+          </div>
+
+          {isAdmin && (
+            <div className="form-text mb-3">
+              Para modificar los tokens, utiliza la sección "Ajustar tokens manualmente" más abajo.
+            </div>
+          )}
+
+          <div className="form-check mb-3">
+            <input
+              className="form-check-input"
+              type="checkbox"
+              id="hasSpecialPeriod"
+              checked={form.hasSpecialPeriod}
+              onChange={(e) => handleChange('hasSpecialPeriod', e.target.checked)}
+              disabled={isReadOnly}
+            />
+            <label className="form-check-label" htmlFor="hasSpecialPeriod">
+              ¿Tiene periodo especial activo?
+            </label>
+          </div>
+
+          {form.hasSpecialPeriod && (
+            <>
+              <div className="row mb-3">
+                <div className="col-md-6">
+                  <label className="form-label">Inicio:</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={dayjs(form.specialPeriod?.startDate).format('YYYY-MM-DD')}
+                    disabled
+                  />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Fin:</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={dayjs(form.specialPeriod?.endDate).format('YYYY-MM-DD')}
+                    disabled
+                  />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
-    </div>
-  </>
-);
+
+      {/* Acciones de oficina fuera del card principal */}
+      {!isReadOnly && (
+        <StudentOfficeActions
+          student={student}
+          onUpdate={() => {
+            if (fetchStudents) fetchStudents();
+            if (fetchMovements) fetchMovements();
+          }}
+        />
+      )}
+
+      <div className="card mt-4">
+        <div className="card-body">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h5 className="mb-0">Historial de movimientos</h5>
+            {isAdmin && (
+              <button className="btn btn-outline-success" onClick={exportCSV}>
+                Exportar historial a CSV
+              </button>
+            )}
+          </div>
+
+          {studentMovements.length === 0 && <p>No hay transacciones registradas.</p>}
+          {studentMovements.slice(0, visibleMovements).map((m, i) => (
+            <div key={i} className="border rounded p-3 mb-2 bg-light">
+              <p><strong>Fecha:</strong> {dayjs(m.timestamp).format('DD/MM/YYYY HH:mm')}</p>
+              <p><strong>Motivo:</strong> {m.reason}</p>
+              {m.note && <p><strong>Nota:</strong> {m.note}</p>}
+              <p><strong>Responsable:</strong> {m.performedBy} ({m.userRole})</p>
+              <p><strong>Cambio:</strong> {m.change > 0 ? '+' : ''}{m.change}</p>
+            </div>
+          ))}
+          {visibleMovements < studentMovements.length && (
+            <button className="btn btn-outline-secondary mt-2" onClick={handleLoadMore}>
+              Cargar más
+            </button>
+          )}
+        </div>
+      </div>
+    </>
+  );
 };
 
 export default StudentDetailsPanel;
