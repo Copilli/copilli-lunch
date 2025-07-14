@@ -269,16 +269,20 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
 
     await student.save();
 
-    const log = new PeriodLog({
-      studentId: student.studentId,
-      startDate: start.toDate(),
-      endDate: end.toDate(),
-      note: note || '',
-      reason: reason || 'nuevo periodo',
-      performedBy: performedBy || 'sistema',
-      userRole: userRole || 'sistema'
-    });
-    await log.save();
+    try {
+      const log = new PeriodLog({
+        studentId: student.studentId || student._id.toString(),
+        startDate: start.toDate(),
+        endDate: end.toDate(),
+        note: note || '',
+        reason: reason || 'nuevo periodo',
+        performedBy: performedBy || 'sistema',
+        userRole: userRole || 'sistema'
+      });
+      await log.save();
+    } catch (logErr) {
+      console.error('[❌ PeriodLog ERROR]', logErr);
+    }
 
     res.json({
       message: 'Periodo especial actualizado',
@@ -286,8 +290,8 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       specialPeriod: student.specialPeriod
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Error al actualizar el periodo' });
+    console.error('[❌ Period PATCH ERROR]', err);
+    res.status(500).json({ error: err.message || 'Error al actualizar el periodo' });
   }
 });
 
