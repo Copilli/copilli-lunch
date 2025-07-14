@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import axios from 'axios';
 import dayjs from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
@@ -115,18 +116,18 @@ const StudentCalendarContainer = ({ month, year }) => {
   const [loading, setLoading] = useState(true);
 
   const token = localStorage.getItem('token');
+  const API = import.meta.env.VITE_API_URL;
 
   const fetchAllPeriodLogs = async (students) => {
     const allLogs = await Promise.all(
       students.map(async (s) => {
         try {
-          const res = await fetch(`/api/students/${s.studentId}/period-logs`, {
+          const res = await axios.get(`${API}/students/${s.studentId}/period-logs`, {
             headers: {
               Authorization: `Bearer ${token}`,
             },
           });
-          const logs = await res.json();
-          return logs.map(log => ({ ...log, studentId: s.studentId }));
+          return res.data.map(log => ({ ...log, studentId: s.studentId }));
         } catch (err) {
           console.error(`Error al obtener logs de ${s.studentId}`, err);
           return [];
@@ -139,15 +140,17 @@ const StudentCalendarContainer = ({ month, year }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const sRes = await fetch('/api/students', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const mRes = await fetch('/api/token-movements', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const [sRes, mRes] = await Promise.all([
+          axios.get(`${API}/students`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axios.get(`${API}/token-movements`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+        ]);
 
-        const studentsData = await sRes.json();
-        const movementsData = await mRes.json();
+        const studentsData = sRes.data;
+        const movementsData = mRes.data;
         const periodLogsData = await fetchAllPeriodLogs(studentsData);
 
         setStudents(studentsData);

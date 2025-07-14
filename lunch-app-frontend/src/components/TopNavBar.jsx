@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-const TopNavBar = ({ children, setUser }) => {
+const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = JSON.parse(localStorage.getItem('user'));
@@ -35,14 +35,31 @@ const TopNavBar = ({ children, setUser }) => {
   };
 
   return (
-    <div className="d-flex justify-content-between align-items-center p-3 bg-light border-bottom">
+    <div className="d-flex align-items-center p-3 bg-light border-bottom" style={{ gap: 16 }}>
+      {/* Izquierda: Inicio */}
       <div>
-        <button className="btn btn-outline-primary me-2" onClick={handleHome}>
+        <button className="btn btn-outline-primary" onClick={handleHome}>
           Inicio
         </button>
-        <button className="btn btn-outline-danger" onClick={handleLogout}>Cerrar sesión</button>
       </div>
-      <div style={{ minWidth: 300 }}>{children}</div>
+      {/* Centro-izquierda: Importar (si aplica) */}
+      {showImport && (
+        <div>
+          <button className="btn btn-success" onClick={onImportClick}>
+            Importar estudiantes
+          </button>
+        </div>
+      )}
+      {/* Centro: SearchBar u otros children */}
+      <div className="flex-grow-1 d-flex justify-content-center align-items-center">
+        {children}
+      </div>
+      {/* Derecha: Cerrar sesión */}
+      <div>
+        <button className="btn btn-outline-danger" onClick={handleLogout}>
+          Cerrar sesión
+        </button>
+      </div>
     </div>
   );
 };

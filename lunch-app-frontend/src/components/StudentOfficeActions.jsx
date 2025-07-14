@@ -11,6 +11,7 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   const user = JSON.parse(localStorage.getItem('user'));
   const canUseAjusteManual = user?.role === 'admin';
@@ -34,6 +35,11 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
     setTimeout(() => setFormError(''), 3000);
   };
 
+  const showSuccess = (msg) => {
+    setSuccessMsg(msg);
+    setTimeout(() => setSuccessMsg(''), 3000);
+  };
+
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
@@ -55,6 +61,7 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        showSuccess('Tokens actualizados correctamente.');
       } else if (actionType === 'period') {
         if (!note.trim() || !reason.trim()) {
           showError('Debes proporcionar un motivo y una nota para el periodo.');
@@ -72,6 +79,7 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        showSuccess('Periodo especial registrado correctamente.');
       }
 
       setFormError('');
@@ -105,10 +113,17 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
 
   return (
     <>
-      {/* Alerta flotante con Bootstrap */}
+      {/* Alerta de error tipo Bootstrap */}
       {formError && (
         <div className="alert alert-danger position-fixed top-0 start-50 translate-middle-x mt-3 z-3" role="alert" style={{ zIndex: 9999 }}>
           {formError}
+        </div>
+      )}
+
+      {/* Alerta de éxito tipo Bootstrap */}
+      {successMsg && (
+        <div className="alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3 z-3" role="alert" style={{ zIndex: 9999 }}>
+          {successMsg}
         </div>
       )}
 
@@ -205,7 +220,7 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
         </button>
       </div>
 
-      {/* Modal Bootstrap-like */}
+      {/* Modal Bootstrap-like para confirmación */}
       {confirming && (
         <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">

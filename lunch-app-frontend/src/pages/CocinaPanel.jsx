@@ -12,6 +12,10 @@ const CocinaPanel = ({ setUser }) => {
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [formError, setFormError] = useState('');
+  const [confirming, setConfirming] = useState(false);
+  const [confirmMessage, setConfirmMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchStudents = async () => {
     const token = localStorage.getItem('token');
@@ -72,17 +76,19 @@ const CocinaPanel = ({ setUser }) => {
       return;
     }
 
-    const confirm = window.confirm(
+    setConfirmMessage(
       hasTokens
         ? `¿Deseas descontar un token? Total final: ${student.tokens - 1}`
         : `No tiene tokens ni periodo activo. ¿Deseas registrar el desayuno en negativo? Total final: ${student.tokens - 1}`
     );
+    setConfirming(true);
+  };
 
-    if (!confirm) return;
-
+  const handleConfirm = async () => {
+    setSubmitting(true);
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${import.meta.env.VITE_API_URL}/students/${student._id}/use`, {
+      await axios.post(`${import.meta.env.VITE_API_URL}/students/${selectedStudent._id}/use`, {
         performedBy: localStorage.getItem('username') || 'cocina'
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -94,7 +100,10 @@ const CocinaPanel = ({ setUser }) => {
       setSearch('');
     } catch (err) {
       console.error(err);
-      alert('Error al registrar consumo');
+      setFormError('Error al registrar consumo');
+    } finally {
+      setSubmitting(false);
+      setConfirming(false);
     }
   };
 
@@ -127,6 +136,36 @@ const CocinaPanel = ({ setUser }) => {
           }}
         />
       </TopNavBar>
+
+      {formError && (
+        <div className="alert alert-danger position-fixed top-0 start-50 translate-middle-x mt-3 z-3" role="alert" style={{ zIndex: 9999 }}>
+          {formError}
+        </div>
+      )}
+
+      {confirming && (
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">¿Confirmas esta acción?</h5>
+                <button type="button" className="btn-close" onClick={() => setConfirming(false)}></button>
+              </div>
+              <div className="modal-body">
+                <p>{confirmMessage}</p>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setConfirming(false)}>
+                  Cancelar
+                </button>
+                <button className="btn btn-primary" onClick={handleConfirm} disabled={submitting}>
+                  {submitting ? 'Guardando...' : 'Sí, confirmar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedStudent ? (
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>

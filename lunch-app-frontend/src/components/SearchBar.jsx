@@ -45,7 +45,7 @@ const SearchBar = ({ search, setSearch, students, onSelect }) => {
   }, []);
 
   return (
-    <div ref={containerRef} className="position-relative mb-3" style={{ maxWidth: 400 }}>
+    <div ref={containerRef} className="position-relative mb-0 flex-grow-1" style={{ minWidth: 250 }}>
       <input
         type="text"
         placeholder="Buscar por nombre o ID..."
@@ -53,6 +53,7 @@ const SearchBar = ({ search, setSearch, students, onSelect }) => {
         onChange={(e) => setSearch(e.target.value)}
         onKeyDown={handleKeyDown}
         className="form-control"
+        style={{ width: '100%' }}
       />
 
       {suggestions.length > 0 && (

@@ -8,7 +8,7 @@ import GroupCard from '../components/GroupCard';
 import StudentCalendarTable from '../components/StudentCalendarTable';
 import StudentDetailsPanel from '../components/StudentDetailsPanel';
 import StudentSummaryCard from '../components/StudentSummaryCard';
-import StudentImportPanel from '../components/StudentImportPanel'; // <--- Importa aquí
+import StudentImportPanel from '../components/StudentImportPanel';
 
 const AdminPanel = ({ setUser }) => {
   const [students, setStudents] = useState([]);
@@ -20,6 +20,7 @@ const AdminPanel = ({ setUser }) => {
   const [calendarMonth, setCalendarMonth] = useState(dayjs().month() + 1);
   const [calendarYear, setCalendarYear] = useState(dayjs().year());
   const [periodLogs, setPeriodLogs] = useState([]);
+  const [showImportModal, setShowImportModal] = useState(false);
   const user = JSON.parse(localStorage.getItem('user'));
 
   const fetchStudents = async () => {
@@ -87,7 +88,11 @@ const AdminPanel = ({ setUser }) => {
   return (
     <div className="app-container container py-4">
       <h2 className="mb-4">Panel de Administración</h2>
-      <TopNavBar setUser={setUser}>
+      <TopNavBar
+        setUser={setUser}
+        onImportClick={() => setShowImportModal(true)}
+        showImport={user?.role === 'admin'}
+      >
         <SearchBar
           search={search}
           setSearch={setSearch}
@@ -101,9 +106,26 @@ const AdminPanel = ({ setUser }) => {
         />
       </TopNavBar>
 
-      {/* Import solo visible para admin */}
-      {user?.role === 'admin' && (
-        <StudentImportPanel onSuccess={fetchStudents} />
+      {/* Modal para importar estudiantes */}
+      {showImportModal && (
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Importar estudiantes</h5>
+                <button type="button" className="btn-close" onClick={() => setShowImportModal(false)}></button>
+              </div>
+              <div className="modal-body">
+                <StudentImportPanel
+                  onSuccess={() => {
+                    fetchStudents();
+                    setShowImportModal(false);
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {showStartView && (
