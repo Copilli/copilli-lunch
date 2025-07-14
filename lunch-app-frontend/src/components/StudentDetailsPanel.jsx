@@ -324,15 +324,13 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
       </div>
 
       {/* Acciones de oficina fuera del card principal */}
-      {!isReadOnly && (
-        <StudentOfficeActions
-          student={student}
-          onUpdate={() => {
-            if (fetchStudents) fetchStudents();
-            if (fetchMovements) fetchMovements();
-          }}
-        />
-      )}
+      <StudentOfficeActions
+        student={student}
+        onUpdate={() => {
+          if (fetchStudents) fetchStudents();
+          if (fetchMovements) fetchMovements();
+        }}
+      />
 
       <div className="card mt-4">
         <div className="card-body">
