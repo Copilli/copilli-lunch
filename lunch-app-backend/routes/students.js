@@ -240,15 +240,18 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       });
     }
 
-    const start = dayjs(startDate).startOf('day');
-    const end = dayjs(endDate).startOf('day');
+    const parsedStart = dayjs(startDate);
+    const parsedEnd = dayjs(endDate);
 
-    if (!start.isValid() || !end.isValid() || end.isBefore(start)) {
+    if (!parsedStart.isValid() || !parsedEnd.isValid()) {
       return res.status(400).json({ error: 'Fechas del periodo inválidas.' });
     }
 
-    if (end.isBefore(today)) {
-      return res.status(400).json({ error: 'No se puede asignar un periodo que ya terminó.' });
+    const start = parsedStart.startOf('day');
+    const end = parsedEnd.startOf('day');
+
+    if (end.isBefore(start)) {
+      return res.status(400).json({ error: 'La fecha de fin no puede ser anterior a la de inicio.' });
     }
 
     if (student.hasSpecialPeriod && student.specialPeriod?.startDate && student.specialPeriod?.endDate) {
