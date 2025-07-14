@@ -5,7 +5,7 @@ const tokenMovementSchema = new mongoose.Schema({
   change: { type: Number, required: true },
   reason: {
     type: String,
-    enum: ['uso', 'pago', 'justificado', 'ajuste manual'],
+    enum: ['uso', 'uso-con-deuda', 'pago', 'justificado', 'ajuste manual'],
     required: true
   },
   note: String,

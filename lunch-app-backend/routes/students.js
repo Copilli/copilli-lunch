@@ -182,11 +182,13 @@ router.post('/:id/use', async (req, res) => {
     student.tokens -= 1;
     await student.save();
 
+    const isDebt = student.tokens < 0;
+
     const movement = new TokenMovement({
       studentId: student.studentId,
       change: -1,
-      reason: 'uso',
-      note: 'Consumo registrado sin periodo activo',
+      reason: isDebt ? 'uso-con-deuda' : 'uso',
+      note: isDebt ? 'Consumo con deuda' : 'Consumo registrado sin periodo activo',
       performedBy,
       userRole: 'cocina'
     });
@@ -195,8 +197,8 @@ router.post('/:id/use', async (req, res) => {
 
     res.json({
       canEat: true,
-      method: student.tokens >= 0 ? 'token' : 'deuda',
-      message: student.tokens >= 0 ? 'Usó un token. Puede desayunar.' : 'No tenía tokens. Se registró deuda.',
+      method: isDebt ? 'deuda' : 'token',
+      message: isDebt ? 'No tenía tokens. Se registró deuda.' : 'Usó un token. Puede desayunar.',
       tokens: student.tokens
     });
   } catch (err) {
@@ -311,6 +313,20 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       await log.save();
     } catch (logErr) {
       console.error('[❌ PeriodLog ERROR]', logErr);
+    }
+
+    try {
+      const movement = new TokenMovement({
+        studentId: student.studentId,
+        change: 0,
+        reason: reason || 'nuevo periodo',
+        note: `Periodo especial del ${start.format('YYYY-MM-DD')} al ${end.format('YYYY-MM-DD')}\n${note || ''}`,
+        performedBy: performedBy || 'sistema',
+        userRole: userRole || 'sistema'
+      });
+      await movement.save();
+    } catch (movementErr) {
+      console.error('[❌ movement ERROR]', movementErr);
     }
 
     res.json({

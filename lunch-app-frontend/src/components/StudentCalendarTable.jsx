@@ -44,11 +44,9 @@ const StudentCalendarTable = ({ students, movements, periodLogsMap = {}, month, 
               .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
             const tokenMap = {};
-            let runningTokens = 0;
             studentMovs.forEach(m => {
               const date = dayjs(m.timestamp).format('YYYY-MM-DD');
-              runningTokens += m.change;
-              tokenMap[date] = { ...m, runningTokens };
+              tokenMap[date] = m;
             });
 
             const logs = periodLogsMap[student.studentId] || [];
@@ -57,15 +55,20 @@ const StudentCalendarTable = ({ students, movements, periodLogsMap = {}, month, 
               <tr key={student.studentId}>
                 <td style={{ fontWeight: 'bold' }}>{student.name}</td>
                 {days.map(d => {
-                  const date = dayjs(`${selectedYear}-${selectedMonth}-${d}`).format('YYYY-MM-DD');
+                  const dayStr = String(d).padStart(2, '0');
+                  const monthStr = String(selectedMonth).padStart(2, '0');
+                  const date = `${selectedYear}-${monthStr}-${dayStr}`;
+
                   const movement = tokenMap[date];
                   const inPeriod = isInAnyPeriod(date, logs);
 
                   let bg = '';
-                  if (movement && movement.reason === 'uso') {
-                    bg = movement.change < 0 && movement.runningTokens < 0 ? '#ffb3b3' : '#add8e6';
+                  if (movement?.reason === 'uso') {
+                    bg = '#add8e6'; // azul
+                  } else if (movement?.reason === 'uso-con-deuda') {
+                    bg = '#ffb3b3'; // rojo
                   } else if (inPeriod) {
-                    bg = '#c1f0c1';
+                    bg = '#c1f0c1'; // verde
                   }
 
                   return (
