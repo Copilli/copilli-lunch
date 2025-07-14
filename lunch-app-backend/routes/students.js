@@ -47,6 +47,7 @@ router.post('/', async (req, res) => {
   }
 });
 
+// POST /api/students/import-bulk
 router.post('/import-bulk', verifyToken, allowRoles('admin'), async (req, res) => {
   try {
     const students = req.body.students;
@@ -99,6 +100,8 @@ router.post('/import-bulk', verifyToken, allowRoles('admin'), async (req, res) =
   }
 });
 
+// Actualizar tokens (sumar o restar)
+// PATCH /api/students/:id/tokens
 router.patch('/:id/tokens', async (req, res) => {
   try {
     const {
@@ -144,6 +147,7 @@ router.patch('/:id/tokens', async (req, res) => {
   }
 });
 
+// POST /api/students/:id/use
 router.post('/:id/use', async (req, res) => {
   try {
     const { performedBy } = req.body;
@@ -194,6 +198,7 @@ router.post('/:id/use', async (req, res) => {
   }
 });
 
+// PATCH /api/students/:id/period
 router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (req, res) => {
   try {
     const { startDate, endDate, reason, note, performedBy, userRole } = req.body;
@@ -254,13 +259,21 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       return res.status(400).json({ error: 'La fecha de fin no puede ser anterior a la de inicio.' });
     }
 
-    if (student.hasSpecialPeriod && student.specialPeriod?.startDate && student.specialPeriod?.endDate) {
+    if (
+      student.hasSpecialPeriod &&
+      student.specialPeriod &&
+      student.specialPeriod.startDate &&
+      student.specialPeriod.endDate
+    ) {
       const existingStart = dayjs(student.specialPeriod.startDate).startOf('day');
       const existingEnd = dayjs(student.specialPeriod.endDate).startOf('day');
 
-      const overlap = start.isSameOrBefore(existingEnd) && end.isSameOrAfter(existingStart);
-      if (overlap) {
-        return res.status(400).json({ error: 'El nuevo periodo se solapa con uno ya existente.' });
+      // Solo compara si ambas fechas son válidas
+      if (existingStart.isValid() && existingEnd.isValid()) {
+        const overlap = start.isSameOrBefore(existingEnd) && end.isSameOrAfter(existingStart);
+        if (overlap) {
+          return res.status(400).json({ error: 'El nuevo periodo se solapa con uno ya existente.' });
+        }
       }
     }
 
