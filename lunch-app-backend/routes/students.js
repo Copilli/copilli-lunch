@@ -207,6 +207,13 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
 
     const today = dayjs().startOf('day');
 
+    console.log('[💡 PATCH /:id/period] Recibido:', {
+      startDate,
+      endDate,
+      typeofStart: typeof startDate,
+      typeofEnd: typeof endDate,
+    });
+
     if (!startDate || !endDate) {
       const existingStart = dayjs(student.specialPeriod?.startDate);
       const existingEnd = dayjs(student.specialPeriod?.endDate);
