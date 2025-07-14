@@ -13,7 +13,7 @@ import StudentOfficeActions from '../components/StudentOfficeActions';
 const OficinaPanel = ({ setUser }) => {
   const [students, setStudents] = useState([]);
   const [movements, setMovements] = useState([]);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(''); 
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
