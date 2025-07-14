@@ -1,4 +1,3 @@
-// models/PeriodLog.js
 const mongoose = require('mongoose');
 
 const PeriodLogSchema = new mongoose.Schema({
@@ -8,8 +7,9 @@ const PeriodLogSchema = new mongoose.Schema({
   note: { type: String, default: '' },
   reason: { type: String, default: 'nuevo periodo' },
   performedBy: { type: String, default: 'sistema' },
-  userRole: { type: String, default: 'sistema' },
-  timestamp: { type: Date, default: Date.now }
+  userRole: { type: String, default: 'sistema' }
+}, {
+  timestamps: true  // esto añade automáticamente createdAt y updatedAt
 });
 
 module.exports = mongoose.model('PeriodLog', PeriodLogSchema);
