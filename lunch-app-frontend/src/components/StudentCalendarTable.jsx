@@ -27,9 +27,9 @@ const StudentCalendarTable = ({ students, movements, periodLogsMap = {}, month, 
   const days = getDaysInMonth(selectedMonth, selectedYear);
 
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table border="1" style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
+    <div className="table-responsive">
+      <table className="table table-bordered table-sm text-center">
+        <thead className="table-light">
           <tr>
             <th>Alumno</th>
             {days.map(d => (
@@ -45,22 +45,22 @@ const StudentCalendarTable = ({ students, movements, periodLogsMap = {}, month, 
 
             const tokenMap = {};
             studentMovs.forEach(m => {
-              const date = dayjs(m.timestamp).format('YYYY-MM-DD');
-              tokenMap[date] = m;
+              const dateKey = dayjs(m.timestamp).startOf('day').format('YYYY-MM-DD');
+              tokenMap[dateKey] = m;
             });
 
             const logs = periodLogsMap[student.studentId] || [];
 
             return (
               <tr key={student.studentId}>
-                <td style={{ fontWeight: 'bold' }}>{student.name}</td>
+                <td className="fw-bold text-start">{student.name}</td>
                 {days.map(d => {
                   const dayStr = String(d).padStart(2, '0');
                   const monthStr = String(selectedMonth).padStart(2, '0');
-                  const date = `${selectedYear}-${monthStr}-${dayStr}`;
+                  const currentDate = dayjs(`${selectedYear}-${monthStr}-${dayStr}`).startOf('day').format('YYYY-MM-DD');
 
-                  const movement = tokenMap[date];
-                  const inPeriod = isInAnyPeriod(date, logs);
+                  const movement = tokenMap[currentDate];
+                  const inPeriod = isInAnyPeriod(currentDate, logs);
 
                   let bg = '';
                   if (movement?.reason === 'uso') {
@@ -72,7 +72,7 @@ const StudentCalendarTable = ({ students, movements, periodLogsMap = {}, month, 
                   }
 
                   return (
-                    <td key={d} style={{ backgroundColor: bg, textAlign: 'center' }}>
+                    <td key={d} style={{ backgroundColor: bg }}>
                       {bg ? '✓' : ''}
                     </td>
                   );

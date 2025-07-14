@@ -320,7 +320,7 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
         studentId: student.studentId,
         change: 0,
         reason: reason || 'nuevo periodo',
-        note: `Periodo especial del ${start.format('YYYY-MM-DD')} al ${end.format('YYYY-MM-DD')}\n${note || ''}`,
+        note: `Periodo especial del ${start.format('YYYY-MM-DD')} al ${end.format('YYYY-MM-DD')} - \n${note || ''}`,
         performedBy: performedBy || 'sistema',
         userRole: userRole || 'sistema'
       });

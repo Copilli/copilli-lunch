@@ -29,22 +29,6 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
     }
   }, [student]);
 
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        setConfirming(false);
-      }
-    };
-
-    if (confirming) {
-      document.addEventListener('keydown', handleKeyDown);
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [confirming]);
-
   const showError = (msg) => {
     setFormError(msg);
     setTimeout(() => setFormError(''), 3000);
@@ -121,154 +105,134 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
 
   return (
     <>
-      {/* Alerta flotante de error */}
+      {/* Alerta flotante con Bootstrap */}
       {formError && (
-        <div style={{
-          position: 'fixed',
-          top: 20,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          backgroundColor: '#f44336',
-          color: 'white',
-          padding: '10px 20px',
-          borderRadius: '5px',
-          zIndex: 9999,
-          boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
-        }}>
+        <div className="alert alert-danger position-fixed top-0 start-50 translate-middle-x mt-3 z-3" role="alert" style={{ zIndex: 9999 }}>
           {formError}
         </div>
       )}
 
-      <div style={{ marginTop: '2rem', padding: '1rem', border: '1px solid #ccc', borderRadius: 8 }}>
+      <div className="mt-4 p-3 border rounded">
         <h4>Acciones de oficina</h4>
 
-        <label>Tipo de acción: </label>
-        <select value={actionType} onChange={(e) => setActionType(e.target.value)}>
-          <option value="tokens">Agregar tokens</option>
-          <option value="period">Agregar periodo</option>
-        </select>
+        <div className="mb-3">
+          <label className="form-label">Tipo de acción:</label>
+          <select className="form-select" value={actionType} onChange={(e) => setActionType(e.target.value)}>
+            <option value="tokens">Agregar tokens</option>
+            <option value="period">Agregar periodo</option>
+          </select>
+        </div>
 
         {actionType === 'tokens' && (
-          <div style={{ marginTop: '1rem' }}>
-            <label>Cantidad de tokens:</label>
-            <input
-              type="number"
-              min="0"
-              value={tokenAmount}
-              onChange={(e) => setTokenAmount(Math.max(0, Number(e.target.value)))}
-              style={{ width: '100%' }}
-            />
+          <>
+            <div className="mb-3">
+              <label className="form-label">Cantidad de tokens:</label>
+              <input
+                type="number"
+                className="form-control"
+                min="0"
+                value={tokenAmount}
+                onChange={(e) => setTokenAmount(Math.max(0, Number(e.target.value)))}
+              />
+            </div>
 
-            <label>Motivo:</label>
-            <select value={reason} onChange={(e) => setReason(e.target.value)}>
-              <option value="pago">Pago</option>
-              <option value="justificado">Justificado</option>
-              {canUseAjusteManual && <option value="ajuste manual">Ajuste manual</option>}
-            </select>
+            <div className="mb-3">
+              <label className="form-label">Motivo:</label>
+              <select className="form-select" value={reason} onChange={(e) => setReason(e.target.value)}>
+                <option value="pago">Pago</option>
+                <option value="justificado">Justificado</option>
+                {canUseAjusteManual && <option value="ajuste manual">Ajuste manual</option>}
+              </select>
+            </div>
 
-            <label>Nota:</label>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Especifica detalles o ticket"
-              style={{ width: '100%' }}
-            />
-          </div>
+            <div className="mb-3">
+              <label className="form-label">Nota:</label>
+              <textarea
+                className="form-control"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Especifica detalles o ticket"
+              />
+            </div>
+          </>
         )}
 
         {actionType === 'period' && (
-          <div style={{ marginTop: '1rem' }}>
-            <label>Fecha inicio:</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
+          <>
+            <div className="mb-3">
+              <label className="form-label">Fecha inicio:</label>
+              <input
+                type="date"
+                className="form-control"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
 
-            <label>Fecha fin:</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
+            <div className="mb-3">
+              <label className="form-label">Fecha fin:</label>
+              <input
+                type="date"
+                className="form-control"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
 
-            <label>Motivo:</label>
-            <select value={reason} onChange={(e) => setReason(e.target.value)}>
-              <option value="pago">Pago</option>
-              <option value="justificado">Justificado</option>
-              {canUseAjusteManual && <option value="ajuste manual">Ajuste manual</option>}
-            </select>
+            <div className="mb-3">
+              <label className="form-label">Motivo:</label>
+              <select className="form-select" value={reason} onChange={(e) => setReason(e.target.value)}>
+                <option value="pago">Pago</option>
+                <option value="justificado">Justificado</option>
+                {canUseAjusteManual && <option value="ajuste manual">Ajuste manual</option>}
+              </select>
+            </div>
 
-            <label>Nota:</label>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Especifica detalles o ticket"
-              style={{ width: '100%' }}
-            />
-          </div>
+            <div className="mb-3">
+              <label className="form-label">Nota:</label>
+              <textarea
+                className="form-control"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Especifica detalles o ticket"
+              />
+            </div>
+          </>
         )}
 
-        <button onClick={showConfirmation} style={{ marginTop: '1rem' }}>
+        <button className="btn btn-primary" onClick={showConfirmation}>
           Confirmar acción
         </button>
       </div>
 
+      {/* Modal Bootstrap-like */}
       {confirming && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '2rem',
-            borderRadius: '8px',
-            width: '90%',
-            maxWidth: '400px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-            position: 'relative'
-          }}>
-            {/* Botón de cerrar (X) */}
-            <button
-              onClick={() => setConfirming(false)}
-              style={{
-                position: 'absolute',
-                top: '10px',
-                right: '10px',
-                background: 'none',
-                border: 'none',
-                fontSize: '1.2rem',
-                cursor: 'pointer'
-              }}
-              aria-label="Cerrar modal"
-            >
-              ❌
-            </button>
-
-            <h5>¿Confirmas esta acción?</h5>
-            {actionType === 'tokens' && (
-              <p>Tokens actuales: {student.tokens} → Total: {student.tokens + tokenAmount}</p>
-            )}
-            {actionType === 'period' && (
-              <p>Periodo: {startDate} a {endDate}</p>
-            )}
-            <p><strong>Motivo:</strong> {reason}</p>
-            <p><strong>Nota:</strong> {note}</p>
-
-            <button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? 'Guardando...' : 'Sí, registrar'}
-            </button>
-            <button onClick={() => setConfirming(false)} style={{ marginLeft: '1rem' }}>
-              Cancelar
-            </button>
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">¿Confirmas esta acción?</h5>
+                <button type="button" className="btn-close" onClick={() => setConfirming(false)}></button>
+              </div>
+              <div className="modal-body">
+                {actionType === 'tokens' && (
+                  <p>Tokens actuales: {student.tokens} → Total: {student.tokens + tokenAmount}</p>
+                )}
+                {actionType === 'period' && (
+                  <p>Periodo: {startDate} a {endDate}</p>
+                )}
+                <p><strong>Motivo:</strong> {reason}</p>
+                <p><strong>Nota:</strong> {note}</p>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setConfirming(false)}>
+                  Cancelar
+                </button>
+                <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>
+                  {submitting ? 'Guardando...' : 'Sí, registrar'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
