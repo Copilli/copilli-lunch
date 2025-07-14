@@ -59,16 +59,17 @@ const StudentCalendarTable = ({ students, movements, periodLogsMap = {}, month, 
                   const monthStr = String(selectedMonth).padStart(2, '0');
                   const currentDate = dayjs(`${selectedYear}-${monthStr}-${dayStr}`).startOf('day').format('YYYY-MM-DD');
 
+                  // Debug: Verifica si currentDate coincide con alguna clave de tokenMap
+                  console.log('currentDate:', currentDate, 'tokenMap keys:', Object.keys(tokenMap));
+
                   const movement = tokenMap[currentDate];
                   const inPeriod = isInAnyPeriod(currentDate, logs);
 
                   let bg = '';
                   if (movement?.reason === 'uso') {
-                    bg = '#add8e6'; // azul
-                  } else if (movement?.reason === 'uso-con-deuda') {
-                    bg = '#ffb3b3'; // rojo
+                    bg = movement.change < 0 ? '#ffb3b3' : '#add8e6';
                   } else if (inPeriod) {
-                    bg = '#c1f0c1'; // verde
+                    bg = '#c1f0c1';
                   }
 
                   return (
