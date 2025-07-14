@@ -207,23 +207,6 @@ const OficinaPanel = ({ setUser }) => {
           </button>
         </div>
       )}
-      {selectedStudent && (
-        <>
-          <StudentDetailsPanel
-            student={selectedStudent}
-            movements={movements}
-            onClose={() => setSelectedStudent(null)}
-          />
-
-          <StudentOfficeActions
-            student={selectedStudent}
-            onUpdate={() => {
-              fetchStudents();
-              fetchMovements();
-            }}
-          />
-        </>
-      )}
     </div>
   );
 };
