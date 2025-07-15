@@ -5,20 +5,20 @@ import TopNavBar from '../components/TopNavBar';
 import SearchBar from '../components/SearchBar';
 import LevelCard from '../components/LevelCard';
 import GroupCard from '../components/GroupCard';
-import StudentCalendarTable from '../components/StudentCalendarTable';
+import { StudentCalendarContainer } from '../components/StudentCalendarTable';
 import StudentSummaryCard from '../components/StudentSummaryCard';
 import StudentDetailsPanel from '../components/StudentDetailsPanel';
 
 const OficinaPanel = ({ setUser }) => {
   const [students, setStudents] = useState([]);
   const [movements, setMovements] = useState([]);
-  const [search, setSearch] = useState(''); 
+  const [search, setSearch] = useState('');
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [calendarMonth, setCalendarMonth] = useState(dayjs().month() + 1);
   const [calendarYear, setCalendarYear] = useState(dayjs().year());
-  const [periodLogs, setPeriodLogs] = useState([]);
+  const [showDetails, setShowDetails] = useState(false);
 
   const fetchStudents = async () => {
     const token = localStorage.getItem('token');
@@ -26,14 +26,6 @@ const OficinaPanel = ({ setUser }) => {
       headers: { Authorization: `Bearer ${token}` }
     });
     setStudents(res.data);
-  };
-
-  const fetchPeriodLogs = async (studentId) => {
-    const token = localStorage.getItem('token');
-    const res = await axios.get(`${import.meta.env.VITE_API_URL}/students/${studentId}/period-logs`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    setPeriodLogs(res.data);
   };
 
   const fetchMovements = async () => {
@@ -51,6 +43,7 @@ const OficinaPanel = ({ setUser }) => {
 
   useEffect(() => {
     setSelectedStudent(null);
+    setShowDetails(false);
   }, [selectedGroup, selectedLevel]);
 
   const levels = ['preescolar', 'primaria', 'secundaria'];
@@ -74,7 +67,7 @@ const OficinaPanel = ({ setUser }) => {
     : [];
 
   const relevantMovements = useMemo(() => {
-    return movements.filter(m => m.reason === 'uso');
+    return movements.filter(m => m.reason === 'uso' || m.reason === 'uso-con-deuda');
   }, [movements]);
 
   return (
@@ -89,7 +82,7 @@ const OficinaPanel = ({ setUser }) => {
             setSelectedLevel(student.group.level);
             setSelectedGroup(student.group.name);
             setSelectedStudent(student);
-            fetchPeriodLogs(student._id);
+            setShowDetails(true);
           }}
         />
       </TopNavBar>
@@ -118,14 +111,12 @@ const OficinaPanel = ({ setUser }) => {
         <div>
           <h3>Estudiantes en {selectedLevel} - Grupo {selectedGroup}</h3>
 
-          {selectedStudent ? (
-            <>
+          {selectedStudent && showDetails ? (
+            <div className="position-relative">
               <p>Mostrando resultados para: <strong>{selectedStudent.name}</strong> ({selectedStudent.studentId})</p>
 
-              <StudentCalendarTable
-                students={[selectedStudent]}
-                movements={relevantMovements}
-                periodLogs={periodLogs}
+              <StudentCalendarContainer
+                selectedStudent={selectedStudent}
                 month={calendarMonth}
                 year={calendarYear}
               />
@@ -138,14 +129,16 @@ const OficinaPanel = ({ setUser }) => {
                 />
               </div>
 
-              <StudentDetailsPanel
-                student={selectedStudent}
-                movements={movements}
-                onClose={() => setSelectedStudent(null)}
-                fetchStudents={fetchStudents}
-                fetchMovements={fetchMovements}
-              />
-            </>
+              <div className="slide-panel">
+                <StudentDetailsPanel
+                  student={selectedStudent}
+                  movements={movements}
+                  onClose={() => setShowDetails(false)}
+                  fetchStudents={fetchStudents}
+                  fetchMovements={fetchMovements}
+                />
+              </div>
+            </div>
           ) : (
             <>
               <p>{studentsInGroup.length} estudiante(s)</p>
@@ -168,10 +161,8 @@ const OficinaPanel = ({ setUser }) => {
                 </select>
               </div>
 
-              <StudentCalendarTable
-                students={studentsInGroup}
-                movements={relevantMovements}
-                periodLogs={periodLogs}
+              <StudentCalendarContainer
+                currentGroup={{ name: selectedGroup, level: selectedLevel }}
                 month={calendarMonth}
                 year={calendarYear}
               />
@@ -182,18 +173,13 @@ const OficinaPanel = ({ setUser }) => {
                   <StudentSummaryCard
                     key={student.studentId}
                     student={student}
-                    onSelect={setSelectedStudent}
+                    onSelect={(s) => {
+                      setSelectedStudent(s);
+                      setShowDetails(true);
+                    }}
                   />
                 ))}
               </div>
-
-              <StudentDetailsPanel
-                student={selectedStudent}
-                movements={movements}
-                onClose={() => setSelectedStudent(null)}
-                fetchStudents={fetchStudents}
-                fetchMovements={fetchMovements}
-              />
             </>
           )}
 

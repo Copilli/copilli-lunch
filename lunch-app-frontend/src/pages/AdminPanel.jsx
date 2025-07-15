@@ -5,7 +5,7 @@ import TopNavBar from '../components/TopNavBar';
 import SearchBar from '../components/SearchBar';
 import LevelCard from '../components/LevelCard';
 import GroupCard from '../components/GroupCard';
-import StudentCalendarTable from '../components/StudentCalendarTable';
+import { StudentCalendarContainer } from '../components/StudentCalendarTable';
 import StudentDetailsPanel from '../components/StudentDetailsPanel';
 import StudentSummaryCard from '../components/StudentSummaryCard';
 import StudentImportPanel from '../components/StudentImportPanel';
@@ -19,8 +19,8 @@ const AdminPanel = ({ setUser }) => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [calendarMonth, setCalendarMonth] = useState(dayjs().month() + 1);
   const [calendarYear, setCalendarYear] = useState(dayjs().year());
-  const [periodLogs, setPeriodLogs] = useState([]);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const user = JSON.parse(localStorage.getItem('user'));
 
   const fetchStudents = async () => {
@@ -29,14 +29,6 @@ const AdminPanel = ({ setUser }) => {
       headers: { Authorization: `Bearer ${token}` }
     });
     setStudents(res.data);
-  };
-
-  const fetchPeriodLogs = async (studentId) => {
-    const token = localStorage.getItem('token');
-    const res = await axios.get(`${import.meta.env.VITE_API_URL}/students/${studentId}/period-logs`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    setPeriodLogs(res.data);
   };
 
   const fetchMovements = async () => {
@@ -54,6 +46,7 @@ const AdminPanel = ({ setUser }) => {
 
   useEffect(() => {
     setSelectedStudent(null);
+    setShowDetails(false);
   }, [selectedGroup, selectedLevel]);
 
   const levels = ['preescolar', 'primaria', 'secundaria'];
@@ -77,7 +70,7 @@ const AdminPanel = ({ setUser }) => {
     : [];
 
   const relevantMovements = useMemo(() => {
-    return movements.filter(m => m.reason === 'uso');
+    return movements.filter(m => m.reason === 'uso' || m.reason === 'uso-con-deuda');
   }, [movements]);
 
   const showGroupView = !search && selectedLevel && selectedGroup;
@@ -101,12 +94,11 @@ const AdminPanel = ({ setUser }) => {
             setSelectedLevel(student.group.level);
             setSelectedGroup(student.group.name);
             setSelectedStudent(student);
-            fetchPeriodLogs(student._id);
+            setShowDetails(true);
           }}
         />
       </TopNavBar>
 
-      {/* Modal para importar estudiantes */}
       {showImportModal && (
         <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
@@ -159,10 +151,8 @@ const AdminPanel = ({ setUser }) => {
           <h3>Resultado de búsqueda</h3>
           <p><strong>{selectedStudent.name}</strong> ({selectedStudent.studentId})</p>
 
-          <StudentCalendarTable
-            students={[selectedStudent]}
-            movements={relevantMovements}
-            periodLogs={periodLogs}
+          <StudentCalendarContainer
+            selectedStudent={selectedStudent}
             month={calendarMonth}
             year={calendarYear}
           />
@@ -171,18 +161,19 @@ const AdminPanel = ({ setUser }) => {
             <h4>Resumen por alumno</h4>
             <StudentSummaryCard
               student={selectedStudent}
-              onSelect={() => {}} // deshabilitado
+              onSelect={() => {}}
             />
           </div>
 
-          <StudentDetailsPanel
-            student={selectedStudent}
-            movements={movements}
-            onClose={() => {
-              setSelectedStudent(null);
-              setSearch('');
-            }}
-          />
+          <div className="slide-panel">
+            <StudentDetailsPanel
+              student={selectedStudent}
+              movements={movements}
+              onClose={() => setShowDetails(false)}
+              fetchStudents={fetchStudents}
+              fetchMovements={fetchMovements}
+            />
+          </div>
 
           <button onClick={() => {
             setSearch('');
@@ -216,10 +207,8 @@ const AdminPanel = ({ setUser }) => {
             </select>
           </div>
 
-          <StudentCalendarTable
-            students={studentsInGroup}
-            movements={relevantMovements}
-            periodLogs={periodLogs}
+          <StudentCalendarContainer
+            currentGroup={{ name: selectedGroup, level: selectedLevel }}
             month={calendarMonth}
             year={calendarYear}
           />
@@ -230,16 +219,25 @@ const AdminPanel = ({ setUser }) => {
               <StudentSummaryCard
                 key={student.studentId}
                 student={student}
-                onSelect={setSelectedStudent}
+                onSelect={(s) => {
+                  setSelectedStudent(s);
+                  setShowDetails(true);
+                }}
               />
             ))}
           </div>
 
-          <StudentDetailsPanel
-            student={selectedStudent}
-            movements={movements}
-            onClose={() => setSelectedStudent(null)}
-          />
+          <div className="slide-panel">
+            {selectedStudent && showDetails && (
+              <StudentDetailsPanel
+                student={selectedStudent}
+                movements={movements}
+                onClose={() => setShowDetails(false)}
+                fetchStudents={fetchStudents}
+                fetchMovements={fetchMovements}
+              />
+            )}
+          </div>
 
           <button className="btn btn-secondary mt-3" onClick={() => setSelectedGroup(null)}>
             ← Volver a grupos

@@ -175,11 +175,18 @@ router.post('/:id/use', async (req, res) => {
       });
     }
 
-    if (student.status === 'bloqueado') {
-      return res.status(403).json({ error: 'Este estudiante está bloqueado y no puede registrar consumo sin un periodo activo.' });
+    // Simular decremento sin aplicarlo aún
+    const wouldHave = student.tokens - 1;
+
+    // Solo impedir si se quedaría en negativo Y está bloqueado
+    if (student.status === 'bloqueado' && wouldHave < 0) {
+      return res.status(403).json({
+        error: 'Este estudiante está bloqueado y no puede registrar consumo en negativo.'
+      });
     }
 
-    student.tokens -= 1;
+    // Aplicar consumo
+    student.tokens = wouldHave;
     await student.save();
 
     const isDebt = student.tokens < 0;
