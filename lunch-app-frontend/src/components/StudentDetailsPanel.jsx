@@ -3,24 +3,14 @@ import axios from 'axios';
 import dayjs from 'dayjs';
 import StudentOfficeActions from './StudentOfficeActions';
 
-const statusLabels = {
-  'con-fondos': 'success',
-  'sin-fondos': 'warning',
-  'bloqueado': 'danger',
-  'periodo-activo': 'primary'
-};
-
 const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetchMovements }) => {
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [originalTokens, setOriginalTokens] = useState(0);
-  const [delta, setDelta] = useState(0);
-  const [reason, setReason] = useState('pago');
-  const [note, setNote] = useState('');
-  const [periodReason, setPeriodReason] = useState('nuevo periodo');
-  const [periodNote, setPeriodNote] = useState('');
   const [lastValidStatus, setLastValidStatus] = useState(null);
   const [visibleMovements, setVisibleMovements] = useState(5);
+  const [formError, setFormError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const user = JSON.parse(localStorage.getItem('user'));
 
   useEffect(() => {
@@ -50,6 +40,16 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
     .filter(m => m.studentId === student.studentId)
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
+  const showError = (msg) => {
+    setFormError(msg);
+    setTimeout(() => setFormError(''), 3000);
+  };
+
+  const showSuccess = (msg) => {
+    setSuccessMsg(msg);
+    setTimeout(() => setSuccessMsg(''), 3000);
+  };
+
   const handleChange = (field, value) => {
     if (field.startsWith('group.')) {
       setForm(prev => ({
@@ -57,15 +57,6 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
         group: {
           ...prev.group,
           [field.split('.')[1]]: value
-        }
-      }));
-    } else if (field === 'hasSpecialPeriod' && value === false) {
-      setForm(prev => ({
-        ...prev,
-        hasSpecialPeriod: false,
-        specialPeriod: {
-          startDate: null,
-          endDate: null
         }
       }));
     } else if (field === 'status') {
@@ -82,26 +73,9 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
     }
   };
 
-  const handleSpecialPeriodChange = (field, value) => {
-    if (isReadOnly) return;
-    setForm(prev => ({
-      ...prev,
-      specialPeriod: {
-        ...prev.specialPeriod,
-        [field]: value
-      }
-    }));
-  };
-
   const handleSave = async () => {
-    if (form.hasSpecialPeriod && (!periodReason.trim() || !periodNote.trim())) {
-      alert('Para asignar un periodo especial se requiere un motivo y una nota.');
-      return;
-    }
-
     setSaving(true);
     const token = localStorage.getItem('token');
-
     try {
       const tokenDelta = form.tokens - originalTokens;
       if (tokenDelta !== 0 && isAdmin) {
@@ -115,28 +89,13 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
           headers: { Authorization: `Bearer ${token}` }
         });
       }
-
       await axios.put(`${import.meta.env.VITE_API_URL}/students/${student._id}`, form, {
         headers: { Authorization: `Bearer ${token}` }
       });
-
-      if (form.hasSpecialPeriod) {
-        await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/period`, {
-          startDate: form.specialPeriod.startDate,
-          endDate: form.specialPeriod.endDate,
-          reason: periodReason,
-          note: periodNote,
-          performedBy: user?.username || 'admin',
-          userRole: user?.role || 'admin'
-        }, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      }
-
-      alert('Estudiante actualizado.');
+      showSuccess('Estudiante actualizado.');
     } catch (err) {
       console.error(err);
-      alert('Error al guardar cambios.');
+      showError('Error al guardar cambios.');
     } finally {
       setSaving(false);
     }
@@ -144,7 +103,6 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
 
   const exportCSV = () => {
     if (!isAdmin) return;
-
     const header = 'Fecha,Motivo,Nota,Responsable,Cambio\n';
     const rows = studentMovements.map(m => {
       const fecha = dayjs(m.timestamp).format('YYYY-MM-DD HH:mm');
@@ -154,7 +112,6 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
       const cambio = m.change;
       return `${fecha},${motivo},${nota},${responsable},${cambio}`;
     });
-
     const blob = new Blob([header + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -164,12 +121,46 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
     document.body.removeChild(link);
   };
 
-  const handleLoadMore = () => {
-    setVisibleMovements(prev => prev + 5);
+  const handleLoadMore = () => setVisibleMovements(prev => prev + 5);
+
+  const handleDeletePeriod = async () => {
+    if (!form.hasSpecialPeriod) return;
+    setSaving(true);
+    const token = localStorage.getItem('token');
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_URL}/students/${student._id}/period`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setForm(prev => ({
+        ...prev,
+        hasSpecialPeriod: false,
+        specialPeriod: { startDate: null, endDate: null }
+      }));
+      if (fetchStudents) fetchStudents();
+      if (fetchMovements) fetchMovements();
+      showSuccess('Periodo especial eliminado.');
+    } catch (err) {
+      console.error(err);
+      showError('Error al eliminar el periodo especial.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <>
+      {/* Mensajes de error y éxito tipo Bootstrap */}
+      {formError && (
+        <div className="alert alert-danger position-fixed top-0 start-50 translate-middle-x mt-3 z-3" role="alert" style={{ zIndex: 9999 }}>
+          {formError}
+        </div>
+      )}
+      {successMsg && (
+        <div className="alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3 z-3" role="alert" style={{ zIndex: 9999 }}>
+          {successMsg}
+        </div>
+      )}
+
       <div className="card mt-4">
         <div className="card-header d-flex justify-content-between align-items-center">
           <h4 className="mb-0">Detalle del alumno</h4>
@@ -270,20 +261,6 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
             </div>
           )}
 
-          <div className="form-check mb-3">
-            <input
-              className="form-check-input"
-              type="checkbox"
-              id="hasSpecialPeriod"
-              checked={form.hasSpecialPeriod}
-              onChange={(e) => handleChange('hasSpecialPeriod', e.target.checked)}
-              disabled={isReadOnly}
-            />
-            <label className="form-check-label" htmlFor="hasSpecialPeriod">
-              ¿Tiene periodo especial activo?
-            </label>
-          </div>
-
           {form.hasSpecialPeriod && (
             <>
               <div className="row mb-3">
@@ -306,17 +283,23 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
                   />
                 </div>
               </div>
+              <button
+                className="btn btn-outline-danger mb-3"
+                onClick={handleDeletePeriod}
+                disabled={saving}
+              >
+                {saving ? 'Eliminando...' : 'Eliminar periodo especial'}
+              </button>
             </>
           )}
 
           {isAdmin && (
             <>
               <div className="form-text mb-3">
-                Para modificar un periodo, utiliza la sección "Ajustar desayunos" más abajo. Si quieres eliminar el periodo actual solo desmarca la opción "Tiene periodo especial activo".
+                Para modificar un periodo, utiliza la sección "Ajustar desayunos" más abajo.
               </div>
-
               <button className="btn btn-primary mb-3" onClick={handleSave} disabled={saving}>
-                  {saving ? 'Guardando...' : 'Guardar cambios'}
+                {saving ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </>
           )}
