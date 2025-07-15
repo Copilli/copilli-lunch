@@ -30,7 +30,6 @@ const CocinaPanel = ({ setUser }) => {
   }, []);
 
   const today = dayjs().format('YYYY-MM-DD');
-
   const levels = ['preescolar', 'primaria', 'secundaria'];
 
   const filtered = search
@@ -62,7 +61,7 @@ const CocinaPanel = ({ setUser }) => {
     return 'sin-fondos';
   };
 
-  const handleClick = async (student) => {
+  const handleClick = (student) => {
     const status = getStatus(student);
     const hasTokens = student.tokens > 0;
 
@@ -76,6 +75,7 @@ const CocinaPanel = ({ setUser }) => {
       return;
     }
 
+    setSelectedStudent(student); // ✅ CORRECCIÓN
     setConfirmMessage(
       hasTokens
         ? `¿Deseas descontar un token? Total final: ${student.tokens - 1}`
@@ -85,6 +85,11 @@ const CocinaPanel = ({ setUser }) => {
   };
 
   const handleConfirm = async () => {
+    if (!selectedStudent?._id) {
+      setFormError('Estudiante no seleccionado');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const token = localStorage.getItem('token');

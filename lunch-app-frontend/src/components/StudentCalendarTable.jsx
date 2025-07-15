@@ -106,10 +106,10 @@ const StudentCalendarTable = ({ students, movements, periodLogs = [], month, yea
 };
 
 //
-// 🚀 Componente 2: Hace fetch de datos y muestra la tabla
+// 🚀 Componente 2: Hace fetch de datos y muestra la tabla con filtros dinámicos
 //
 
-const StudentCalendarContainer = ({ month, year }) => {
+const StudentCalendarContainer = ({ month, year, selectedStudent, currentGroup }) => {
   const [students, setStudents] = useState([]);
   const [movements, setMovements] = useState([]);
   const [periodLogs, setPeriodLogs] = useState([]);
@@ -168,11 +168,30 @@ const StudentCalendarContainer = ({ month, year }) => {
 
   if (loading) return <p>Cargando calendario...</p>;
 
+  // 🎯 Aplicar filtros por alumno o grupo
+  let visibleStudents = students;
+
+  if (selectedStudent) {
+    visibleStudents = students.filter(s => s.studentId === selectedStudent.studentId);
+  } else if (currentGroup) {
+    visibleStudents = students.filter(
+      s => s.group?.name === currentGroup.name && s.group?.level === currentGroup.level
+    );
+  }
+
+  const visibleMovements = movements.filter(m =>
+    visibleStudents.some(s => s.studentId === m.studentId)
+  );
+
+  const visiblePeriodLogs = periodLogs.filter(p =>
+    visibleStudents.some(s => s.studentId === p.studentId)
+  );
+
   return (
     <StudentCalendarTable
-      students={students}
-      movements={movements}
-      periodLogs={periodLogs}
+      students={visibleStudents}
+      movements={visibleMovements}
+      periodLogs={visiblePeriodLogs}
       month={month}
       year={year}
     />
