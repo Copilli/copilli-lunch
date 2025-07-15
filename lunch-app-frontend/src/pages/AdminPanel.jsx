@@ -21,6 +21,7 @@ const AdminPanel = ({ setUser }) => {
   const [calendarYear, setCalendarYear] = useState(dayjs().year());
   const [showDetails, setShowDetails] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showGroupView, setShowGroupView] = useState(false);
   const user = JSON.parse(localStorage.getItem('user'));
 
   const fetchStudents = async () => {
@@ -88,7 +89,7 @@ const AdminPanel = ({ setUser }) => {
             setSelectedLevel(student.group.level);
             setSelectedGroup(student.group.name);
             setSelectedStudent(student);
-            setShowDetails(true);
+            // fetchPeriodLogs(student._id);
           }}
         />
       </TopNavBar>
@@ -140,7 +141,7 @@ const AdminPanel = ({ setUser }) => {
         </div>
       )}
 
-      {selectedGroup && (
+      {showGroupView && (
         <div>
           <h3>Estudiantes en {selectedLevel} - Grupo {selectedGroup}</h3>
           <p>{studentsInGroup.length} estudiante(s)</p>

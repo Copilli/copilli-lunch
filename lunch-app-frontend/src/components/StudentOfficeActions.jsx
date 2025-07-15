@@ -62,6 +62,7 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
           headers: { Authorization: `Bearer ${token}` }
         });
         showSuccess('Tokens actualizados correctamente.');
+        setConfirming(false);
       } else if (actionType === 'period') {
         if (!note.trim() || !reason.trim()) {
           showError('Debes proporcionar un motivo y una nota para el periodo.');
@@ -69,17 +70,30 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
           return;
         }
 
-        await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/period`, {
-          startDate,
-          endDate,
-          reason,
-          note,
-          performedBy: user?.username || 'desconocido',
-          userRole: user?.role || 'oficina'
-        }, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        showSuccess('Periodo especial registrado correctamente.');
+        try {
+          await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/period`, {
+            startDate,
+            endDate,
+            reason,
+            note,
+            performedBy: user?.username || 'desconocido',
+            userRole: user?.role || 'oficina'
+          }, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          showSuccess('Periodo especial registrado correctamente.');
+          setConfirming(false);
+        } catch (err) {
+          // Si el backend regresa un mensaje de error específico, muéstralo
+          let msg = 'Error al registrar el periodo especial.';
+          if (err.response && err.response.data && err.response.data.message) {
+            msg = err.response.data.message;
+          }
+          showError(msg);
+          setConfirming(false);
+          setSubmitting(false);
+          return;
+        }
       }
 
       setFormError('');
@@ -87,11 +101,15 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
       setNote('');
       setStartDate('');
       setEndDate('');
-      setConfirming(false);
       onUpdate();
     } catch (err) {
       console.error(err);
-      showError('Error al registrar el cambio.');
+      let msg = 'Error al registrar el cambio.';
+      if (err.response && err.response.data && err.response.data.message) {
+        msg = err.response.data.message;
+      }
+      showError(msg);
+      setConfirming(false);
     } finally {
       setSubmitting(false);
     }

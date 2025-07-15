@@ -41,10 +41,6 @@ const OficinaPanel = ({ setUser }) => {
     fetchMovements();
   }, []);
 
-  useEffect(() => {
-    setShowDetails(false);
-  }, [selectedGroup, selectedLevel]);
-
   const levels = ['preescolar', 'primaria', 'secundaria'];
 
   const filtered = search
@@ -138,29 +134,32 @@ const OficinaPanel = ({ setUser }) => {
 
           <div style={{ marginTop: '2rem' }}>
             <h4>Resumen por alumno</h4>
-            {studentsInGroup.map(student => (
-              <StudentSummaryCard
-                key={student.studentId}
-                student={student}
-                onSelect={(s) => {
-                  setSelectedStudent(s);
-                  setShowDetails(true);
-                }}
-              />
-            ))}
-          </div>
-
-          {showDetails && (
-            <div className="slide-panel">
-              <StudentDetailsPanel
-                student={selectedStudent}
-                movements={movements}
-                onClose={() => setShowDetails(false)}
-                fetchStudents={fetchStudents}
-                fetchMovements={fetchMovements}
-              />
+            <div>
+              {studentsInGroup.map(student => (
+                <div key={student.studentId}>
+                  <StudentSummaryCard
+                    student={student}
+                    onSelect={() => {
+                      setSelectedStudent(student);
+                      setShowDetails(true);
+                    }}
+                  />
+                  {/* Mostrar detalles justo debajo del alumno seleccionado */}
+                  {showDetails && selectedStudent && selectedStudent.studentId === student.studentId && (
+                    <div className="slide-panel">
+                      <StudentDetailsPanel
+                        student={selectedStudent}
+                        movements={movements}
+                        onClose={() => setShowDetails(false)}
+                        fetchStudents={fetchStudents}
+                        fetchMovements={fetchMovements}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-          )}
+          </div>
 
           <button onClick={() => setSelectedGroup(null)} style={{ marginTop: '1rem' }}>
             ← Volver a grupos
