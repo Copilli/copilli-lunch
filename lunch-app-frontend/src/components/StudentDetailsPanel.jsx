@@ -283,6 +283,9 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
                   />
                 </div>
               </div>
+              <div className="form-text mb-3">
+                Para modificar un periodo, utiliza la sección "Ajustar desayunos" más abajo.
+              </div>
               <button
                 className="btn btn-outline-danger mb-3"
                 onClick={handleDeletePeriod}
@@ -295,9 +298,6 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
 
           {isAdmin && (
             <>
-              <div className="form-text mb-3">
-                Para modificar un periodo, utiliza la sección "Ajustar desayunos" más abajo.
-              </div>
               <button className="btn btn-primary mb-3" onClick={handleSave} disabled={saving}>
                 {saving ? 'Guardando...' : 'Guardar cambios'}
               </button>
