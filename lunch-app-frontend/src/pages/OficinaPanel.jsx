@@ -12,7 +12,7 @@ import StudentDetailsPanel from '../components/StudentDetailsPanel';
 const OficinaPanel = ({ setUser }) => {
   const [students, setStudents] = useState([]);
   const [movements, setMovements] = useState([]);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(''); 
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -42,7 +42,6 @@ const OficinaPanel = ({ setUser }) => {
   }, []);
 
   useEffect(() => {
-    setSelectedStudent(null);
     setShowDetails(false);
   }, [selectedGroup, selectedLevel]);
 
@@ -87,7 +86,7 @@ const OficinaPanel = ({ setUser }) => {
         />
       </TopNavBar>
 
-      {!search && !selectedLevel && !selectedStudent && (
+      {!search && !selectedLevel && (
         <div>
           {levels.map(level => (
             <LevelCard key={level} level={level} onClick={setSelectedLevel} />
@@ -110,77 +109,57 @@ const OficinaPanel = ({ setUser }) => {
       {selectedGroup && (
         <div>
           <h3>Estudiantes en {selectedLevel} - Grupo {selectedGroup}</h3>
+          <p>{studentsInGroup.length} estudiante(s)</p>
 
-          {selectedStudent && showDetails ? (
-            <div className="position-relative">
-              <p>Mostrando resultados para: <strong>{selectedStudent.name}</strong> ({selectedStudent.studentId})</p>
+          <div style={{ marginBottom: '1rem' }}>
+            <label>Mes: </label>
+            <select value={calendarMonth} onChange={e => setCalendarMonth(Number(e.target.value))}>
+              {Array.from({ length: 12 }, (_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  {dayjs().month(i).format('MMMM')}
+                </option>
+              ))}
+            </select>
 
-              <StudentCalendarContainer
-                selectedStudent={selectedStudent}
-                month={calendarMonth}
-                year={calendarYear}
+            <label style={{ marginLeft: '1rem' }}>Año: </label>
+            <select value={calendarYear} onChange={e => setCalendarYear(Number(e.target.value))}>
+              {Array.from({ length: 5 }, (_, i) => calendarYear - 2 + i).map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+
+          <StudentCalendarContainer
+            currentGroup={{ name: selectedGroup, level: selectedLevel }}
+            selectedStudent={showDetails ? selectedStudent : null}
+            month={calendarMonth}
+            year={calendarYear}
+          />
+
+          <div style={{ marginTop: '2rem' }}>
+            <h4>Resumen por alumno</h4>
+            {studentsInGroup.map(student => (
+              <StudentSummaryCard
+                key={student.studentId}
+                student={student}
+                onSelect={(s) => {
+                  setSelectedStudent(s);
+                  setShowDetails(true);
+                }}
               />
+            ))}
+          </div>
 
-              <div style={{ marginTop: '2rem' }}>
-                <h4>Resumen por alumno</h4>
-                <StudentSummaryCard
-                  student={selectedStudent}
-                  onSelect={() => {}}
-                />
-              </div>
-
-              <div className="slide-panel">
-                <StudentDetailsPanel
-                  student={selectedStudent}
-                  movements={movements}
-                  onClose={() => setShowDetails(false)}
-                  fetchStudents={fetchStudents}
-                  fetchMovements={fetchMovements}
-                />
-              </div>
+          {showDetails && (
+            <div className="slide-panel">
+              <StudentDetailsPanel
+                student={selectedStudent}
+                movements={movements}
+                onClose={() => setShowDetails(false)}
+                fetchStudents={fetchStudents}
+                fetchMovements={fetchMovements}
+              />
             </div>
-          ) : (
-            <>
-              <p>{studentsInGroup.length} estudiante(s)</p>
-
-              <div style={{ marginBottom: '1rem' }}>
-                <label>Mes: </label>
-                <select value={calendarMonth} onChange={e => setCalendarMonth(Number(e.target.value))}>
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <option key={i + 1} value={i + 1}>
-                      {dayjs().month(i).format('MMMM')}
-                    </option>
-                  ))}
-                </select>
-
-                <label style={{ marginLeft: '1rem' }}>Año: </label>
-                <select value={calendarYear} onChange={e => setCalendarYear(Number(e.target.value))}>
-                  {Array.from({ length: 5 }, (_, i) => calendarYear - 2 + i).map(y => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
-              </div>
-
-              <StudentCalendarContainer
-                currentGroup={{ name: selectedGroup, level: selectedLevel }}
-                month={calendarMonth}
-                year={calendarYear}
-              />
-
-              <div style={{ marginTop: '2rem' }}>
-                <h4>Resumen por alumno</h4>
-                {studentsInGroup.map(student => (
-                  <StudentSummaryCard
-                    key={student.studentId}
-                    student={student}
-                    onSelect={(s) => {
-                      setSelectedStudent(s);
-                      setShowDetails(true);
-                    }}
-                  />
-                ))}
-              </div>
-            </>
           )}
 
           <button onClick={() => setSelectedGroup(null)} style={{ marginTop: '1rem' }}>

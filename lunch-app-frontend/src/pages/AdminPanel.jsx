@@ -6,8 +6,8 @@ import SearchBar from '../components/SearchBar';
 import LevelCard from '../components/LevelCard';
 import GroupCard from '../components/GroupCard';
 import { StudentCalendarContainer } from '../components/StudentCalendarTable';
-import StudentDetailsPanel from '../components/StudentDetailsPanel';
 import StudentSummaryCard from '../components/StudentSummaryCard';
+import StudentDetailsPanel from '../components/StudentDetailsPanel';
 import StudentImportPanel from '../components/StudentImportPanel';
 
 const AdminPanel = ({ setUser }) => {
@@ -19,8 +19,8 @@ const AdminPanel = ({ setUser }) => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [calendarMonth, setCalendarMonth] = useState(dayjs().month() + 1);
   const [calendarYear, setCalendarYear] = useState(dayjs().year());
-  const [showImportModal, setShowImportModal] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const user = JSON.parse(localStorage.getItem('user'));
 
   const fetchStudents = async () => {
@@ -45,7 +45,6 @@ const AdminPanel = ({ setUser }) => {
   }, []);
 
   useEffect(() => {
-    setSelectedStudent(null);
     setShowDetails(false);
   }, [selectedGroup, selectedLevel]);
 
@@ -72,11 +71,6 @@ const AdminPanel = ({ setUser }) => {
   const relevantMovements = useMemo(() => {
     return movements.filter(m => m.reason === 'uso' || m.reason === 'uso-con-deuda');
   }, [movements]);
-
-  const showGroupView = !search && selectedLevel && selectedGroup;
-  const showSelectedStudent = search && selectedStudent;
-  const showLevelView = !search && selectedLevel && !selectedGroup;
-  const showStartView = !search && !selectedLevel;
 
   return (
     <div className="app-container container py-4">
@@ -120,7 +114,7 @@ const AdminPanel = ({ setUser }) => {
         </div>
       )}
 
-      {showStartView && (
+      {!search && !selectedLevel && (
         <div className="row">
           {levels.map(level => (
             <div className="col-md-4 mb-3" key={level}>
@@ -130,7 +124,7 @@ const AdminPanel = ({ setUser }) => {
         </div>
       )}
 
-      {showLevelView && (
+      {selectedLevel && !selectedGroup && (
         <div>
           <h3>Grupos en {selectedLevel}</h3>
           <div className="row">
@@ -146,45 +140,7 @@ const AdminPanel = ({ setUser }) => {
         </div>
       )}
 
-      {showSelectedStudent && (
-        <div>
-          <h3>Resultado de búsqueda</h3>
-          <p><strong>{selectedStudent.name}</strong> ({selectedStudent.studentId})</p>
-
-          <StudentCalendarContainer
-            selectedStudent={selectedStudent}
-            month={calendarMonth}
-            year={calendarYear}
-          />
-
-          <div style={{ marginTop: '2rem' }}>
-            <h4>Resumen por alumno</h4>
-            <StudentSummaryCard
-              student={selectedStudent}
-              onSelect={() => {}}
-            />
-          </div>
-
-          <div className="slide-panel">
-            <StudentDetailsPanel
-              student={selectedStudent}
-              movements={movements}
-              onClose={() => setShowDetails(false)}
-              fetchStudents={fetchStudents}
-              fetchMovements={fetchMovements}
-            />
-          </div>
-
-          <button onClick={() => {
-            setSearch('');
-            setSelectedStudent(null);
-          }} style={{ marginTop: '1rem' }}>
-            ← Limpiar búsqueda
-          </button>
-        </div>
-      )}
-
-      {showGroupView && (
+      {selectedGroup && (
         <div>
           <h3>Estudiantes en {selectedLevel} - Grupo {selectedGroup}</h3>
           <p>{studentsInGroup.length} estudiante(s)</p>
@@ -209,6 +165,7 @@ const AdminPanel = ({ setUser }) => {
 
           <StudentCalendarContainer
             currentGroup={{ name: selectedGroup, level: selectedLevel }}
+            selectedStudent={showDetails ? selectedStudent : null}
             month={calendarMonth}
             year={calendarYear}
           />
@@ -227,8 +184,8 @@ const AdminPanel = ({ setUser }) => {
             ))}
           </div>
 
-          <div className="slide-panel">
-            {selectedStudent && showDetails && (
+          {showDetails && (
+            <div className="slide-panel">
               <StudentDetailsPanel
                 student={selectedStudent}
                 movements={movements}
@@ -236,8 +193,8 @@ const AdminPanel = ({ setUser }) => {
                 fetchStudents={fetchStudents}
                 fetchMovements={fetchMovements}
               />
-            )}
-          </div>
+            </div>
+          )}
 
           <button className="btn btn-secondary mt-3" onClick={() => setSelectedGroup(null)}>
             ← Volver a grupos
