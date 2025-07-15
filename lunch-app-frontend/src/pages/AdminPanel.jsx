@@ -21,7 +21,6 @@ const AdminPanel = ({ setUser }) => {
   const [calendarYear, setCalendarYear] = useState(dayjs().year());
   const [showDetails, setShowDetails] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [showGroupView, setShowGroupView] = useState(false);
   const user = JSON.parse(localStorage.getItem('user'));
 
   const fetchStudents = async () => {
@@ -47,6 +46,7 @@ const AdminPanel = ({ setUser }) => {
 
   useEffect(() => {
     setShowDetails(false);
+    setSelectedStudent(null);
   }, [selectedGroup, selectedLevel]);
 
   const levels = ['preescolar', 'primaria', 'secundaria'];
@@ -89,7 +89,7 @@ const AdminPanel = ({ setUser }) => {
             setSelectedLevel(student.group.level);
             setSelectedGroup(student.group.name);
             setSelectedStudent(student);
-            // fetchPeriodLogs(student._id);
+            setShowDetails(true);
           }}
         />
       </TopNavBar>
@@ -141,7 +141,7 @@ const AdminPanel = ({ setUser }) => {
         </div>
       )}
 
-      {showGroupView && (
+      {selectedGroup && (
         <div>
           <h3>Estudiantes en {selectedLevel} - Grupo {selectedGroup}</h3>
           <p>{studentsInGroup.length} estudiante(s)</p>
@@ -174,28 +174,36 @@ const AdminPanel = ({ setUser }) => {
           <div style={{ marginTop: '2rem' }}>
             <h4>Resumen por alumno</h4>
             {studentsInGroup.map(student => (
-              <StudentSummaryCard
-                key={student.studentId}
-                student={student}
-                onSelect={(s) => {
-                  setSelectedStudent(s);
-                  setShowDetails(true);
-                }}
-              />
+              <div key={student.studentId}>
+                <StudentSummaryCard
+                  student={student}
+                  onSelect={() => {
+                    if (selectedStudent && selectedStudent.studentId === student.studentId) {
+                      setSelectedStudent(null);
+                      setShowDetails(false);
+                    } else {
+                      setSelectedStudent(student);
+                      setShowDetails(true);
+                    }
+                  }}
+                />
+                {showDetails && selectedStudent?.studentId === student.studentId && (
+                  <div className="accordion-panel card card-body bg-light mt-2 mb-3">
+                    <StudentDetailsPanel
+                      student={selectedStudent}
+                      movements={movements}
+                      onClose={() => {
+                        setSelectedStudent(null);
+                        setShowDetails(false);
+                      }}
+                      fetchStudents={fetchStudents}
+                      fetchMovements={fetchMovements}
+                    />
+                  </div>
+                )}
+              </div>
             ))}
           </div>
-
-          {showDetails && (
-            <div className="slide-panel">
-              <StudentDetailsPanel
-                student={selectedStudent}
-                movements={movements}
-                onClose={() => setShowDetails(false)}
-                fetchStudents={fetchStudents}
-                fetchMovements={fetchMovements}
-              />
-            </div>
-          )}
 
           <button className="btn btn-secondary mt-3" onClick={() => setSelectedGroup(null)}>
             ← Volver a grupos
