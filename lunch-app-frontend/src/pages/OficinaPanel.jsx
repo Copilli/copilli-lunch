@@ -41,11 +41,12 @@ const OficinaPanel = ({ setUser }) => {
     fetchMovements();
   }, []);
 
-  const levels = ['preescolar', 'primaria', 'secundaria'];
-
-   useEffect(() => {
+  useEffect(() => {
     setShowDetails(false);
+    setSelectedStudent(null);
   }, [selectedGroup, selectedLevel]);
+
+  const levels = ['preescolar', 'primaria', 'secundaria'];
 
   const filtered = search
     ? students.filter(
@@ -144,17 +145,24 @@ const OficinaPanel = ({ setUser }) => {
                   <StudentSummaryCard
                     student={student}
                     onSelect={() => {
-                      setSelectedStudent(student);
-                      setShowDetails(true);
+                      if (selectedStudent && selectedStudent.studentId === student.studentId) {
+                        setSelectedStudent(null);
+                        setShowDetails(false);
+                      } else {
+                        setSelectedStudent(student);
+                        setShowDetails(true);
+                      }
                     }}
                   />
-                  {/* Mostrar detalles justo debajo del alumno seleccionado */}
                   {showDetails && selectedStudent && selectedStudent.studentId === student.studentId && (
-                    <div className="slide-panel">
+                    <div className="accordion-panel card card-body bg-light mt-2 mb-3">
                       <StudentDetailsPanel
                         student={selectedStudent}
                         movements={movements}
-                        onClose={() => setShowDetails(false)}
+                        onClose={() => {
+                          setSelectedStudent(null);
+                          setShowDetails(false);
+                        }}
                         fetchStudents={fetchStudents}
                         fetchMovements={fetchMovements}
                       />
