@@ -304,9 +304,11 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
 
           {isAdmin && (
             <>
-              <button className="btn btn-primary mb-3" onClick={handleSave} disabled={saving}>
-                {saving ? 'Guardando...' : 'Guardar cambios'}
-              </button>
+             <div className="row mb-3">
+                <button className="btn btn-primary mb-3" onClick={handleSave} disabled={saving}>
+                  {saving ? 'Guardando...' : 'Guardar cambios'}
+                </button>
+             </div>
             </>
           )}
         </div>
