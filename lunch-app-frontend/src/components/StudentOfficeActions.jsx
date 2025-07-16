@@ -12,6 +12,8 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [consumptionDate, setConsumptionDate] = useState('');
+  const [consumptionReason, setConsumptionReason] = useState('');
 
   const user = JSON.parse(localStorage.getItem('user'));
   const canUseAjusteManual = user?.role === 'admin';
@@ -24,6 +26,8 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
       setNote('');
       setStartDate('');
       setEndDate('');
+      setConsumptionDate('');
+      setConsumptionReason('');
       setConfirming(false);
       setSubmitting(false);
       setFormError('');
@@ -42,9 +46,9 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
 
   const handleSubmit = async () => {
     setSubmitting(true);
-    try {
-      const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token');
 
+    try {
       if (actionType === 'tokens') {
         if ((reason === 'pago' || reason === 'justificado') && !note.trim()) {
           showError('La nota es obligatoria para este motivo.');
@@ -61,8 +65,10 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
+
         showSuccess('Tokens actualizados correctamente.');
         setConfirming(false);
+
       } else if (actionType === 'period') {
         if (!note.trim() || !reason.trim()) {
           showError('Debes proporcionar un motivo y una nota para el periodo.');
@@ -70,30 +76,39 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
           return;
         }
 
-        try {
-          await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/period`, {
-            startDate,
-            endDate,
-            reason,
-            note,
-            performedBy: user?.username || 'desconocido',
-            userRole: user?.role || 'oficina'
-          }, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          showSuccess('Periodo especial registrado correctamente.');
-          setConfirming(false);
-        } catch (err) {
-          // Si el backend regresa un mensaje de error específico, muéstralo
-          let msg = 'Error al registrar el periodo especial.';
-          if (err.response && err.response.data && err.response.data.message) {
-            msg = err.response.data.message;
-          }
-          showError(msg);
-          setConfirming(false);
+        await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/period`, {
+          startDate,
+          endDate,
+          reason,
+          note,
+          performedBy: user?.username || 'desconocido',
+          userRole: user?.role || 'oficina'
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        showSuccess('Periodo especial registrado correctamente.');
+        setConfirming(false);
+
+      } else if (actionType === 'manual-consumption') {
+        if (!consumptionDate || !consumptionReason) {
+          showError('Debes seleccionar motivo y fecha para registrar el consumo.');
           setSubmitting(false);
           return;
         }
+
+        await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/tokens`, {
+          delta: -1,
+          reason: consumptionReason,
+          note: `Consumo manual (${consumptionDate})`,
+          performedBy: user?.username || 'admin',
+          userRole: user?.role || 'admin'
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        showSuccess('Consumo manual registrado correctamente.');
+        setConfirming(false);
       }
 
       setFormError('');
@@ -101,14 +116,14 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
       setNote('');
       setStartDate('');
       setEndDate('');
+      setConsumptionDate('');
+      setConsumptionReason('');
       onUpdate();
+
     } catch (err) {
       console.error(err);
-      let msg = 'Error al registrar el cambio.';
-      if (err.response && err.response.data && err.response.data.message) {
-        msg = err.response.data.message;
-      }
-      showError(msg);
+      const backendError = err?.response?.data?.error || err?.response?.data?.message;
+      showError(backendError || 'Error al registrar el cambio.');
       setConfirming(false);
     } finally {
       setSubmitting(false);
@@ -124,6 +139,10 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
       showError('Especifica las fechas de inicio y fin.');
       return;
     }
+    if (actionType === 'manual-consumption' && (!consumptionDate || !consumptionReason)) {
+      showError('Debes seleccionar motivo y fecha para registrar el consumo.');
+      return;
+    }
 
     setFormError('');
     setConfirming(true);
@@ -131,14 +150,11 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
 
   return (
     <>
-      {/* Alerta de error tipo Bootstrap */}
       {formError && (
         <div className="alert alert-danger position-fixed top-0 start-50 translate-middle-x mt-3 z-3" role="alert" style={{ zIndex: 9999 }}>
           {formError}
         </div>
       )}
-
-      {/* Alerta de éxito tipo Bootstrap */}
       {successMsg && (
         <div className="alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3 z-3" role="alert" style={{ zIndex: 9999 }}>
           {successMsg}
@@ -153,6 +169,7 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
           <select className="form-select" value={actionType} onChange={(e) => setActionType(e.target.value)}>
             <option value="tokens">Agregar tokens</option>
             <option value="period">Agregar periodo</option>
+            {canUseAjusteManual && <option value="manual-consumption">Registrar consumo faltante</option>}
           </select>
         </div>
 
@@ -233,12 +250,34 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
           </>
         )}
 
+        {actionType === 'manual-consumption' && (
+          <>
+            <div className="mb-3">
+              <label className="form-label">Fecha del consumo:</label>
+              <input
+                type="date"
+                className="form-control"
+                value={consumptionDate}
+                onChange={(e) => setConsumptionDate(e.target.value)}
+              />
+            </div>
+
+            <div className="mb-3">
+              <label className="form-label">Motivo:</label>
+              <select className="form-select" value={consumptionReason} onChange={(e) => setConsumptionReason(e.target.value)}>
+                <option value="">Selecciona</option>
+                <option value="uso">Uso</option>
+                <option value="uso-con-deuda">Uso con deuda</option>
+              </select>
+            </div>
+          </>
+        )}
+
         <button className="btn btn-primary" onClick={showConfirmation}>
           Confirmar acción
         </button>
       </div>
 
-      {/* Modal Bootstrap-like para confirmación */}
       {confirming && (
         <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
@@ -253,6 +292,13 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
                 )}
                 {actionType === 'period' && (
                   <p>Periodo: {startDate} a {endDate}</p>
+                )}
+                {actionType === 'manual-consumption' && (
+                  <>
+                    <p>Registrar -1 token por consumo no anotado.</p>
+                    <p><strong>Fecha:</strong> {consumptionDate}</p>
+                    <p><strong>Motivo:</strong> {consumptionReason}</p>
+                  </>
                 )}
                 <p><strong>Motivo:</strong> {reason}</p>
                 <p><strong>Nota:</strong> {note}</p>

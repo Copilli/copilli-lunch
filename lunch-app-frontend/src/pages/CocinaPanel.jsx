@@ -116,7 +116,8 @@ const CocinaPanel = ({ setUser }) => {
       setSearch('');
     } catch (err) {
       console.error(err);
-      showError('Error al registrar consumo');
+      const backendError = err?.response?.data?.error;
+      showError(backendError || 'Error al registrar consumo');
     } finally {
       setSubmitting(false);
       setConfirming(false);

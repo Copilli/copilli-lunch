@@ -156,7 +156,7 @@ router.patch('/:id/tokens', async (req, res) => {
 // POST /api/students/:id/use
 router.post('/:id/use', async (req, res) => {
   try {
-    const { performedBy } = req.body;
+    const { performedBy, userRole } = req.body;
     const student = await Student.findById(req.params.id);
     if (!student) return res.status(404).json({ error: 'Estudiante no encontrado' });
 
@@ -165,6 +165,18 @@ router.post('/:id/use', async (req, res) => {
     const inPeriod = student.hasSpecialPeriod && student.specialPeriod &&
       dayjs(student.specialPeriod.startDate).isSameOrBefore(today) &&
       dayjs(student.specialPeriod.endDate).isSameOrAfter(today);
+
+    // Simular decremento sin aplicarlo aún
+    const wouldHave = student.tokens - 1;
+
+    const existingTodayUse = await TokenMovement.findOne({
+      studentId: student.studentId,
+      reason: { $in: ['uso', 'uso-con-deuda'] },
+      timestamp: {
+        $gte: today.toDate(),
+        $lt: today.add(1, 'day').toDate()
+      }
+    });
 
     if (inPeriod) {
       return res.json({
@@ -175,13 +187,15 @@ router.post('/:id/use', async (req, res) => {
       });
     }
 
-    // Simular decremento sin aplicarlo aún
-    const wouldHave = student.tokens - 1;
-
-    // Solo impedir si se quedaría en negativo Y está bloqueado
-    if (student.status === 'bloqueado' && wouldHave < 0) {
+    if (student.status === 'bloqueado' && wouldHave < 0 && userRole !== 'admin') {
       return res.status(403).json({
         error: 'Este estudiante está bloqueado y no puede registrar consumo en negativo.'
+      });
+    }
+
+    if (existingTodayUse) {
+      return res.status(403).json({
+        error: 'Ya se registró un consumo para este estudiante hoy.'
       });
     }
 
