@@ -13,9 +13,20 @@ const CocinaPanel = ({ setUser }) => {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [formError, setFormError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const showError = (msg) => {
+    setFormError(msg);
+    setTimeout(() => setFormError(''), 3000);
+  };
+
+  const showSuccess = (msg) => {
+    setSuccessMsg(msg);
+    setTimeout(() => setSuccessMsg(''), 3000);
+  };
 
   const fetchStudents = async () => {
     const token = localStorage.getItem('token');
@@ -66,16 +77,16 @@ const CocinaPanel = ({ setUser }) => {
     const hasTokens = student.tokens > 0;
 
     if (status === 'periodo-activo') {
-      alert('Tiene un periodo activo. No se requiere token.');
+      showError('Tiene un periodo activo. No se requiere token.');
       return;
     }
 
     if (status === 'bloqueado' && !hasTokens) {
-      alert('Este alumno está bloqueado y no tiene tokens. No se puede registrar consumo.');
+      showError('Este alumno está bloqueado y no tiene tokens. No se puede registrar consumo.');
       return;
     }
 
-    setSelectedStudent(student); // ✅ CORRECCIÓN
+    setSelectedStudent(student);
     setConfirmMessage(
       hasTokens
         ? `¿Deseas descontar un token? Total final: ${student.tokens - 1}`
@@ -86,7 +97,7 @@ const CocinaPanel = ({ setUser }) => {
 
   const handleConfirm = async () => {
     if (!selectedStudent?._id) {
-      setFormError('Estudiante no seleccionado');
+      showError('Estudiante no seleccionado');
       return;
     }
 
@@ -99,13 +110,13 @@ const CocinaPanel = ({ setUser }) => {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      alert('Registro guardado');
+      showSuccess('Registro guardado');
       await fetchStudents();
       setSelectedStudent(null);
       setSearch('');
     } catch (err) {
       console.error(err);
-      setFormError('Error al registrar consumo');
+      showError('Error al registrar consumo');
     } finally {
       setSubmitting(false);
       setConfirming(false);
@@ -127,7 +138,7 @@ const CocinaPanel = ({ setUser }) => {
   };
 
   return (
-    <div className="app-container" style={{ padding: '2rem' }}>
+    <div className="app-container container py-4">
       <h2>Panel de Cocina</h2>
       <TopNavBar setUser={setUser}>
         <SearchBar
@@ -137,14 +148,27 @@ const CocinaPanel = ({ setUser }) => {
           onSelect={(student) => {
             setSelectedLevel(student.group.level);
             setSelectedGroup(student.group.name);
-            setSelectedStudent(student);
+            setSelectedStudent(null); // forzar reset
+            setShowDetails(false);
+            
+            // esperar a que se monte el grupo y luego mostrar detalles
+            setTimeout(() => {
+              setSelectedStudent(student);
+              setShowDetails(true);
+            }, 100); // 100ms suele ser suficiente
           }}
         />
       </TopNavBar>
 
       {formError && (
-        <div className="alert alert-danger position-fixed top-0 start-50 translate-middle-x mt-3 z-3" role="alert" style={{ zIndex: 9999 }}>
+        <div className="alert alert-warning position-fixed top-0 start-50 translate-middle-x mt-3 z-3 text-center" role="alert" style={{ zIndex: 9999 }}>
           {formError}
+        </div>
+      )}
+
+      {successMsg && (
+        <div className="alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3 z-3 text-center" role="alert" style={{ zIndex: 9999 }}>
+          {successMsg}
         </div>
       )}
 
