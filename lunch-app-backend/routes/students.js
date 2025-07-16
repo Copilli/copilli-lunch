@@ -260,6 +260,13 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       });
       await log.save();
 
+      // También eliminar de PeriodLog si coincide con el periodo actual
+      await PeriodLog.deleteMany({
+        studentId: student.studentId,
+        startDate: existingStart.toDate(),
+        endDate: existingEnd.toDate()
+      });
+
       return res.json({
         message: 'Periodo especial eliminado',
         hasSpecialPeriod: false,
