@@ -81,8 +81,14 @@ const OficinaPanel = ({ setUser }) => {
           onSelect={(student) => {
             setSelectedLevel(student.group.level);
             setSelectedGroup(student.group.name);
-            setSelectedStudent(student);
-            setShowDetails(true);
+            setSelectedStudent(null); // forzar reset
+            setShowDetails(false);
+            
+            // esperar a que se monte el grupo y luego mostrar detalles
+            setTimeout(() => {
+              setSelectedStudent(student);
+              setShowDetails(true);
+            }, 100); // 100ms suele ser suficiente
           }}
         />
       </TopNavBar>

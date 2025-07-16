@@ -1,18 +1,13 @@
 const GroupCard = ({ group, onClick }) => {
   return (
     <div
-      style={{
-        display: 'inline-block',
-        padding: '0.5rem 1rem',
-        margin: '0.25rem',
-        border: '1px solid #ccc',
-        borderRadius: 6,
-        cursor: 'pointer',
-        backgroundColor: '#e6f7ff'
-      }}
+      className="card text-center border-primary shadow-sm hover-shadow cursor-pointer"
       onClick={() => onClick(group)}
+      style={{ cursor: 'pointer' }}
     >
-      {group}
+      <div className="card-body bg-primary text-white">
+        <h6 className="card-title m-0">Grupo {group}</h6>
+      </div>
     </div>
   );
 };
