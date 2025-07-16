@@ -122,11 +122,9 @@ const AdminPanel = ({ setUser }) => {
       )}
 
       {!search && !selectedLevel && (
-        <div className="row">
+        <div>
           {levels.map(level => (
-            <div className="col-md-4 mb-3" key={level}>
-              <LevelCard level={level} onClick={setSelectedLevel} />
-            </div>
+            <LevelCard key={level} level={level} onClick={setSelectedLevel} />
           ))}
         </div>
       )}
@@ -134,18 +132,15 @@ const AdminPanel = ({ setUser }) => {
       {selectedLevel && !selectedGroup && (
         <div>
           <h3>Grupos en {selectedLevel}</h3>
-          <div className="row">
-            {groupsInLevel.map(group => (
-              <div className="col-md-3 mb-2" key={group}>
-                <GroupCard group={group} onClick={setSelectedGroup} />
-              </div>
-            ))}
-          </div>
-          <button className="btn btn-secondary mt-3" onClick={() => setSelectedLevel(null)}>
+          {groupsInLevel.map(group => (
+            <GroupCard key={group} group={group} onClick={setSelectedGroup} />
+          ))}
+          <button onClick={() => setSelectedLevel(null)} style={{ marginTop: '1rem' }}>
             ← Volver a niveles
           </button>
         </div>
       )}
+
 
       {selectedGroup && (
         <div>
