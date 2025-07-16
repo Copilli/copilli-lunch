@@ -288,13 +288,15 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
               </div>
               {isAdmin && (
                 <>
-                  <button
+                <div className="row mb-3">
+                 <button
                     className="btn btn-outline-danger mb-3"
                     onClick={handleDeletePeriod}
                     disabled={saving}
                   >
                     {saving ? 'Eliminando...' : 'Eliminar periodo especial'}
                   </button>
+                </div>
                 </>
               )}
             </>
