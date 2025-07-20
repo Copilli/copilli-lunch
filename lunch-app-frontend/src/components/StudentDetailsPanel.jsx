@@ -18,13 +18,14 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
   useEffect(() => {
     if (student) {
       const today = dayjs().startOf('day');
+      const periodStart = dayjs.utc(student.specialPeriod?.startDate).local().startOf('day');
       const periodEnd = dayjs.utc(student.specialPeriod?.endDate).local().startOf('day');
-      const isExpired = student.hasSpecialPeriod && periodEnd.isBefore(today);
+      const isActive = student.hasSpecialPeriod && today.isSameOrAfter(periodStart) && today.isSameOrBefore(periodEnd);
 
       setForm({
         ...student,
-        hasSpecialPeriod: isExpired ? false : student.hasSpecialPeriod,
-        specialPeriod: isExpired ? { startDate: null, endDate: null } : student.specialPeriod
+        hasSpecialPeriod: isActive,
+        specialPeriod: isActive ? student.specialPeriod : { startDate: null, endDate: null }
       });
 
       setOriginalTokens(student.tokens);
@@ -151,7 +152,6 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
 
   return (
     <>
-      {/* Mensajes de error y éxito tipo Bootstrap */}
       {formError && (
         <div className="alert alert-danger position-fixed top-0 start-50 translate-middle-x mt-3 z-3" role="alert" style={{ zIndex: 9999 }}>
           {formError}
@@ -316,7 +316,6 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
         </div>
       </div>
 
-      {/* Acciones de oficina fuera del card principal */}
       <StudentLunchActions
         student={student}
         onUpdate={() => {

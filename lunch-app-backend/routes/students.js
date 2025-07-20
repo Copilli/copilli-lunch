@@ -302,6 +302,12 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       return res.status(400).json({ error: 'La fecha de fin no puede ser anterior a la de inicio.' });
     }
 
+    if (student.tokens < 0) {
+      return res.status(400).json({
+        error: 'No se puede asignar un periodo especial si el estudiante tiene saldo negativo.'
+     });
+    }
+
     if (
       student.hasSpecialPeriod &&
       student.specialPeriod &&
@@ -325,7 +331,8 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
   }
 
     student.specialPeriod = { startDate: start.toDate(), endDate: end.toDate() };
-    student.hasSpecialPeriod = end.isSameOrAfter(today);
+    student.hasSpecialPeriod = start.isSameOrBefore(today) && end.isSameOrAfter(today);
+
     if (student.hasSpecialPeriod) {
       student.status = 'periodo-activo';
     }
