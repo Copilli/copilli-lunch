@@ -396,7 +396,7 @@ router.delete('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async 
     student.specialPeriod = { startDate: null, endDate: null };
 
     if (student.status === 'periodo-activo') {
-      student.status = 'sin-fondos';
+      student.status = student.tokens > 0 ? 'con-fondos' : 'sin-fondos';
     }
 
     await student.save();
