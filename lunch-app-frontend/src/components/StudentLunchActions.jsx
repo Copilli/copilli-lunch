@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 
-const StudentOfficeActions = ({ student, onUpdate }) => {
+const StudentLunchActions = ({ student, onUpdate }) => {
   const [actionType, setActionType] = useState('tokens');
   const [tokenAmount, setTokenAmount] = useState(0);
   const [reason, setReason] = useState('pago');
@@ -319,4 +319,4 @@ const StudentOfficeActions = ({ student, onUpdate }) => {
   );
 };
 
-export default StudentOfficeActions;
+export default StudentLunchActions;

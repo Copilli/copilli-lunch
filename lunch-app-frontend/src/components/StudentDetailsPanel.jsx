@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
-import StudentOfficeActions from './StudentOfficeActions';
+import StudentLunchActions from './StudentLunchActions';
 
 const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetchMovements }) => {
   const [form, setForm] = useState(null);
@@ -315,7 +315,7 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
       </div>
 
       {/* Acciones de oficina fuera del card principal */}
-      <StudentOfficeActions
+      <StudentLunchActions
         student={student}
         onUpdate={() => {
           if (fetchStudents) fetchStudents();

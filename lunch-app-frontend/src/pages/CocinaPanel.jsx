@@ -40,6 +40,12 @@ const CocinaPanel = ({ setUser }) => {
     fetchStudents();
   }, []);
 
+    useEffect(() => {
+    if (!search) {
+      setSelectedStudent(null);
+    }
+  }, [search]);
+
   const today = dayjs().format('YYYY-MM-DD');
   const levels = ['preescolar', 'primaria', 'secundaria'];
 
@@ -162,7 +168,7 @@ const CocinaPanel = ({ setUser }) => {
       </TopNavBar>
 
       {formError && (
-        <div className="alert alert-warning position-fixed top-0 start-50 translate-middle-x mt-3 z-3 text-center" role="alert" style={{ zIndex: 9999 }}>
+        <div className="alert alert-danger position-fixed top-0 start-50 translate-middle-x mt-3 z-3 text-center" role="alert" style={{ zIndex: 9999 }}>
           {formError}
         </div>
       )}
@@ -197,7 +203,61 @@ const CocinaPanel = ({ setUser }) => {
         </div>
       )}
 
-      {selectedStudent ? (
+      {/* Renderiza el grupo y los alumnos SIEMPRE que selectedGroup esté activo */}
+      {selectedGroup && !(search && selectedStudent) && (
+        <div>
+          <h3>Estudiantes en {selectedLevel} - Grupo {selectedGroup}</h3>
+          <div className="container">
+            <div className="row justify-content-center">
+              {studentsInGroup.map(student => {
+                const status = getStatus(student);
+                return (
+                  <div
+                    key={student.studentId}
+                    className="col-12 col-sm-6 col-md-4 col-lg-3 mb-4 d-flex justify-content-center"
+                  >
+                    <div
+                      onClick={() => handleClick(student)}
+                      className="card text-center"
+                      style={{
+                        backgroundColor: statusColor[status],
+                        cursor: status === 'periodo-activo' ? 'default' : 'pointer',
+                        width: '200px'
+                      }}
+                    >
+                      <div className="card-body d-flex flex-column align-items-center">
+                        <img
+                          src={student.photoUrl}
+                          alt={student.name}
+                          style={{
+                            width: '80px',
+                            height: '80px',
+                            borderRadius: '50%',
+                            objectFit: 'cover',
+                            marginBottom: '0.5rem'
+                          }}
+                        />
+                        <strong>{student.name}</strong>
+                        <p className="mb-1">ID: {student.studentId}</p>
+                        <p className="mb-1">Tokens: {student.tokens}</p>
+                        <p className="mb-0">Status: {statusLabels[status]}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="text-center mt-3">
+            <button onClick={() => setSelectedGroup(null)} className="btn btn-secondary">
+              ← Volver a grupos
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Renderiza el alumno seleccionado encima del grupo, si existe */}
+      {selectedStudent && (
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>
           <div
             onClick={() => handleClick(selectedStudent)}
@@ -228,78 +288,34 @@ const CocinaPanel = ({ setUser }) => {
             <p>ID: {selectedStudent.studentId}</p>
             <p>Tokens: {selectedStudent.tokens}</p>
             <p>Status: {statusLabels[getStatus(selectedStudent)]}</p>
+            <button
+              className="btn btn-secondary mt-3"
+              onClick={() => setSelectedStudent(null)}
+            >
+              ← Volver a grupo
+            </button>
           </div>
         </div>
-      ) : (
-        <>
-          {!search && !selectedLevel && (
-            <div>
-              {levels.map(level => (
-                <LevelCard key={level} level={level} onClick={setSelectedLevel} />
-              ))}
-            </div>
-          )}
+      )}
 
-          {selectedLevel && !selectedGroup && (
-            <div>
-              <h3>Grupos en {selectedLevel}</h3>
-              {groupsInLevel.map(group => (
-                <GroupCard key={group} group={group} onClick={setSelectedGroup} />
-              ))}
-              <button onClick={() => setSelectedLevel(null)} style={{ marginTop: '1rem' }}>
-                ← Volver a niveles
-              </button>
-            </div>
-          )}
+      {!search && !selectedLevel && (
+        <div>
+          {levels.map(level => (
+            <LevelCard key={level} level={level} onClick={setSelectedLevel} />
+          ))}
+        </div>
+      )}
 
-          {selectedGroup && (
-            <div>
-              <h3>Estudiantes en {selectedLevel} - Grupo {selectedGroup}</h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-                {studentsInGroup.map(student => {
-                  const status = getStatus(student);
-                  return (
-                    <div
-                      key={student.studentId}
-                      onClick={() => handleClick(student)}
-                      style={{
-                        backgroundColor: statusColor[status],
-                        padding: '1rem',
-                        borderRadius: 8,
-                        cursor: status === 'periodo-activo' ? 'default' : 'pointer',
-                        width: '200px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        textAlign: 'center'
-                      }}
-                    >
-                      <img
-                        src={student.photoUrl}
-                        alt={student.name}
-                        style={{
-                          width: '80px',
-                          height: '80px',
-                          borderRadius: '50%',
-                          objectFit: 'cover',
-                          marginBottom: '0.5rem'
-                        }}
-                      />
-                      <strong>{student.name}</strong>
-                      <p>ID: {student.studentId}</p>
-                      <p>Tokens: {student.tokens}</p>
-                      <p>Status: {statusLabels[status]}</p>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <button onClick={() => setSelectedGroup(null)} style={{ marginTop: '1rem' }}>
-                ← Volver a grupos
-              </button>
-            </div>
-          )}
-        </>
+      {selectedLevel && !selectedGroup && (
+        <div>
+          <h3>Grupos en {selectedLevel}</h3>
+          {groupsInLevel.map(group => (
+            <GroupCard key={group} group={group} onClick={setSelectedGroup} />
+          ))}
+          <button onClick={() => setSelectedLevel(null)} style={{ marginTop: '1rem' }}>
+            ← Volver a niveles
+          </button>
+        </div>
       )}
     </div>
   );
