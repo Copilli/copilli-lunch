@@ -40,7 +40,7 @@ const CocinaPanel = ({ setUser }) => {
     fetchStudents();
   }, []);
 
-    useEffect(() => {
+  useEffect(() => {
     if (!search) {
       setSelectedStudent(null);
     }
@@ -155,14 +155,7 @@ const CocinaPanel = ({ setUser }) => {
           onSelect={(student) => {
             setSelectedLevel(student.group.level);
             setSelectedGroup(student.group.name);
-            setSelectedStudent(null); // forzar reset
-            setShowDetails(false);
-            
-            // esperar a que se monte el grupo y luego mostrar detalles
-            setTimeout(() => {
-              setSelectedStudent(student);
-              setShowDetails(true);
-            }, 100); // 100ms suele ser suficiente
+            setSelectedStudent(student);
           }}
         />
       </TopNavBar>
@@ -203,7 +196,6 @@ const CocinaPanel = ({ setUser }) => {
         </div>
       )}
 
-      {/* Mostrar estudiantes del grupo solo si NO hay un estudiante seleccionado */}
       {selectedGroup && !selectedStudent && (
         <div>
           <h3>Estudiantes en {selectedLevel} - Grupo {selectedGroup}</h3>
@@ -214,15 +206,15 @@ const CocinaPanel = ({ setUser }) => {
                 return (
                   <div
                     key={student.studentId}
-                    className="col-12 col-sm-6 col-md-4 col-lg-3 mb-4 d-flex justify-content-center"
+                    className="col-12 col-sm-6 col-md-4 col-lg-3 mb-4"
                   >
                     <div
                       onClick={() => handleClick(student)}
-                      className="card text-center shadow-sm"
+                      className="card text-center h-100 shadow"
                       style={{
                         backgroundColor: statusColor[status],
                         cursor: status === 'periodo-activo' ? 'default' : 'pointer',
-                        width: '14rem'
+                        minWidth: '240px'
                       }}
                     >
                       <div className="card-body d-flex flex-column align-items-center">
@@ -251,7 +243,6 @@ const CocinaPanel = ({ setUser }) => {
         </div>
       )}
 
-      {/* Mostrar solo el estudiante seleccionado */}
       {selectedStudent && (
         <div className="d-flex justify-content-center mt-4">
           <div
