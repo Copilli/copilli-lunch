@@ -20,17 +20,18 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
       const today = dayjs.utc().startOf('day');
       const periodStart = dayjs.utc(student.specialPeriod?.startDate).startOf('day');
       const periodEnd = dayjs.utc(student.specialPeriod?.endDate).startOf('day');
-      const isActive = student.hasSpecialPeriod && today.isSameOrAfter(periodStart) && today.isSameOrBefore(periodEnd);
+
+      const periodExists = !!(student.specialPeriod?.startDate && student.specialPeriod?.endDate);
+      const isActive = periodExists && today.isSameOrAfter(periodStart) && today.isSameOrBefore(periodEnd);
 
       setForm({
         ...student,
-        specialPeriod: isActive
-          ? {
-              startDate: periodStart.toISOString(),
-              endDate: periodEnd.toISOString()
-            }
-          : { startDate: null, endDate: null }
-              });
+        specialPeriod: {
+          startDate: student.specialPeriod?.startDate || null,
+          endDate: student.specialPeriod?.endDate || null
+        },
+        hasSpecialPeriod: isActive // esto ahora depende de la fecha actual
+      });
 
       setOriginalTokens(student.tokens);
       setLastValidStatus(student.status);
