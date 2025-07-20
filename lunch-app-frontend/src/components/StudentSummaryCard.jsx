@@ -1,4 +1,6 @@
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+dayjs.extend(utc);
 
 const statusColors = {
   'periodo-activo': '#c1f0c1',   // verde claro
@@ -15,8 +17,17 @@ const statusLabels = {
 };
 
 const StudentSummaryCard = ({ student, onSelect }) => {
-  const bg = statusColors[student.status] || '#ffffff';
-  const label = statusLabels[student.status] || student.status;
+  const today = dayjs.utc().startOf('day');
+  const start = dayjs.utc(student.specialPeriod?.startDate).startOf('day');
+  const end = dayjs.utc(student.specialPeriod?.endDate).startOf('day');
+
+  const isPeriodActive = student.specialPeriod?.startDate && student.specialPeriod?.endDate &&
+    today.isSameOrAfter(start) && today.isSameOrBefore(end);
+
+  const effectiveStatus = isPeriodActive ? 'periodo-activo' : student.status;
+
+  const bg = statusColors[effectiveStatus] || '#ffffff';
+  const label = statusLabels[effectiveStatus] || effectiveStatus;
 
   return (
     <div
