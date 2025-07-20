@@ -18,15 +18,19 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
   useEffect(() => {
     if (student) {
       const today = dayjs().startOf('day');
-      const periodStart = dayjs.utc(student.specialPeriod?.startDate).local().startOf('day');
-      const periodEnd = dayjs.utc(student.specialPeriod?.endDate).local().startOf('day');
+      const periodStart = dayjs.utc(student.specialPeriod?.startDate).startOf('day');
+      const periodEnd = dayjs.utc(student.specialPeriod?.endDate).startOf('day');
       const isActive = student.hasSpecialPeriod && today.isSameOrAfter(periodStart) && today.isSameOrBefore(periodEnd);
 
       setForm({
         ...student,
-        hasSpecialPeriod: isActive,
-        specialPeriod: isActive ? student.specialPeriod : { startDate: null, endDate: null }
-      });
+        specialPeriod: isActive
+          ? {
+              startDate: periodStart.toISOString(),
+              endDate: periodEnd.toISOString()
+            }
+          : { startDate: null, endDate: null }
+              });
 
       setOriginalTokens(student.tokens);
       setLastValidStatus(student.status);
@@ -271,7 +275,7 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
                   <input
                     type="date"
                     className="form-control"
-                    value={dayjs(form.specialPeriod?.startDate).format('YYYY-MM-DD')}
+                    value={dayjs.utc(form.specialPeriod?.startDate).format('YYYY-MM-DD')}
                     disabled
                   />
                 </div>
@@ -280,7 +284,7 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
                   <input
                     type="date"
                     className="form-control"
-                    value={dayjs(form.specialPeriod?.endDate).format('YYYY-MM-DD')}
+                    value={dayjs.utc(form.specialPeriod?.endDate).format('YYYY-MM-DD')}
                     disabled
                   />
                 </div>
