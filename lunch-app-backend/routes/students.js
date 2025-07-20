@@ -201,6 +201,11 @@ router.post('/:id/use', async (req, res) => {
 
     // Aplicar consumo
     student.tokens = wouldHave;
+
+    if (student.tokens === 0 && student.status === 'con-fondos') {
+      student.status = 'sin-fondos';
+    }
+    
     await student.save();
 
     const isDebt = student.tokens < 0;
