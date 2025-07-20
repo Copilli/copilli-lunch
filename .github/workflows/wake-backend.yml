@@ -1,0 +1,13 @@
+name: Wake up backend
+
+on:
+  schedule:
+    - cron: '1 6 * * *'  # 6:01 UTC → 00:01 AM hora centro de México
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call /api/cron/wake endpoint
+        run: |
+          curl -X GET https://copilli-launch-backend.onrender.com/api/cron/wake
