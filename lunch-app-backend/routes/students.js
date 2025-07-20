@@ -372,6 +372,69 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
   }
 });
 
+// DELETE /api/students/:id/period
+router.delete('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (req, res) => {
+  try {
+    const student = await Student.findById(req.params.id);
+    if (!student) return res.status(404).json({ error: 'Estudiante no encontrado' });
+
+    const today = dayjs().startOf('day');
+    const existingStart = dayjs(student.specialPeriod?.startDate);
+    const existingEnd = dayjs(student.specialPeriod?.endDate);
+
+    const isCurrentActive = student.hasSpecialPeriod &&
+      existingStart.isValid() &&
+      existingEnd.isValid() &&
+      existingStart.isSameOrBefore(today) &&
+      existingEnd.isSameOrAfter(today);
+
+    if (!isCurrentActive) {
+      return res.status(403).json({ error: 'Solo se puede eliminar el periodo especial si está actualmente activo.' });
+    }
+
+    student.hasSpecialPeriod = false;
+    student.specialPeriod = { startDate: null, endDate: null };
+
+    if (student.status === 'periodo-activo') {
+      student.status = 'sin-fondos';
+    }
+
+    await student.save();
+
+    const log = new TokenMovement({
+      studentId: student.studentId,
+      change: 0,
+      reason: 'periodo-removido',
+      note: 'Periodo especial eliminado',
+      performedBy: req.user?.username || 'sistema',
+      userRole: req.user?.role || 'sistema'
+    });
+    await log.save();
+
+    await PeriodLog.deleteMany({
+      studentId: student.studentId,
+      startDate: {
+        $gte: existingStart.startOf('day').toDate(),
+        $lte: existingStart.endOf('day').toDate()
+      },
+      endDate: {
+        $gte: existingEnd.startOf('day').toDate(),
+        $lte: existingEnd.endOf('day').toDate()
+      }
+    });
+
+    res.json({
+      message: 'Periodo especial eliminado',
+      hasSpecialPeriod: false,
+      specialPeriod: null
+    });
+  } catch (err) {
+    console.error('[❌ Period DELETE ERROR]', err);
+    res.status(500).json({ error: err.message || 'Error al eliminar el periodo especial' });
+  }
+});
+
+
 router.get('/:id/period-logs', verifyToken, async (req, res) => {
   try {
     const logs = await PeriodLog.find({ studentId: req.params.id }).sort({ startDate: 1 });
