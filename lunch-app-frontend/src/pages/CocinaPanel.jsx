@@ -203,8 +203,8 @@ const CocinaPanel = ({ setUser }) => {
         </div>
       )}
 
-      {/* Renderiza el grupo y los alumnos SIEMPRE que selectedGroup esté activo */}
-      {selectedGroup && !(search && selectedStudent) && (
+      {/* Mostrar estudiantes del grupo solo si NO hay un estudiante seleccionado */}
+      {selectedGroup && !selectedStudent && (
         <div>
           <h3>Estudiantes en {selectedLevel} - Grupo {selectedGroup}</h3>
           <div className="container">
@@ -218,26 +218,21 @@ const CocinaPanel = ({ setUser }) => {
                   >
                     <div
                       onClick={() => handleClick(student)}
-                      className="card text-center"
+                      className="card text-center shadow-sm"
                       style={{
                         backgroundColor: statusColor[status],
                         cursor: status === 'periodo-activo' ? 'default' : 'pointer',
-                        width: '200px'
+                        width: '14rem'
                       }}
                     >
                       <div className="card-body d-flex flex-column align-items-center">
                         <img
                           src={student.photoUrl}
                           alt={student.name}
-                          style={{
-                            width: '80px',
-                            height: '80px',
-                            borderRadius: '50%',
-                            objectFit: 'cover',
-                            marginBottom: '0.5rem'
-                          }}
+                          className="rounded-circle mb-3"
+                          style={{ width: '80px', height: '80px', objectFit: 'cover' }}
                         />
-                        <strong>{student.name}</strong>
+                        <h6 className="card-title">{student.name}</h6>
                         <p className="mb-1">ID: {student.studentId}</p>
                         <p className="mb-1">Tokens: {student.tokens}</p>
                         <p className="mb-0">Status: {statusLabels[status]}</p>
@@ -256,44 +251,38 @@ const CocinaPanel = ({ setUser }) => {
         </div>
       )}
 
-      {/* Renderiza el alumno seleccionado encima del grupo, si existe */}
+      {/* Mostrar solo el estudiante seleccionado */}
       {selectedStudent && (
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>
+        <div className="d-flex justify-content-center mt-4">
           <div
-            onClick={() => handleClick(selectedStudent)}
+            className="card text-center shadow-sm"
             style={{
+              width: '18rem',
               backgroundColor: statusColor[getStatus(selectedStudent)],
-              padding: '1rem',
-              borderRadius: 8,
-              cursor: 'pointer',
-              width: '200px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              textAlign: 'center'
             }}
+            onClick={() => handleClick(selectedStudent)}
           >
-            <img
-              src={selectedStudent.photoUrl}
-              alt={selectedStudent.name}
-              style={{
-                width: '80px',
-                height: '80px',
-                borderRadius: '50%',
-                objectFit: 'cover',
-                marginBottom: '0.5rem'
-              }}
-            />
-            <strong>{selectedStudent.name}</strong>
-            <p>ID: {selectedStudent.studentId}</p>
-            <p>Tokens: {selectedStudent.tokens}</p>
-            <p>Status: {statusLabels[getStatus(selectedStudent)]}</p>
-            <button
-              className="btn btn-secondary mt-3"
-              onClick={() => setSelectedStudent(null)}
-            >
-              ← Volver a grupo
-            </button>
+            <div className="card-body d-flex flex-column align-items-center">
+              <img
+                src={selectedStudent.photoUrl}
+                alt={selectedStudent.name}
+                className="rounded-circle mb-3"
+                style={{ width: '80px', height: '80px', objectFit: 'cover' }}
+              />
+              <h5 className="card-title">{selectedStudent.name}</h5>
+              <p className="card-text mb-1">ID: {selectedStudent.studentId}</p>
+              <p className="card-text mb-1">Tokens: {selectedStudent.tokens}</p>
+              <p className="card-text">Status: {statusLabels[getStatus(selectedStudent)]}</p>
+              <button
+                className="btn btn-secondary mt-3"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedStudent(null);
+                }}
+              >
+                ← Volver a grupo
+              </button>
+            </div>
           </div>
         </div>
       )}
