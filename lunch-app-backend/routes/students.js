@@ -308,17 +308,21 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       student.specialPeriod.startDate &&
       student.specialPeriod.endDate
     ) {
-      const existingStart = dayjs(student.specialPeriod.startDate).startOf('day');
-      const existingEnd = dayjs(student.specialPeriod.endDate).startOf('day');
 
-      // Solo compara si ambas fechas son válidas
-      if (existingStart.isValid() && existingEnd.isValid()) {
-        const overlap = start.isSameOrBefore(existingEnd) && end.isSameOrAfter(existingStart);
-        if (overlap) {
-          return res.status(400).json({ error: 'El nuevo periodo se solapa con uno ya existente.' });
-        }
-      }
+    // Buscar todos los periodos previos del estudiante
+    const previousPeriods = await PeriodLog.find({ studentId: student.studentId });
+
+    const overlapPeriod = previousPeriods.some(log => {
+      const logStart = dayjs(log.startDate).startOf('day');
+      const logEnd = dayjs(log.endDate).startOf('day');
+
+      return start.isSameOrBefore(logEnd) && end.isSameOrAfter(logStart);
+    });
+
+    if (overlapPeriod) {
+      return res.status(400).json({ error: 'El nuevo periodo se solapa con uno ya registrado en el historial.' });
     }
+  }
 
     student.specialPeriod = { startDate: start.toDate(), endDate: end.toDate() };
     student.hasSpecialPeriod = end.isSameOrAfter(today);

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import StudentLunchActions from './StudentLunchActions';
+import utc from 'dayjs/plugin/utc';
+dayjs.extend(utc);
 
 const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetchMovements }) => {
   const [form, setForm] = useState(null);
@@ -16,7 +18,7 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
   useEffect(() => {
     if (student) {
       const today = dayjs().startOf('day');
-      const periodEnd = dayjs(student.specialPeriod?.endDate).startOf('day');
+      const periodEnd = dayjs.utc(student.specialPeriod?.endDate).local().startOf('day');
       const isExpired = student.hasSpecialPeriod && periodEnd.isBefore(today);
 
       setForm({
@@ -337,7 +339,7 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
           {studentMovements.length === 0 && <p>No hay transacciones registradas.</p>}
           {studentMovements.slice(0, visibleMovements).map((m, i) => (
             <div key={i} className="border rounded p-3 mb-2 bg-light">
-              <p><strong>Fecha:</strong> {dayjs(m.timestamp).format('DD/MM/YYYY HH:mm')}</p>
+              <p><strong>Fecha:</strong> {dayjs.utc(m.timestamp).local().format('DD/MM/YYYY HH:mm')}</p>
               <p><strong>Motivo:</strong> {m.reason}</p>
               {m.note && <p><strong>Nota:</strong> {m.note}</p>}
               <p><strong>Responsable:</strong> {m.performedBy} ({m.userRole})</p>

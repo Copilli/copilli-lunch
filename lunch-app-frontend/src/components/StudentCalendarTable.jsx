@@ -79,8 +79,9 @@ const StudentCalendarTable = ({ students, movements, periodLogs = [], month, yea
 
               const tokenMap = {};
               studentMovs.forEach(m => {
-                const dateKey = dayjs.utc(m.timestamp).startOf('day').format('YYYY-MM-DD');
-                tokenMap[dateKey] = m;
+                const dateKey = dayjs(m.timestamp).startOf('day').format('YYYY-MM-DD');
+                if (!tokenMap[dateKey]) tokenMap[dateKey] = [];
+                tokenMap[dateKey].push(m);
               });
 
               const logs = periodLogsMap[student.studentId] || [];
@@ -92,18 +93,18 @@ const StudentCalendarTable = ({ students, movements, periodLogs = [], month, yea
                     const dayStr = String(d).padStart(2, '0');
                     const monthStr = String(selectedMonth).padStart(2, '0');
                     const currentDate = dayjs.utc(`${selectedYear}-${monthStr}-${dayStr}`).startOf('day').format('YYYY-MM-DD');0
-                    const movement = tokenMap[currentDate];
+                    const movementsForDay = tokenMap[currentDate] || [];
+                    const movement = movementsForDay.find(m => m.reason === 'uso-con-deuda') || movementsForDay.find(m => m.reason === 'uso');
                     const inPeriod = isInAnyPeriod(currentDate, logs);
-
+                    
                     let bg = '';
                     if (movement?.reason === 'uso-con-deuda') {
                       bg = '#ffb3b3';
                     } else if (movement?.reason === 'uso') {
                       bg = '#add8e6';
-                    } else if (inPeriod) {
+                    } else if (!movement && inPeriod) {
                       bg = '#c1f0c1';
                     }
-
                     return (
                       <td key={d} style={{ backgroundColor: bg }}>
                         {bg ? '✓' : ''}
