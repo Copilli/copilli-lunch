@@ -3,6 +3,8 @@ import axios from 'axios';
 import dayjs from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import utc from 'dayjs/plugin/utc';
+dayjs.extend(utc);
 
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
@@ -18,9 +20,9 @@ const getDaysInMonth = (month, year) => {
 const isInAnyPeriod = (date, logs = []) => {
   return logs.some(period => {
     if (!period.startDate || !period.endDate) return false;
-    const d = dayjs(date).startOf('day');
-    const start = dayjs(period.startDate).startOf('day');
-    const end = dayjs(period.endDate).startOf('day');
+    const d = dayjs.utc(date).startOf('day');
+    const start = dayjs.utc(period.startDate).startOf('day');
+    const end = dayjs.utc(period.endDate).startOf('day');
     return d.isSameOrAfter(start) && d.isSameOrBefore(end);
   });
 };
@@ -77,7 +79,7 @@ const StudentCalendarTable = ({ students, movements, periodLogs = [], month, yea
 
               const tokenMap = {};
               studentMovs.forEach(m => {
-                const dateKey = dayjs.utc(m.timestamp).local().startOf('day').format('YYYY-MM-DD');
+                const dateKey = dayjs.utc(m.timestamp).startOf('day').format('YYYY-MM-DD');
                 tokenMap[dateKey] = m;
               });
 
@@ -89,8 +91,7 @@ const StudentCalendarTable = ({ students, movements, periodLogs = [], month, yea
                   {days.map(d => {
                     const dayStr = String(d).padStart(2, '0');
                     const monthStr = String(selectedMonth).padStart(2, '0');
-                    const currentDate = dayjs(`${selectedYear}-${monthStr}-${dayStr}`).startOf('day').format('YYYY-MM-DD');
-
+                    const currentDate = dayjs.utc(`${selectedYear}-${monthStr}-${dayStr}`).startOf('day').format('YYYY-MM-DD');0
                     const movement = tokenMap[currentDate];
                     const inPeriod = isInAnyPeriod(currentDate, logs);
 

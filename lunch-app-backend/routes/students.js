@@ -334,7 +334,7 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
         startDate: start.toDate(),
         endDate: end.toDate(),
         note: note || '',
-        reason: reason || 'nuevo periodo',
+        reason: reason || 'ajuste manual',
         performedBy: performedBy || 'sistema',
         userRole: userRole || 'sistema'
       });
@@ -347,7 +347,7 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       const movement = new TokenMovement({
         studentId: student.studentId,
         change: 0,
-        reason: reason || 'nuevo periodo',
+        reason: reason || 'ajuste manual',
         note: `Periodo especial del ${start.format('YYYY-MM-DD')} al ${end.format('YYYY-MM-DD')} - \n${note || ''}`,
         performedBy: performedBy || 'sistema',
         userRole: userRole || 'sistema'
