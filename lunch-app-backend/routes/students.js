@@ -289,7 +289,7 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
     }
 
     const start = parsedStart.startOf('day');
-    const end = parsedEnd.startOf('day');
+    const end = parsedEnd.endOf('day');
 
     if (end.isBefore(start)) {
       return res.status(400).json({ error: 'La fecha de fin no puede ser anterior a la de inicio.' });

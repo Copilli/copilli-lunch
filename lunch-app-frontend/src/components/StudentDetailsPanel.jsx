@@ -17,7 +17,7 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
 
   useEffect(() => {
     if (student) {
-      const today = dayjs().startOf('day');
+      const today = dayjs.utc().startOf('day');
       const periodStart = dayjs.utc(student.specialPeriod?.startDate).startOf('day');
       const periodEnd = dayjs.utc(student.specialPeriod?.endDate).startOf('day');
       const isActive = student.hasSpecialPeriod && today.isSameOrAfter(periodStart) && today.isSameOrBefore(periodEnd);
