@@ -77,7 +77,7 @@ const StudentCalendarTable = ({ students, movements, periodLogs = [], month, yea
 
               const tokenMap = {};
               studentMovs.forEach(m => {
-                const dateKey = dayjs(m.timestamp).startOf('day').format('YYYY-MM-DD');
+                const dateKey = dayjs.utc(m.timestamp).local().startOf('day').format('YYYY-MM-DD');
                 tokenMap[dateKey] = m;
               });
 
