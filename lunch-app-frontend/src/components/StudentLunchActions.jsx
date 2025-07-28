@@ -16,7 +16,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
   const [consumptionReason, setConsumptionReason] = useState('');
 
   const user = JSON.parse(localStorage.getItem('user'));
-  const canUseAjusteManual = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     if (!student) {
@@ -31,6 +31,10 @@ const StudentLunchActions = ({ student, onUpdate }) => {
       setConfirming(false);
       setSubmitting(false);
       setFormError('');
+    } else {
+      if (!isAdmin) {
+        setReason('pago');
+      }
     }
   }, [student]);
 
@@ -50,6 +54,12 @@ const StudentLunchActions = ({ student, onUpdate }) => {
 
     try {
       if (actionType === 'tokens') {
+        if (!isAdmin && reason !== 'pago') {
+          showError('Solo los administradores pueden usar ese motivo.');
+          setSubmitting(false);
+          return;
+        }
+
         if ((reason === 'pago' || reason === 'justificado') && !note.trim()) {
           showError('La nota es obligatoria para este motivo.');
           setSubmitting(false);
@@ -70,6 +80,12 @@ const StudentLunchActions = ({ student, onUpdate }) => {
         setConfirming(false);
 
       } else if (actionType === 'period') {
+        if (!isAdmin && reason !== 'pago') {
+          showError('Solo los administradores pueden usar ese motivo.');
+          setSubmitting(false);
+          return;
+        }
+
         if (!note.trim() || !reason.trim()) {
           showError('Debes proporcionar un motivo y una nota para el periodo.');
           setSubmitting(false);
@@ -169,7 +185,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
           <select className="form-select" value={actionType} onChange={(e) => setActionType(e.target.value)}>
             <option value="tokens">Agregar tokens</option>
             <option value="period">Agregar periodo</option>
-            {canUseAjusteManual && <option value="manual-consumption">Registrar consumo faltante</option>}
+            {isAdmin && <option value="manual-consumption">Registrar consumo faltante</option>}
           </select>
         </div>
 
@@ -188,11 +204,15 @@ const StudentLunchActions = ({ student, onUpdate }) => {
 
             <div className="mb-3">
               <label className="form-label">Motivo:</label>
-              <select className="form-select" value={reason} onChange={(e) => setReason(e.target.value)}>
-                <option value="pago">Pago</option>
-                <option value="justificado">Justificado</option>
-                {canUseAjusteManual && <option value="ajuste manual">Ajuste manual</option>}
-              </select>
+              {isAdmin ? (
+                <select className="form-select" value={reason} onChange={(e) => setReason(e.target.value)}>
+                  <option value="pago">Pago</option>
+                  <option value="justificado">Justificado</option>
+                  <option value="ajuste manual">Ajuste manual</option>
+                </select>
+              ) : (
+                <div className="form-control-plaintext">Pago</div>
+              )}
             </div>
 
             <div className="mb-3">
@@ -231,11 +251,15 @@ const StudentLunchActions = ({ student, onUpdate }) => {
 
             <div className="mb-3">
               <label className="form-label">Motivo:</label>
-              <select className="form-select" value={reason} onChange={(e) => setReason(e.target.value)}>
-                <option value="pago">Pago</option>
-                <option value="justificado">Justificado</option>
-                {canUseAjusteManual && <option value="ajuste manual">Ajuste manual</option>}
-              </select>
+              {isAdmin ? (
+                <select className="form-select" value={reason} onChange={(e) => setReason(e.target.value)}>
+                  <option value="pago">Pago</option>
+                  <option value="justificado">Justificado</option>
+                  <option value="ajuste manual">Ajuste manual</option>
+                </select>
+              ) : (
+                <div className="form-control-plaintext">Pago</div>
+              )}
             </div>
 
             <div className="mb-3">

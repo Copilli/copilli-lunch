@@ -172,13 +172,19 @@ const CocinaPanel = ({ setUser }) => {
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">¿Confirmas esta acción?</h5>
-                <button type="button" className="btn-close" onClick={() => setConfirming(false)}></button>
+                <button type="button" className="btn-close" onClick={() => {
+                  setConfirming(false);
+                  setSelectedStudent(null);
+                }}></button>
               </div>
               <div className="modal-body">
                 <p>{confirmMessage}</p>
               </div>
               <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={() => setConfirming(false)}>
+                <button className="btn btn-secondary" onClick={() => {
+                  setConfirming(false);
+                  setSelectedStudent(null);
+                }}>
                   Cancelar
                 </button>
                 <button className="btn btn-primary" onClick={handleConfirm} disabled={submitting}>
