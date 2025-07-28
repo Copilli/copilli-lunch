@@ -79,7 +79,7 @@ npm run deploy  # Publica en GitHub Pages (rama gh-pages)
 ```
 
 > La aplicación estará disponible en:  
-> `https://<tu-usuario>.github.io/<nombre-del-repo>/`
+> `https://copilli.github.io/copilli-lunch/`
 
 ---
 
@@ -92,7 +92,7 @@ npm run deploy  # Publica en GitHub Pages (rama gh-pages)
 3. Asegúrate de tener configurado `base` en `vite.config.js`:
 
 ```js
-base: '/<nombre-del-repo>/'
+base: '/copilli-lunch/'
 ```
 
 ---
