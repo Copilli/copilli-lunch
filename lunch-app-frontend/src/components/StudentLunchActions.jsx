@@ -203,16 +203,18 @@ const StudentLunchActions = ({ student, onUpdate }) => {
             </div>
 
             <div className="mb-3">
-              <label className="form-label">Motivo:</label>
-              {isAdmin ? (
-                <select className="form-select" value={reason} onChange={(e) => setReason(e.target.value)}>
-                  <option value="pago">Pago</option>
-                  <option value="justificado">Justificado</option>
-                  <option value="ajuste manual">Ajuste manual</option>
-                </select>
-              ) : (
-                <div className="form-control-plaintext">Pago</div>
-              )}
+              <div className="mb-3 d-flex align-items-center gap-2">
+                <label className="form-label mb-0">Motivo:</label>
+                {isAdmin ? (
+                  <select className="form-select" value={reason} onChange={(e) => setReason(e.target.value)}>
+                    <option value="pago">Pago</option>
+                    <option value="justificado">Justificado</option>
+                    <option value="ajuste manual">Ajuste manual</option>
+                  </select>
+                ) : (
+                  <span className="form-control-plaintext mb-0">Pago</span>
+                )}
+              </div>
             </div>
 
             <div className="mb-3">
