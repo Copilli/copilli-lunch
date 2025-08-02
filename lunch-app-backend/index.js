@@ -129,7 +129,7 @@ app.use((req, res) => {
 
 
 // 🕒 CRON: Desactivar periodos vencidos + registrar movimiento
-cron.schedule('5 0 * * *', async () => {
+cron.schedule('5 0 * * 1-5', async () => {
   console.log('[CRON] Verificando periodos especiales vencidos...');
   try {
     const today = dayjs().startOf('day').toDate();
@@ -166,7 +166,7 @@ cron.schedule('5 0 * * *', async () => {
 });
 
 // 🕒 CRON: Activar nuevos periodos desde PeriodLog
-cron.schedule('5 0 * * *', async () => {
+cron.schedule('5 0 * * 1-5', async () => {
   console.log('[CRON] Activando nuevos periodos desde PeriodLog...');
   try {
     const today = dayjs().startOf('day').toDate();
