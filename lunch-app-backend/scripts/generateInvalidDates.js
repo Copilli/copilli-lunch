@@ -1,31 +1,47 @@
-// scripts/generateInvalidDates.js
 const mongoose = require('mongoose');
 const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+dayjs.extend(utc);
+require('dotenv').config();
 const InvalidDate = require('../models/InvalidDate');
 
-// Configura tu URI de conexión aquí
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost/copilli-lunch';
+// === CONFIGURACIÓN ===
+const year = 2025;
 
 const holidayBridgesMX = [
-  '2025-01-01',
-  '2025-02-03',
-  '2025-03-17',
-  '2025-05-01',
-  '2025-09-16',
-  '2025-11-17',
-  '2025-12-25',
+  '2025-01-01', // Año nuevo
+  '2025-02-03', // Constitución
+  '2025-03-17', // Benito Juárez
+  '2025-05-01', // Día del trabajo
+  '2025-09-16', // Independencia
+  '2025-11-17', // Revolución
+  '2025-12-25', // Navidad
 ];
 
 const customInvalidDates = [
-  '2025-04-30',
+  '2025-12-24', // Noche Buena, ejemplo personalizado
 ];
 
+const customInvalidPeriods = [
+  {
+    start: '2025-07-15',
+    end: '2025-08-15',
+    reason: 'Vacaciones de verano'
+  },
+  {
+    start: '2025-12-16',
+    end: '2025-12-31',
+    reason: 'Cierre de año'
+  }
+];
+
+// === UTILIDADES ===
 function generateWeekendDates(year) {
   const weekends = [];
   const start = dayjs(`${year}-01-01`);
   const end = dayjs(`${year}-12-31`);
 
-  for (let d = start; d.isBefore(end); d = d.add(1, 'day')) {
+  for (let d = start; d.isBefore(end) || d.isSame(end); d = d.add(1, 'day')) {
     if (d.day() === 0 || d.day() === 6) {
       weekends.push(d.format('YYYY-MM-DD'));
     }
@@ -34,34 +50,75 @@ function generateWeekendDates(year) {
   return weekends;
 }
 
-async function run() {
-  const year = 2025;
-  await mongoose.connect(MONGO_URI);
-  console.log('[✅] Conectado a MongoDB');
-
-  const generatedDates = [...generateWeekendDates(year), ...holidayBridgesMX, ...customInvalidDates];
-  const existing = await InvalidDate.find({ date: { $in: generatedDates.map(d => new Date(d)) } }).lean();
-  const existingSet = new Set(existing.map(d => dayjs(d.date).format('YYYY-MM-DD')));
-
-  const toInsert = generatedDates
-    .filter(date => !existingSet.has(date))
-    .map(date => ({
-      date: new Date(date),
-      reason: 'auto-generado'
-    }));
-
-  if (toInsert.length > 0) {
-    await InvalidDate.insertMany(toInsert);
-    console.log(`[🗓️] Agregadas ${toInsert.length} fechas inválidas`);
-  } else {
-    console.log('No se agregaron nuevas fechas (ya estaban registradas)');
+function expandPeriods(periods) {
+  const expanded = [];
+  for (const period of periods) {
+    const start = dayjs(period.start);
+    const end = dayjs(period.end);
+    for (let d = start; d.isBefore(end) || d.isSame(end); d = d.add(1, 'day')) {
+      expanded.push({
+        date: d.format('YYYY-MM-DD'),
+        reason: period.reason || 'periodo personalizado'
+      });
+    }
   }
-
-  await mongoose.disconnect();
-  console.log('[🔌] Desconectado de MongoDB');
+  return expanded;
 }
 
-run().catch(err => {
-  console.error('Error al generar fechas inválidas:', err);
-  process.exit(1);
-});
+// === EJECUCIÓN ===
+async function run() {
+  const uri = process.env.MONGODB_URI;
+
+  if (!uri) {
+    console.error('❌ No se encontró MONGODB_URI en .env');
+    process.exit(1);
+  }
+
+  try {
+    await mongoose.connect(uri);
+    console.log('✅ Conectado a MongoDB');
+
+    const weekendDates = generateWeekendDates(year).map(d => ({ date: d, reason: 'fin de semana' }));
+    const bridgeDates = holidayBridgesMX.map(d => ({ date: d, reason: 'puente' }));
+    const singleDates = customInvalidDates.map(d => ({ date: d, reason: 'personalizado' }));
+    const expandedPeriods = expandPeriods(customInvalidPeriods);
+
+    const allDates = [...weekendDates, ...bridgeDates, ...singleDates, ...expandedPeriods];
+
+    const existing = await InvalidDate.distinct('date');
+    const existingSet = new Set(existing.map(e => dayjs.utc(e).format('YYYY-MM-DD')));
+
+    // Agrupar por fecha (solo una razón por fecha)
+    const grouped = new Map();
+
+    for (const d of allDates) {
+      const key = dayjs.utc(d.date).format('YYYY-MM-DD');
+      if (!grouped.has(key)) {
+        grouped.set(key, { date: key, reason: d.reason });
+      }
+    }
+
+    // Preparar lote limpio y sin duplicados
+    const toInsert = Array.from(grouped.values())
+      .filter(d => !existingSet.has(d.date))
+      .map(d => ({
+        date: dayjs.utc(d.date).startOf('day').toDate(),
+        reason: d.reason
+      }));
+
+    if (toInsert.length > 0) {
+      await InvalidDate.insertMany(toInsert);
+      console.log(`🗓️ Agregadas ${toInsert.length} fechas inválidas`);
+    } else {
+      console.log('ℹ️ No se agregaron nuevas fechas (ya estaban registradas)');
+    }
+
+    await mongoose.disconnect();
+    console.log('🔌 Desconectado de MongoDB');
+  } catch (err) {
+    console.error('❌ Error al ejecutar el script:', err.message);
+    process.exit(1);
+  }
+}
+
+run();
