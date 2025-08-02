@@ -47,14 +47,6 @@ app.use('/api/students', studentRoutes);
 app.use('/api/token-movements', tokenMovementsRoutes);
 app.use('/api/invalid-dates', invalidDatesRoutes);
 
-app.get('/', (req, res) => {
-  res.send('API de desayunos funcionando ✅');
-});
-
-app.use((req, res) => {
-  res.status(404).json({ error: 'Ruta no encontrada' });
-});
-
 // 🕒 CRON: Ejecutar manualmente para activar/desactivar periodos
 app.get('/api/cron/wake', async (req, res) => {
   try {
@@ -123,6 +115,17 @@ app.get('/api/cron/wake', async (req, res) => {
     res.status(500).json({ error: 'Error al ejecutar el cron manualmente' });
   }
 });
+
+
+app.get('/', (req, res) => {
+  res.send('API de desayunos funcionando ✅');
+});
+
+app.use((req, res) => {
+  res.status(404).json({ error: 'Ruta no encontrada' });
+});
+
+
 
 
 // 🕒 CRON: Desactivar periodos vencidos + registrar movimiento
