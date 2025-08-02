@@ -35,8 +35,9 @@ mongoose
 const authRoutes = require('./routes/auth');
 const studentRoutes = require('./routes/students');
 const tokenMovementsRoutes = require('./routes/tokenMovements');
+const invalidDatesRoutes = require('./routes/invalidDates');
 
-if (!authRoutes || !studentRoutes || !tokenMovementsRoutes) {
+if (!authRoutes || !studentRoutes || !tokenMovementsRoutes || !invalidDatesRoutes) {
   console.error('❌ Uno de los archivos de rutas no se pudo cargar. Verifica los nombres y exports.');
   process.exit(1);
 }
@@ -44,6 +45,7 @@ if (!authRoutes || !studentRoutes || !tokenMovementsRoutes) {
 app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/token-movements', tokenMovementsRoutes);
+app.use('/api/invalid-dates', invalidDatesRoutes);
 
 app.get('/', (req, res) => {
   res.send('API de desayunos funcionando ✅');

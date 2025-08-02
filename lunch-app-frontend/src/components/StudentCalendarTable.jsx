@@ -5,7 +5,6 @@ import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import utc from 'dayjs/plugin/utc';
 dayjs.extend(utc);
-
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
 
@@ -28,7 +27,7 @@ const isInAnyPeriod = (date, logs = []) => {
 };
 
 // Componente que pinta la tabla del calendario
-const StudentCalendarTable = ({ students, movements, periodLogs = [], month, year }) => {
+const StudentCalendarTable = ({ students, movements, periodLogs = [], invalidDates = [], month, year }) => {
   const selectedMonth = month;
   const selectedYear = year;
   const days = getDaysInMonth(selectedMonth, selectedYear);
@@ -42,7 +41,7 @@ const StudentCalendarTable = ({ students, movements, periodLogs = [], month, yea
     : periodLogs;
 
   const CalendarLegend = () => (
-    <div className="d-flex justify-content-start align-items-center gap-3 mb-2">
+    <div className="d-flex justify-content-start align-items-center gap-3 mb-2 flex-wrap">
       <span>
         <span style={{ width: 16, height: 16, backgroundColor: '#c1f0c1', border: '1px solid #ccc', display: 'inline-block', marginRight: 5 }} />
         Periodo activo
@@ -54,6 +53,10 @@ const StudentCalendarTable = ({ students, movements, periodLogs = [], month, yea
       <span>
         <span style={{ width: 16, height: 16, backgroundColor: '#ffb3b3', border: '1px solid #ccc', display: 'inline-block', marginRight: 5 }} />
         Consumo con deuda
+      </span>
+      <span>
+        <span style={{ width: 16, height: 16, backgroundColor: '#d9d9d9', border: '1px solid #ccc', display: 'inline-block', marginRight: 5 }} />
+        Dia sin clases
       </span>
     </div>
   );
@@ -92,18 +95,21 @@ const StudentCalendarTable = ({ students, movements, periodLogs = [], month, yea
                   {days.map(d => {
                     const dayStr = String(d).padStart(2, '0');
                     const monthStr = String(selectedMonth).padStart(2, '0');
-                    const currentDate = dayjs.utc(`${selectedYear}-${monthStr}-${dayStr}`).startOf('day').format('YYYY-MM-DD');0
+                    const currentDate = dayjs.utc(`${selectedYear}-${monthStr}-${dayStr}`).startOf('day').format('YYYY-MM-DD');
                     const movementsForDay = tokenMap[currentDate] || [];
                     const movement = movementsForDay.find(m => m.reason === 'uso-con-deuda') || movementsForDay.find(m => m.reason === 'uso');
                     const inPeriod = isInAnyPeriod(currentDate, logs);
-                    
+                    const isInvalid = invalidDates.includes(currentDate);
                     let bg = '';
-                    if (movement?.reason === 'uso-con-deuda') {
-                      bg = '#ffb3b3';
+
+                    if (isInvalid) {
+                      bg = '#d9d9d9'; // Gris claro
+                    } else if (movement?.reason === 'uso-con-deuda') {
+                      bg = '#ffb3b3'; // Rojo suave
                     } else if (movement?.reason === 'uso') {
-                      bg = '#add8e6';
-                    } else if (!movement && inPeriod) {
-                      bg = '#c1f0c1';
+                      bg = '#add8e6'; // Azul claro
+                    } else if (inPeriod) {
+                      bg = '#c1f0c1'; // Verde claro
                     }
                     return (
                       <td key={d} style={{ backgroundColor: bg }}>
@@ -127,9 +133,17 @@ export const StudentCalendarContainer = ({ month, year, selectedStudent, current
   const [movements, setMovements] = useState([]);
   const [periodLogs, setPeriodLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [invalidDates, setInvalidDates] = useState([]);
 
   const token = localStorage.getItem('token');
   const API = import.meta.env.VITE_API_URL;
+
+  const fetchInvalidDates = async () => {
+    const res = await axios.get(`${API}/invalid-dates`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setInvalidDates(res.data.map(d => dayjs(d.date).format('YYYY-MM-DD')));
+  };
 
   const fetchAllPeriodLogs = async (students) => {
     const allLogs = await Promise.all(
@@ -167,6 +181,8 @@ export const StudentCalendarContainer = ({ month, year, selectedStudent, current
         setStudents(studentsData);
         setMovements(movementsData);
         setPeriodLogs(periodLogsData);
+        await fetchInvalidDates();
+
         setLoading(false);
       } catch (err) {
         console.error('Error al cargar los datos:', err);
@@ -201,6 +217,7 @@ export const StudentCalendarContainer = ({ month, year, selectedStudent, current
       students={visibleStudents}
       movements={visibleMovements}
       periodLogs={visiblePeriodLogs}
+      invalidDates={invalidDates}
       month={month}
       year={year}
     />

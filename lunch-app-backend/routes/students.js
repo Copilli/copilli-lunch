@@ -3,6 +3,7 @@ const router = express.Router();
 const Student = require('../models/Student');
 const TokenMovement = require('../models/TokenMovement');
 const PeriodLog = require('../models/PeriodLog');
+const InvalidDate = require('../models/InvalidDate');
 
 const dayjs = require('dayjs');
 const isSameOrBefore = require('dayjs/plugin/isSameOrBefore');
@@ -272,7 +273,6 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       });
       await log.save();
 
-      // También eliminar de PeriodLog si coincide con el periodo actual
       await PeriodLog.deleteMany({
         studentId: student.studentId,
         startDate: existingStart.toDate(),
@@ -306,27 +306,49 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
      });
     }
 
+    // 🚫 Verificar días inválidos
+    const invalidDatesDocs = await InvalidDate.find({});
+    const invalidSet = new Set(invalidDatesDocs.map(doc => dayjs(doc.date).format('YYYY-MM-DD')));
+
+    if (invalidSet.has(start.format('YYYY-MM-DD')) || invalidSet.has(end.format('YYYY-MM-DD'))) {
+      return res.status(400).json({ error: 'El periodo no puede comenzar ni terminar en un día inválido.' });
+    }
+
+    // ✅ Verificar al menos 5 días válidos
+    let validDayCount = 0;
+    let cursor = start.clone();
+    while (cursor.isSameOrBefore(end, 'day')) {
+      const dayStr = cursor.format('YYYY-MM-DD');
+      if (!invalidSet.has(dayStr)) {
+        validDayCount++;
+      }
+      cursor = cursor.add(1, 'day');
+    }
+
+    if (validDayCount < 5) {
+      return res.status(400).json({ error: `El periodo debe incluir al menos 5 días válidos. Actualmente incluye solo ${validDayCount}.` });
+    }
+
+    // ❗ Verificar solapamiento con logs anteriores
     if (
       student.hasSpecialPeriod &&
       student.specialPeriod &&
       student.specialPeriod.startDate &&
       student.specialPeriod.endDate
     ) {
+      const previousPeriods = await PeriodLog.find({ studentId: student.studentId });
 
-    // Buscar todos los periodos previos del estudiante
-    const previousPeriods = await PeriodLog.find({ studentId: student.studentId });
+      const overlapPeriod = previousPeriods.some(log => {
+        const logStart = dayjs(log.startDate).startOf('day');
+        const logEnd = dayjs(log.endDate).startOf('day');
 
-    const overlapPeriod = previousPeriods.some(log => {
-      const logStart = dayjs(log.startDate).startOf('day');
-      const logEnd = dayjs(log.endDate).startOf('day');
+        return start.isSameOrBefore(logEnd) && end.isSameOrAfter(logStart);
+      });
 
-      return start.isSameOrBefore(logEnd) && end.isSameOrAfter(logStart);
-    });
-
-    if (overlapPeriod) {
-      return res.status(400).json({ error: 'El nuevo periodo se solapa con uno ya registrado en el historial.' });
+      if (overlapPeriod) {
+        return res.status(400).json({ error: 'El nuevo periodo se solapa con uno ya registrado en el historial.' });
+      }
     }
-  }
 
     student.specialPeriod = { startDate: start.toDate(), endDate: end.toDate() };
     student.hasSpecialPeriod = start.isSameOrBefore(today) && end.isSameOrAfter(today);

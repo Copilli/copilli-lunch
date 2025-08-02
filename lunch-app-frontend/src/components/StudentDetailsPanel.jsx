@@ -13,6 +13,7 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
   const [visibleMovements, setVisibleMovements] = useState(5);
   const [formError, setFormError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [invalidDates, setInvalidDates] = useState([]);
   const user = JSON.parse(localStorage.getItem('user'));
 
   useEffect(() => {
@@ -30,7 +31,7 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
           startDate: student.specialPeriod?.startDate || null,
           endDate: student.specialPeriod?.endDate || null
         },
-        hasSpecialPeriod: isActive // esto ahora depende de la fecha actual
+        hasSpecialPeriod: isActive
       });
 
       setOriginalTokens(student.tokens);
@@ -38,6 +39,17 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
       setVisibleMovements(5);
     }
   }, [student]);
+
+  useEffect(() => {
+    const fetchInvalidDates = async () => {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/invalid-dates`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setInvalidDates(res.data.map(d => dayjs(d.date).format('YYYY-MM-DD')));
+    };
+    fetchInvalidDates();
+  }, []);
 
   if (!student || !form) return null;
 
@@ -57,6 +69,8 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
     setSuccessMsg(msg);
     setTimeout(() => setSuccessMsg(''), 3000);
   };
+
+  const isDateInvalid = (date) => invalidDates.includes(dayjs(date).format('YYYY-MM-DD'));
 
   const handleChange = (field, value) => {
     if (field.startsWith('group.')) {
@@ -82,6 +96,11 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
   };
 
   const handleSave = async () => {
+    if (form.hasSpecialPeriod && (isDateInvalid(form.specialPeriod.startDate) || isDateInvalid(form.specialPeriod.endDate))) {
+      showError('El periodo especial tiene fechas no válidas.');
+      return;
+    }
+
     setSaving(true);
     const token = localStorage.getItem('token');
     try {

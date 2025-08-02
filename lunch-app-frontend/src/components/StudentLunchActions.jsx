@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import dayjs from 'dayjs';
 
 const StudentLunchActions = ({ student, onUpdate }) => {
   const [actionType, setActionType] = useState('tokens');
@@ -14,6 +15,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
   const [successMsg, setSuccessMsg] = useState('');
   const [consumptionDate, setConsumptionDate] = useState('');
   const [consumptionReason, setConsumptionReason] = useState('');
+  const [invalidDates, setInvalidDates] = useState([]);
 
   const user = JSON.parse(localStorage.getItem('user'));
   const isAdmin = user?.role === 'admin';
@@ -38,6 +40,17 @@ const StudentLunchActions = ({ student, onUpdate }) => {
     }
   }, [student]);
 
+  useEffect(() => {
+    const fetchInvalidDates = async () => {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/invalid-dates`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setInvalidDates(res.data.map(d => dayjs(d.date).format('YYYY-MM-DD')));
+    };
+    fetchInvalidDates();
+  }, []);
+
   const showError = (msg) => {
     setFormError(msg);
     setTimeout(() => setFormError(''), 3000);
@@ -46,6 +59,20 @@ const StudentLunchActions = ({ student, onUpdate }) => {
   const showSuccess = (msg) => {
     setSuccessMsg(msg);
     setTimeout(() => setSuccessMsg(''), 3000);
+  };
+
+  const isDateInvalid = (date) => invalidDates.includes(dayjs(date).format('YYYY-MM-DD'));
+
+  const getValidDaysCount = (start, end) => {
+    const validDays = [];
+    let current = dayjs(start);
+    const final = dayjs(end);
+    while (current.isSameOrBefore(final)) {
+      const formatted = current.format('YYYY-MM-DD');
+      if (!invalidDates.includes(formatted)) validDays.push(formatted);
+      current = current.add(1, 'day');
+    }
+    return validDays.length;
   };
 
   const handleSubmit = async () => {
@@ -88,6 +115,19 @@ const StudentLunchActions = ({ student, onUpdate }) => {
 
         if (!note.trim() || !reason.trim()) {
           showError('Debes proporcionar un motivo y una nota para el periodo.');
+          setSubmitting(false);
+          return;
+        }
+
+        if (isDateInvalid(startDate) || isDateInvalid(endDate)) {
+          showError('La fecha de inicio o fin no puede ser un día inválido.');
+          setSubmitting(false);
+          return;
+        }
+
+        const validCount = getValidDaysCount(startDate, endDate);
+        if (validCount < 5) {
+          showError('El periodo debe tener al menos 5 días válidos.');
           setSubmitting(false);
           return;
         }
