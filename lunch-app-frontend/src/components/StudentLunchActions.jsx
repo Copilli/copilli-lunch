@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 const StudentLunchActions = ({ student, onUpdate }) => {
   const [actionType, setActionType] = useState('tokens');
@@ -46,7 +48,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
       const res = await axios.get(`${import.meta.env.VITE_API_URL}/invalid-dates`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setInvalidDates(res.data.map(d => dayjs(d.date).format('YYYY-MM-DD')));
+      setInvalidDates(res.data.map(d => dayjs(d.date).toDate()));
     };
     fetchInvalidDates();
   }, []);
@@ -68,8 +70,8 @@ const StudentLunchActions = ({ student, onUpdate }) => {
     let current = dayjs(start);
     const final = dayjs(end);
     while (current.isSameOrBefore(final)) {
-      const formatted = current.format('YYYY-MM-DD');
-      if (!invalidDates.includes(formatted)) validDays.push(formatted);
+      if (!invalidDates.some(d => dayjs(d).isSame(current, 'day')))
+        validDays.push(current.format('YYYY-MM-DD'));
       current = current.add(1, 'day');
     }
     return validDays.length;
@@ -205,7 +207,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
   };
 
   return (
-    <>
+     <>
       {formError && (
         <div className="alert alert-danger position-fixed top-0 start-50 translate-middle-x mt-3 z-3" role="alert" style={{ zIndex: 9999 }}>
           {formError}
@@ -270,26 +272,30 @@ const StudentLunchActions = ({ student, onUpdate }) => {
         )}
 
         {actionType === 'period' && (
-          <>
-            <div className="mb-3">
-              <label className="form-label">Fecha inicio:</label>
-              <input
-                type="date"
-                className="form-control"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
+    <>
+      <div className="mb-3">
+        <label className="form-label">Fecha inicio:</label>
+        <DatePicker
+          selected={startDate}
+          onChange={(date) => setStartDate(date)}
+          excludeDates={invalidDates}
+          dateFormat="yyyy-MM-dd"
+          className="form-control"
+          placeholderText="Selecciona una fecha válida"
+        />
+      </div>
 
-            <div className="mb-3">
-              <label className="form-label">Fecha fin:</label>
-              <input
-                type="date"
-                className="form-control"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
+      <div className="mb-3">
+        <label className="form-label">Fecha fin:</label>
+        <DatePicker
+          selected={endDate}
+          onChange={(date) => setEndDate(date)}
+          excludeDates={invalidDates}
+          dateFormat="yyyy-MM-dd"
+          className="form-control"
+          placeholderText="Selecciona una fecha válida"
+        />
+        </div>
 
             <div className="mb-3">
               <label className="form-label">Motivo:</label>
