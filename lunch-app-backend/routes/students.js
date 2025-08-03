@@ -107,7 +107,6 @@ router.post('/import-bulk', verifyToken, allowRoles('admin'), async (req, res) =
   }
 });
 
-// Actualizar tokens (sumar o restar)
 // PATCH /api/students/:id/tokens
 router.patch('/:id/tokens', async (req, res) => {
   try {
@@ -163,11 +162,17 @@ router.post('/:id/use', async (req, res) => {
 
     const today = dayjs().startOf('day');
 
+    const isInvalidDate = await InvalidDate.findOne({ date: today.toDate() });
+    if (isInvalidDate) {
+      return res.status(403).json({
+        error: 'Hoy es un día inválido (fin de semana o puente). No se puede registrar consumo.'
+      });
+    }
+
     const inPeriod = student.hasSpecialPeriod && student.specialPeriod &&
       dayjs(student.specialPeriod.startDate).isSameOrBefore(today) &&
       dayjs(student.specialPeriod.endDate).isSameOrAfter(today);
 
-    // Simular decremento sin aplicarlo aún
     const wouldHave = student.tokens - 1;
 
     const existingTodayUse = await TokenMovement.findOne({
@@ -200,13 +205,12 @@ router.post('/:id/use', async (req, res) => {
       });
     }
 
-    // Aplicar consumo
     student.tokens = wouldHave;
 
     if (student.tokens === 0 && student.status === 'con-fondos') {
       student.status = 'sin-fondos';
     }
-    
+
     await student.save();
 
     const isDebt = student.tokens < 0;

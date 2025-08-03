@@ -96,15 +96,29 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
   };
 
   const handleSave = async () => {
-    if (form.hasSpecialPeriod && (isDateInvalid(form.specialPeriod.startDate) || isDateInvalid(form.specialPeriod.endDate))) {
+    // Validar fechas inválidas en el periodo especial
+    if (form.hasSpecialPeriod && (isDateInvalid(form.specialPeriod?.startDate) || isDateInvalid(form.specialPeriod?.endDate))
+    ) {
       showError('El periodo especial tiene fechas no válidas.');
       return;
     }
 
+    // Validar que haya al menos 5 días válidos si hay periodo especial
+    if (form.hasSpecialPeriod && form.specialPeriod?.startDate && form.specialPeriod?.endDate) {
+      const validCount = getValidDaysCount(form.specialPeriod.startDate, form.specialPeriod.endDate);
+      if (validCount < 5) {
+        showError('El periodo especial debe tener al menos 5 días válidos.');
+        return;
+      }
+    }
+
     setSaving(true);
     const token = localStorage.getItem('token');
+
     try {
       const tokenDelta = form.tokens - originalTokens;
+
+      // Si hay ajuste de tokens y es admin
       if (tokenDelta !== 0 && isAdmin) {
         await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/tokens`, {
           delta: tokenDelta,
@@ -116,9 +130,12 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
           headers: { Authorization: `Bearer ${token}` }
         });
       }
+
+      // Guardar cambios generales del estudiante
       await axios.put(`${import.meta.env.VITE_API_URL}/students/${student._id}`, form, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
       showSuccess('Estudiante actualizado.');
     } catch (err) {
       console.error(err);
@@ -127,6 +144,7 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
       setSaving(false);
     }
   };
+
 
   const exportCSV = () => {
     if (!isAdmin) return;

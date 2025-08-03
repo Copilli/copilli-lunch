@@ -55,8 +55,8 @@ const StudentCalendarTable = ({ students, movements, periodLogs = [], invalidDat
         Consumo con deuda
       </span>
       <span>
-        <span style={{ width: 16, height: 16, backgroundColor: '#d9d9d9', border: '1px solid #ccc', display: 'inline-block', marginRight: 5 }} />
-        Dia sin clases
+        <span style={{ width: 16, height: 16, backgroundColor: '#b0b0b0', border: '1px solid #ccc', display: 'inline-block', marginRight: 5 }} />
+        Día sin clases
       </span>
     </div>
   );
@@ -99,20 +99,21 @@ const StudentCalendarTable = ({ students, movements, periodLogs = [], invalidDat
                     const movementsForDay = tokenMap[currentDate] || [];
                     const movement = movementsForDay.find(m => m.reason === 'uso-con-deuda') || movementsForDay.find(m => m.reason === 'uso');
                     const inPeriod = isInAnyPeriod(currentDate, logs);
-                    const isInvalid = invalidDates.includes(currentDate);
+                    const invalid = invalidDates.find(d => d.date === currentDate);
+                    const isInvalid = !!invalid;
                     let bg = '';
 
                     if (isInvalid) {
-                      bg = '#d9d9d9'; // Gris claro
+                      bg = '#b0b0b0';
                     } else if (movement?.reason === 'uso-con-deuda') {
-                      bg = '#ffb3b3'; // Rojo suave
+                      bg = '#ffb3b3';
                     } else if (movement?.reason === 'uso') {
-                      bg = '#add8e6'; // Azul claro
+                      bg = '#add8e6';
                     } else if (inPeriod) {
-                      bg = '#c1f0c1'; // Verde claro
+                      bg = '#c1f0c1';
                     }
                     return (
-                      <td key={d} style={{ backgroundColor: bg }}>
+                      <td key={d} style={{ backgroundColor: bg }} title={isInvalid ? invalid.reason : ''}>
                         {bg ? '✓' : ''}
                       </td>
                     );
@@ -142,7 +143,10 @@ export const StudentCalendarContainer = ({ month, year, selectedStudent, current
     const res = await axios.get(`${API}/invalid-dates`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    setInvalidDates(res.data.map(d => dayjs(d.date).format('YYYY-MM-DD')));
+    setInvalidDates(res.data.map(d => ({
+      date: dayjs(d.date).format('YYYY-MM-DD'),
+      reason: d.reason || 'Día no válido'
+    })));
   };
 
   const fetchAllPeriodLogs = async (students) => {

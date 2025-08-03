@@ -21,6 +21,7 @@ const AdminPanel = ({ setUser }) => {
   const [calendarYear, setCalendarYear] = useState(dayjs().year());
   const [showDetails, setShowDetails] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [invalidDates, setInvalidDates] = useState([]);
   const user = JSON.parse(localStorage.getItem('user'));
 
   const fetchStudents = async () => {
@@ -39,9 +40,21 @@ const AdminPanel = ({ setUser }) => {
     setMovements(res.data);
   };
 
+  const fetchInvalidDates = async () => {
+    const token = localStorage.getItem('token');
+    const res = await axios.get(`${import.meta.env.VITE_API_URL}/invalid-dates`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setInvalidDates(res.data.map(d => ({
+      date: dayjs(d.date).format('YYYY-MM-DD'),
+      reason: d.reason || 'Día no válido'
+    })));
+  };
+
   useEffect(() => {
     fetchStudents();
     fetchMovements();
+    fetchInvalidDates();
   }, []);
 
   useEffect(() => {
@@ -88,14 +101,12 @@ const AdminPanel = ({ setUser }) => {
           onSelect={(student) => {
             setSelectedLevel(student.group.level);
             setSelectedGroup(student.group.name);
-            setSelectedStudent(null); // forzar reset
+            setSelectedStudent(null);
             setShowDetails(false);
-            
-            // esperar a que se monte el grupo y luego mostrar detalles
             setTimeout(() => {
               setSelectedStudent(student);
               setShowDetails(true);
-            }, 100); // 100ms suele ser suficiente
+            }, 100);
           }}
         />
       </TopNavBar>
@@ -141,7 +152,6 @@ const AdminPanel = ({ setUser }) => {
         </div>
       )}
 
-
       {selectedGroup && (
         <div>
           <h3>Estudiantes en {selectedLevel} - Grupo {selectedGroup}</h3>
@@ -170,6 +180,7 @@ const AdminPanel = ({ setUser }) => {
             selectedStudent={showDetails ? selectedStudent : null}
             month={calendarMonth}
             year={calendarYear}
+            invalidDates={invalidDates}
           />
 
           <div style={{ marginTop: '2rem' }}>

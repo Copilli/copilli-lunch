@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import TopNavBar from '../components/TopNavBar';
@@ -12,6 +12,7 @@ import StudentDetailsPanel from '../components/StudentDetailsPanel';
 const OficinaPanel = ({ setUser }) => {
   const [students, setStudents] = useState([]);
   const [movements, setMovements] = useState([]);
+  const [invalidDates, setInvalidDates] = useState([]);
   const [search, setSearch] = useState(''); 
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -20,25 +21,37 @@ const OficinaPanel = ({ setUser }) => {
   const [calendarYear, setCalendarYear] = useState(dayjs().year());
   const [showDetails, setShowDetails] = useState(false);
 
+  const token = localStorage.getItem('token');
+  const API = import.meta.env.VITE_API_URL;
+
   const fetchStudents = async () => {
-    const token = localStorage.getItem('token');
-    const res = await axios.get(`${import.meta.env.VITE_API_URL}/students`, {
+    const res = await axios.get(`${API}/students`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     setStudents(res.data);
   };
 
   const fetchMovements = async () => {
-    const token = localStorage.getItem('token');
-    const res = await axios.get(`${import.meta.env.VITE_API_URL}/token-movements`, {
+    const res = await axios.get(`${API}/token-movements`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     setMovements(res.data);
   };
 
+  const fetchInvalidDates = async () => {
+    const res = await axios.get(`${API}/invalid-dates`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setInvalidDates(res.data.map(d => ({
+      date: dayjs(d.date).format('YYYY-MM-DD'),
+      reason: d.reason || 'Día no válido'
+    })));
+  };
+
   useEffect(() => {
     fetchStudents();
     fetchMovements();
+    fetchInvalidDates();
   }, []);
 
   useEffect(() => {
@@ -66,10 +79,6 @@ const OficinaPanel = ({ setUser }) => {
       )
     : [];
 
-  const relevantMovements = useMemo(() => {
-    return movements.filter(m => m.reason === 'uso' || m.reason === 'uso-con-deuda');
-  }, [movements]);
-
   return (
     <div className="app-container" style={{ padding: '2rem' }}>
       <h2>Panel de Oficina</h2>
@@ -81,14 +90,12 @@ const OficinaPanel = ({ setUser }) => {
           onSelect={(student) => {
             setSelectedLevel(student.group.level);
             setSelectedGroup(student.group.name);
-            setSelectedStudent(null); // forzar reset
+            setSelectedStudent(null);
             setShowDetails(false);
-            
-            // esperar a que se monte el grupo y luego mostrar detalles
             setTimeout(() => {
               setSelectedStudent(student);
               setShowDetails(true);
-            }, 100); // 100ms suele ser suficiente
+            }, 100);
           }}
         />
       </TopNavBar>
@@ -141,6 +148,7 @@ const OficinaPanel = ({ setUser }) => {
             selectedStudent={showDetails ? selectedStudent : null}
             month={calendarMonth}
             year={calendarYear}
+            invalidDates={invalidDates}
           />
 
           <div style={{ marginTop: '2rem' }}>
