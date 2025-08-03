@@ -9,8 +9,8 @@ const StudentLunchActions = ({ student, onUpdate }) => {
   const [tokenAmount, setTokenAmount] = useState(0);
   const [reason, setReason] = useState('pago');
   const [note, setNote] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
