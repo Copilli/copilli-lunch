@@ -163,7 +163,8 @@ const StudentLunchActions = ({ student, onUpdate }) => {
           reason: consumptionReason,
           note: `Consumo manual (${dayjs(consumptionDate).format('YYYY-MM-DD')})`,
           performedBy: user?.username || 'admin',
-          userRole: user?.role || 'admin'
+          userRole: user?.role || 'admin',
+          customDate: dayjs(consumptionDate).startOf('day').toISOString()
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -364,10 +365,18 @@ const StudentLunchActions = ({ student, onUpdate }) => {
               </div>
               <div className="modal-body">
                 {actionType === 'tokens' && (
-                  <p>Tokens actuales: {student.tokens} → Total: {student.tokens + tokenAmount}</p>
+                  <>
+                    <p>Tokens actuales: {student.tokens} → Total: {student.tokens + tokenAmount}</p>
+                    <p><strong>Motivo:</strong> {reason}</p>
+                    <p><strong>Nota:</strong> {note}</p>
+                  </>
                 )}
                 {actionType === 'period' && (
-                  <p>Periodo: {dayjs(startDate).format('YYYY-MM-DD')} a {dayjs(endDate).format('YYYY-MM-DD')}</p>
+                  <>
+                    <p>Periodo: {dayjs(startDate).format('YYYY-MM-DD')} a {dayjs(endDate).format('YYYY-MM-DD')}</p>
+                    <p><strong>Motivo:</strong> {reason}</p>
+                    <p><strong>Nota:</strong> {note}</p>
+                  </>
                 )}
                 {actionType === 'manual-consumption' && (
                   <>
@@ -376,8 +385,6 @@ const StudentLunchActions = ({ student, onUpdate }) => {
                     <p><strong>Motivo:</strong> {consumptionReason}</p>
                   </>
                 )}
-                <p><strong>Motivo:</strong> {reason}</p>
-                <p><strong>Nota:</strong> {note}</p>
               </div>
               <div className="modal-footer">
                 <button className="btn btn-secondary" onClick={() => setConfirming(false)}>

@@ -115,7 +115,8 @@ router.patch('/:id/tokens', async (req, res) => {
       reason = 'ajuste manual',
       note = '',
       performedBy,
-      userRole = 'oficina'
+      userRole = 'oficina',
+      customDate
     } = req.body;
 
     if (typeof delta !== 'number') {
@@ -148,7 +149,8 @@ router.patch('/:id/tokens', async (req, res) => {
       reason,
       note,
       performedBy,
-      userRole
+      userRole,
+      timestamp: customDate ? new Date(customDate) : new Date()
     });
 
     await movement.save();
