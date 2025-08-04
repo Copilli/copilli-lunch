@@ -15,7 +15,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [consumptionDate, setConsumptionDate] = useState('');
+  const [consumptionDate, setConsumptionDate] = useState(null);
   const [consumptionReason, setConsumptionReason] = useState('');
   const [invalidDates, setInvalidDates] = useState([]);
 
@@ -28,9 +28,9 @@ const StudentLunchActions = ({ student, onUpdate }) => {
       setTokenAmount(0);
       setReason('pago');
       setNote('');
-      setStartDate('');
-      setEndDate('');
-      setConsumptionDate('');
+      setStartDate(null);
+      setEndDate(null);
+      setConsumptionDate(null);
       setConsumptionReason('');
       setConfirming(false);
       setSubmitting(false);
@@ -158,7 +158,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
         await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/tokens`, {
           delta: -1,
           reason: consumptionReason,
-          note: `Consumo manual (${consumptionDate})`,
+          note: `Consumo manual (${dayjs(consumptionDate).format('YYYY-MM-DD')})`,
           performedBy: user?.username || 'admin',
           userRole: user?.role || 'admin'
         }, {
@@ -326,14 +326,15 @@ const StudentLunchActions = ({ student, onUpdate }) => {
           <>
             <div className="mb-3">
               <label className="form-label">Fecha del consumo:</label>
-              <input
-                type="date"
+              <DatePicker
+                selected={consumptionDate}
+                onChange={(date) => setConsumptionDate(date)}
+                excludeDates={invalidDates}
+                dateFormat="yyyy-MM-dd"
                 className="form-control"
-                value={consumptionDate}
-                onChange={(e) => setConsumptionDate(e.target.value)}
+                placeholderText="Selecciona una fecha válida"
               />
             </div>
-
             <div className="mb-3">
               <label className="form-label">Motivo:</label>
               <select className="form-select" value={consumptionReason} onChange={(e) => setConsumptionReason(e.target.value)}>
@@ -363,7 +364,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
                   <p>Tokens actuales: {student.tokens} → Total: {student.tokens + tokenAmount}</p>
                 )}
                 {actionType === 'period' && (
-                  <p>Periodo: {startDate} a {endDate}</p>
+                  <p>Periodo: {dayjs(startDate).format('YYYY-MM-DD')} a {dayjs(endDate).format('YYYY-MM-DD')}</p>
                 )}
                 {actionType === 'manual-consumption' && (
                   <>

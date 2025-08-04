@@ -115,7 +115,7 @@ const StudentCalendarTable = ({ students, movements, periodLogs = [], invalidDat
 
                     return (
                       <td key={d} style={{ backgroundColor: bg }} title={invalid?.reason || ''}>
-                        {(movement || inPeriod) ? '✓' : ''}
+                        {(movement || inPeriod && !invalid) ? '✓' : ''}
                       </td>
                     );
                   })}
