@@ -63,7 +63,10 @@ const StudentLunchActions = ({ student, onUpdate }) => {
     setTimeout(() => setSuccessMsg(''), 3000);
   };
 
-  const isDateInvalid = (date) => invalidDates.includes(dayjs(date).format('YYYY-MM-DD'));
+  const isDateInvalid = (date) => {
+  if (!date) return false;
+  return invalidDates.some(d => dayjs(d).isSame(dayjs(date), 'day'));
+};
 
   const getValidDaysCount = (start, end) => {
     const validDays = [];
@@ -172,9 +175,9 @@ const StudentLunchActions = ({ student, onUpdate }) => {
       setFormError('');
       setTokenAmount(0);
       setNote('');
-      setStartDate('');
-      setEndDate('');
-      setConsumptionDate('');
+      setStartDate(null);
+      setEndDate(null);
+      setConsumptionDate(null);
       setConsumptionReason('');
       onUpdate();
 
@@ -369,7 +372,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
                 {actionType === 'manual-consumption' && (
                   <>
                     <p>Registrar -1 token por consumo no anotado.</p>
-                    <p><strong>Fecha:</strong> {consumptionDate}</p>
+                    <p><strong>Fecha:</strong> {dayjs(consumptionDate).format('YYYY-MM-DD')}</p>
                     <p><strong>Motivo:</strong> {consumptionReason}</p>
                   </>
                 )}

@@ -130,6 +130,16 @@ router.patch('/:id/tokens', async (req, res) => {
     }
 
     student.tokens += delta;
+
+    // No cambiar status si está bloqueado
+    if (student.status !== 'bloqueado') {
+      if (student.tokens > 0) {
+        student.status = 'con-fondos';
+      } else if (student.tokens <= 0) {
+        student.status = 'sin-fondos';
+      }
+    }
+
     await student.save();
 
     const movement = new TokenMovement({
