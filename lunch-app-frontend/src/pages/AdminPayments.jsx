@@ -1,16 +1,26 @@
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import TopNavBar from '../components/TopNavBar';
 
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+const TZ = 'America/Mexico_City';
 const currency = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n ?? 0);
 
 export default function AdminPayments() {
   const API = import.meta.env.VITE_API_URL;
   const token = localStorage.getItem('token');
+  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
-  const [from, setFrom] = useState(dayjs().format('YYYY-MM-DD'));
-  const [to, setTo] = useState(dayjs().format('YYYY-MM-DD'));
+  // Fechas en CDMX
+  const [from, setFrom] = useState(dayjs().tz(TZ).format('YYYY-MM-DD'));
+  const [to, setTo] = useState(dayjs().tz(TZ).format('YYYY-MM-DD'));
   const [studentId, setStudentId] = useState('');
+
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -19,13 +29,17 @@ export default function AdminPayments() {
   const [summary, setSummary] = useState([]);
   const [overallTotal, setOverallTotal] = useState(0);
 
-  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+  const rangeToISO = (fromDay, toDay) => ({
+    fromISO: dayjs.tz(fromDay, 'YYYY-MM-DD', TZ).startOf('day').toISOString(),
+    toISO:   dayjs.tz(toDay,   'YYYY-MM-DD', TZ).endOf('day').toISOString(),
+  });
 
   const fetchPayments = async () => {
     setLoading(true);
     try {
+      const { fromISO, toISO } = rangeToISO(from, to);
       const { data } = await axios.get(`${API}/payments`, {
-        params: { from, to, studentId: studentId || undefined },
+        params: { from: fromISO, to: toISO, studentId: studentId || undefined },
         headers
       });
       setRows(data.payments || []);
@@ -40,8 +54,9 @@ export default function AdminPayments() {
 
   const fetchSummary = async () => {
     try {
+      const { fromISO, toISO } = rangeToISO(from, to);
       const { data } = await axios.get(`${API}/payments/summary`, {
-        params: { from, to, groupBy },
+        params: { from: fromISO, to: toISO, groupBy, tz: TZ },
         headers
       });
       setSummary(data.rows || []);
@@ -51,13 +66,19 @@ export default function AdminPayments() {
     }
   };
 
+  const handleSearch = async () => {
+    await fetchPayments();
+    await fetchSummary();
+  };
+
   const resendPending = async () => {
     try {
+      const { fromISO, toISO } = rangeToISO(from, to);
       const { data } = await axios.post(`${API}/payments/resend-mails`, {
-        from, to, studentId: studentId || undefined
+        from: fromISO, to: toISO, studentId: studentId || undefined
       }, { headers });
       alert(`Reenviados: ${data.sent} / Intentados: ${data.attempted}`);
-      fetchPayments();
+      handleSearch();
     } catch (e) {
       console.error(e);
       alert(e?.response?.data?.error || 'Error al reenviar correos pendientes');
@@ -65,9 +86,10 @@ export default function AdminPayments() {
   };
 
   const exportCSV = () => {
+    if (!rows.length) return;
     const header = 'Fecha,Ticket,Alumno,Monto,Correo Enviado,Nota\n';
     const lines = rows.map(r => {
-      const fecha = dayjs(r.date).format('YYYY-MM-DD HH:mm');
+      const fecha = dayjs(r.date).tz(TZ).format('YYYY-MM-DD HH:mm');
       const ticket = r.ticketNumber;
       const alumno = r.studentId;
       const monto = r.amount;
@@ -84,127 +106,137 @@ export default function AdminPayments() {
     URL.revokeObjectURL(url);
   };
 
+  // Carga inicial del día actual
   useEffect(() => {
-    fetchPayments();
+    handleSearch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    fetchSummary();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupBy, from, to]);
-
   return (
-    <div className="container py-3">
-      <div className="d-flex align-items-center mb-3">
-        <h4 className="mb-0">Pagos</h4>
-        <div className="ms-auto d-flex gap-2">
-          <button className="btn btn-outline-secondary" onClick={exportCSV} disabled={!rows.length}>
-            Exportar CSV
-          </button>
-          <button className="btn btn-outline-secondary" onClick={resendPending}>
-            Reenviar correos pendientes
-          </button>
-        </div>
-      </div>
+    <>
+      <TopNavBar />
 
-      <div className="row g-2 mb-3">
-        <div className="col-12 col-md-3">
-          <label className="form-label">Desde</label>
-          <input type="date" className="form-control" value={from} onChange={e => setFrom(e.target.value)} />
+      <div className="container py-3">
+        <div className="d-flex align-items-center mb-3">
+          <h4 className="mb-0">Pagos</h4>
+          <div className="ms-auto d-flex gap-2">
+            <button className="btn btn-outline-secondary" onClick={exportCSV} disabled={!rows.length}>
+              Exportar CSV
+            </button>
+            <button className="btn btn-outline-secondary" onClick={resendPending}>
+              Reenviar correos pendientes
+            </button>
+          </div>
         </div>
-        <div className="col-12 col-md-3">
-          <label className="form-label">Hasta</label>
-          <input type="date" className="form-control" value={to} onChange={e => setTo(e.target.value)} />
-        </div>
-        <div className="col-12 col-md-3">
-          <label className="form-label">Alumno (studentId)</label>
-          <input type="text" className="form-control" value={studentId} onChange={e => setStudentId(e.target.value)} placeholder="Opcional" />
-        </div>
-        <div className="col-12 col-md-3 d-flex align-items-end">
-          <button className="btn btn-primary w-100" onClick={fetchPayments} disabled={loading}>
-            {loading ? 'Cargando...' : 'Buscar'}
-          </button>
-        </div>
-      </div>
 
-      <div className="d-flex align-items-center mb-2">
-        <span className="badge bg-success fs-6">Total: {currency(total)}</span>
-        <div className="ms-auto d-flex align-items-center gap-2">
-          <span className="text-muted">Resumen por:</span>
-          <select className="form-select form-select-sm" style={{ width: 160 }} value={groupBy} onChange={e => setGroupBy(e.target.value)}>
-            <option value="day">Día</option>
-            <option value="student">Alumno</option>
-          </select>
+        <div className="row g-2 mb-3">
+          <div className="col-12 col-md-3">
+            <label className="form-label">Desde</label>
+            <input type="date" className="form-control" value={from} onChange={e => setFrom(e.target.value)} />
+          </div>
+          <div className="col-12 col-md-3">
+            <label className="form-label">Hasta</label>
+            <input type="date" className="form-control" value={to} onChange={e => setTo(e.target.value)} />
+          </div>
+          <div className="col-12 col-md-3">
+            <label className="form-label">Alumno (studentId)</label>
+            <input type="text" className="form-control" value={studentId} onChange={e => setStudentId(e.target.value)} placeholder="Opcional" />
+          </div>
+          <div className="col-12 col-md-3 d-flex align-items-end">
+            <button className="btn btn-primary w-100" onClick={handleSearch} disabled={loading}>
+              {loading ? 'Cargando...' : 'Buscar'}
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* SUMMARY */}
-      <div className="table-responsive mb-4">
-        <table className="table table-sm table-striped">
-          <thead>
-            <tr>
-              <th>{groupBy === 'student' ? 'Alumno' : 'Fecha'}</th>
-              <th>Total</th>
-              <th>Pagos</th>
-            </tr>
-          </thead>
-          <tbody>
-            {summary.map((r, idx) => (
-              <tr key={idx}>
-                <td>{groupBy === 'student'
-                  ? r.studentId
-                  : dayjs(r.date).format('YYYY-MM-DD')}</td>
-                <td>{currency(r.total)}</td>
-                <td>{r.count}</td>
-              </tr>
-            ))}
-            {!summary.length && (
-              <tr><td colSpan="3" className="text-center text-muted">Sin datos de resumen.</td></tr>
-            )}
-          </tbody>
-          {summary.length > 0 && (
-            <tfoot>
+        <div className="d-flex align-items-center mb-2">
+          <span className="badge bg-success fs-6">Total: {currency(total)}</span>
+          <div className="ms-auto d-flex align-items-center gap-2">
+            <span className="text-muted">Resumen por:</span>
+            <select
+              className="form-select form-select-sm"
+              style={{ width: 160 }}
+              value={groupBy}
+              onChange={e => setGroupBy(e.target.value)}
+            >
+              <option value="day">Día</option>
+              <option value="student">Alumno</option>
+            </select>
+            <button className="btn btn-outline-primary btn-sm" onClick={fetchSummary}>
+              Actualizar resumen
+            </button>
+          </div>
+        </div>
+
+        {/* SUMMARY */}
+        <div className="table-responsive mb-4">
+          <table className="table table-sm table-striped">
+            <thead>
               <tr>
-                <th>Total periodo</th>
-                <th>{currency(overallTotal)}</th>
-                <th></th>
+                <th>{groupBy === 'student' ? 'Alumno' : 'Fecha'}</th>
+                <th>Total</th>
+                <th>Pagos</th>
               </tr>
-            </tfoot>
-          )}
-        </table>
-      </div>
-
-      {/* LISTA DE PAGOS */}
-      <div className="table-responsive">
-        <table className="table table-sm table-striped">
-          <thead>
-            <tr>
-              <th style={{whiteSpace:'nowrap'}}>Fecha</th>
-              <th>Ticket</th>
-              <th>Alumno</th>
-              <th>Monto</th>
-              <th>Correo</th>
-              <th>Nota</th>
-            </tr>
-          </thead>
-        <tbody>
-            {rows.map(r => (
-              <tr key={r._id}>
-                <td style={{whiteSpace:'nowrap'}}>{dayjs(r.date).format('YYYY-MM-DD HH:mm')}</td>
-                <td>{r.ticketNumber}</td>
-                <td>{r.studentId}</td>
-                <td>{currency(r.amount)}</td>
-                <td>{r.sentEmail ? 'Enviado' : 'Pendiente'}</td>
-                <td>{r?.tokenMovementId?.note || ''}</td>
-              </tr>
-            ))}
-            {!rows.length && (
-              <tr><td colSpan="6" className="text-center text-muted">Sin pagos en el rango.</td></tr>
+            </thead>
+            <tbody>
+              {summary.map((r, idx) => (
+                <tr key={idx}>
+                  <td>{groupBy === 'student'
+                    ? r.studentId
+                    : dayjs(r.date).tz(TZ).format('YYYY-MM-DD')}</td>
+                  <td>{currency(r.total)}</td>
+                  <td>{r.count}</td>
+                </tr>
+              ))}
+              {!summary.length && (
+                <tr><td colSpan="3" className="text-center text-muted">Sin datos de resumen.</td></tr>
+              )}
+            </tbody>
+            {summary.length > 0 && (
+              <tfoot>
+                <tr>
+                  <th>Total periodo</th>
+                  <th>{currency(overallTotal)}</th>
+                  <th></th>
+                </tr>
+              </tfoot>
             )}
-          </tbody>
-        </table>
+          </table>
+        </div>
+
+        {/* LISTA DE PAGOS */}
+        <div className="table-responsive">
+          <table className="table table-sm table-striped">
+            <thead>
+              <tr>
+                <th style={{whiteSpace:'nowrap'}}>Fecha</th>
+                <th>Ticket</th>
+                <th>Alumno</th>
+                <th>Monto</th>
+                <th>Correo</th>
+                <th>Nota</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(r => (
+                <tr key={r._id}>
+                  <td style={{whiteSpace:'nowrap'}}>
+                    {dayjs(r.date).tz(TZ).format('YYYY-MM-DD HH:mm')}
+                  </td>
+                  <td>{r.ticketNumber}</td>
+                  <td>{r.studentId}</td>
+                  <td>{currency(r.amount)}</td>
+                  <td>{r.sentEmail ? 'Enviado' : 'Pendiente'}</td>
+                  <td>{r?.tokenMovementId?.note || ''}</td>
+                </tr>
+              ))}
+              {!rows.length && (
+                <tr><td colSpan="6" className="text-center text-muted">Sin pagos en el rango.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
