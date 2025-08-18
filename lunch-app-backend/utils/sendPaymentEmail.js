@@ -1,5 +1,11 @@
 // utils/sendPaymentEmail.js
 const nodemailer = require('nodemailer');
+const TokenMovement = require('../models/TokenMovement');
+
+const PRICE_PER_TOKEN = 40;
+const PRICE_PER_DAY = 35;
+const DEFAULT_CURRENCY = 'MXN';
+const MX_TZ = 'America/Mexico_City';
 
 let _transporter = null;
 function getTransporter() {
@@ -11,6 +17,43 @@ function getTransporter() {
   return _transporter;
 }
 
+function fmtMoney(n, currency = DEFAULT_CURRENCY) {
+  try {
+    return new Intl.NumberFormat('es-MX', { style: 'currency', currency }).format(n ?? 0);
+  } catch {
+    return `$${n} ${currency}`;
+  }
+}
+
+/**
+ * Intenta inferir el concepto y la cantidad a partir del TokenMovement
+ * - Tokens: change > 0  -> cantidad = change (tokens)
+ * - Periodo: change == 0 -> cantidad ≈ amount / PRICE_PER_DAY (días)
+ * También intenta extraer rango "YYYY-MM-DD → YYYY-MM-DD" de movement.note
+ */
+async function getConceptAndQty(payment) {
+  try {
+    const mov = await TokenMovement.findById(payment.tokenMovementId).lean();
+    if (!mov) return { concept: 'Pago', qty: null, units: '', rangeLabel: '' };
+
+    // ¿Periodo? (nuestro flujo guarda change=0 para periodo)
+    if (!mov.change || mov.change === 0) {
+      const qty = Math.round((payment.amount || 0) / PRICE_PER_DAY) || 0;
+      let rangeLabel = '';
+      // intentar extraer fechas del note: "... (YYYY-MM-DD → YYYY-MM-DD) ..."
+      const m = mov.note && mov.note.match(/(\d{4}-\d{2}-\d{2}).*?(\d{4}-\d{2}-\d{2})/);
+      if (m) rangeLabel = ` (${m[1]} → ${m[2]})`;
+      return { concept: 'Periodo', qty, units: `día${qty === 1 ? '' : 's'}`, rangeLabel };
+    }
+
+    // Si no, lo tratamos como compra de tokens
+    const qty = Number(mov.change) || Math.round((payment.amount || 0) / PRICE_PER_TOKEN) || 0;
+    return { concept: 'Tokens', qty, units: `token${qty === 1 ? '' : 's'}`, rangeLabel: '' };
+  } catch {
+    return { concept: 'Pago', qty: null, units: '', rangeLabel: '' };
+  }
+}
+
 /**
  * Envía el ticket por correo al alumno y marca payment.sentEmail = true si se envió.
  * @param {Object} student - Doc de Student (debe tener .email y .name)
@@ -18,25 +61,60 @@ function getTransporter() {
  * @param {string} currency - Ej: 'MXN' (opcional)
  * @returns {Promise<boolean>} true si se envió; false si no había email
  */
-async function sendPaymentEmail(student, payment, currency = 'MXN') {
+async function sendPaymentEmail(student, payment, currency = DEFAULT_CURRENCY) {
   if (!student?.email) {
     console.log(`[ℹ️ Email] ${student?.name || 'Alumno'} sin correo; no se envía.`);
     return false;
   }
 
+  // Enriquecer: concepto (Tokens/Periodo), cantidad y rango si aplica
+  const { concept, qty, units, rangeLabel } = await getConceptAndQty(payment);
+
+  const amountFmt = fmtMoney(payment.amount, currency);
+  const dateStr = new Date(payment.date).toLocaleString('es-MX', {
+    timeZone: MX_TZ,
+    year: 'numeric', month: '2-digit', day: '2-digit'
+  });
+
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-      <h2 style="color: #2c3e50;">🎟️ Ticket de Pago - Copilli Lunch</h2>
+    <div style="font-family: Arial, sans-serif; max-width: 640px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+        <img src="https://copilli.edu.mx/wp-content/uploads/2017/06/Favicon.jpeg" alt="Copilli" width="28" height="28" style="border-radius:6px" />
+        <h2 style="color:#2c3e50; margin:0;">Ticket de Pago - Copilli Lunch</h2>
+      </div>
+
       <p>Hola <strong>${student.name}</strong>,</p>
       <p>Se ha registrado tu pago correctamente. Aquí están los detalles:</p>
-      <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-        <tr><td style="border: 1px solid #ddd; padding: 8px;">Ticket</td><td style="border: 1px solid #ddd; padding: 8px;">${payment.ticketNumber}</td></tr>
-        <tr><td style="border: 1px solid #ddd; padding: 8px;">Fecha</td><td style="border: 1px solid #ddd; padding: 8px;">${new Date(payment.date).toLocaleDateString()}</td></tr>
-        <tr><td style="border: 1px solid #ddd; padding: 8px;">Alumno</td><td style="border: 1px solid #ddd; padding: 8px;">${student.name}</td></tr>
-        <tr><td style="border: 1px solid #ddd; padding: 8px;">Monto</td><td style="border: 1px solid #ddd; padding: 8px;">$${payment.amount} ${currency}</td></tr>
+
+      <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+        <tr>
+          <td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Ticket</td>
+          <td style="border:1px solid #ddd; padding:8px;">${payment.ticketNumber}</td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Fecha</td>
+          <td style="border:1px solid #ddd; padding:8px;">${dateStr}</td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Alumno</td>
+          <td style="border:1px solid #ddd; padding:8px;">${student.name}</td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Concepto</td>
+          <td style="border:1px solid #ddd; padding:8px;">${concept}${rangeLabel}</td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Cantidad</td>
+          <td style="border:1px solid #ddd; padding:8px;">${qty ?? '-'} ${units}</td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Monto</td>
+          <td style="border:1px solid #ddd; padding:8px;">${amountFmt}</td>
+        </tr>
       </table>
-      <p style="margin-top: 20px;">Gracias por tu pago.</p>
-      <p style="font-size: 12px; color: #888;">Este correo fue enviado automáticamente por el sistema Copilli Lunch.</p>
+
+      <p style="margin-top:16px;">Gracias por tu pago.</p>
+      <p style="font-size:12px; color:#888;">Este correo fue enviado automáticamente por el sistema Copilli Lunch.</p>
     </div>
   `;
 
