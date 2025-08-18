@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+// src/pages/AdminPayments.jsx
+import { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -9,29 +10,33 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const TZ = 'America/Mexico_City';
-const currency = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n ?? 0);
+const currency = (n) =>
+  new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n ?? 0);
 
 export default function AdminPayments() {
   const API = import.meta.env.VITE_API_URL;
   const token = localStorage.getItem('token');
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
-  // Fechas en CDMX
+  // Fechas (local CDMX)
   const [from, setFrom] = useState(dayjs().tz(TZ).format('YYYY-MM-DD'));
   const [to, setTo] = useState(dayjs().tz(TZ).format('YYYY-MM-DD'));
   const [studentId, setStudentId] = useState('');
 
+  // Datos
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
 
+  // Resumen
   const [groupBy, setGroupBy] = useState('day'); // 'day' | 'student'
   const [summary, setSummary] = useState([]);
   const [overallTotal, setOverallTotal] = useState(0);
 
+  // Convierte días locales a ISO (UTC) cubriendo todo el día local
   const rangeToISO = (fromDay, toDay) => ({
     fromISO: dayjs.tz(fromDay, 'YYYY-MM-DD', TZ).startOf('day').toISOString(),
-    toISO:   dayjs.tz(toDay,   'YYYY-MM-DD', TZ).endOf('day').toISOString(),
+    toISO: dayjs.tz(toDay, 'YYYY-MM-DD', TZ).endOf('day').toISOString(),
   });
 
   const fetchPayments = async () => {
@@ -40,7 +45,7 @@ export default function AdminPayments() {
       const { fromISO, toISO } = rangeToISO(from, to);
       const { data } = await axios.get(`${API}/payments`, {
         params: { from: fromISO, to: toISO, studentId: studentId || undefined },
-        headers
+        headers,
       });
       setRows(data.payments || []);
       setTotal(data.total || 0);
@@ -57,7 +62,7 @@ export default function AdminPayments() {
       const { fromISO, toISO } = rangeToISO(from, to);
       const { data } = await axios.get(`${API}/payments/summary`, {
         params: { from: fromISO, to: toISO, groupBy, tz: TZ },
-        headers
+        headers,
       });
       setSummary(data.rows || []);
       setOverallTotal(data.overallTotal || 0);
@@ -67,6 +72,12 @@ export default function AdminPayments() {
   };
 
   const handleSearch = async () => {
+    // valida rango
+    const { fromISO, toISO } = rangeToISO(from, to);
+    if (new Date(fromISO) > new Date(toISO)) {
+      alert('La fecha "Desde" no puede ser mayor que "Hasta".');
+      return;
+    }
     await fetchPayments();
     await fetchSummary();
   };
@@ -74,9 +85,11 @@ export default function AdminPayments() {
   const resendPending = async () => {
     try {
       const { fromISO, toISO } = rangeToISO(from, to);
-      const { data } = await axios.post(`${API}/payments/resend-mails`, {
-        from: fromISO, to: toISO, studentId: studentId || undefined
-      }, { headers });
+      const { data } = await axios.post(
+        `${API}/payments/resend-mails`,
+        { from: fromISO, to: toISO, studentId: studentId || undefined },
+        { headers }
+      );
       alert(`Reenviados: ${data.sent} / Intentados: ${data.attempted}`);
       handleSearch();
     } catch (e) {
@@ -88,7 +101,7 @@ export default function AdminPayments() {
   const exportCSV = () => {
     if (!rows.length) return;
     const header = 'Fecha,Ticket,Alumno,Monto,Correo Enviado,Nota\n';
-    const lines = rows.map(r => {
+    const lines = rows.map((r) => {
       const fecha = dayjs(r.date).tz(TZ).format('YYYY-MM-DD HH:mm');
       const ticket = r.ticketNumber;
       const alumno = r.studentId;
@@ -97,7 +110,9 @@ export default function AdminPayments() {
       const nota = r?.tokenMovementId?.note?.replace(/[\r\n,]/g, ' ') || '';
       return `${fecha},${ticket},${alumno},${monto},${mail},${nota}`;
     });
-    const blob = new Blob([header + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([header + lines.join('\n')], {
+      type: 'text/csv;charset=utf-8;',
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -106,11 +121,22 @@ export default function AdminPayments() {
     URL.revokeObjectURL(url);
   };
 
-  // Carga inicial del día actual
+  // Carga inicial (día actual)
   useEffect(() => {
     handleSearch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Auto-actualiza SOLO el resumen cuando cambia el agrupador (Día/Alumno)
+  const didMount = useRef(false);
+  useEffect(() => {
+    if (!didMount.current) {
+      didMount.current = true;
+      return;
+    }
+    fetchSummary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupBy]);
 
   return (
     <>
@@ -120,7 +146,11 @@ export default function AdminPayments() {
         <div className="d-flex align-items-center mb-3">
           <h4 className="mb-0">Pagos</h4>
           <div className="ms-auto d-flex gap-2">
-            <button className="btn btn-outline-secondary" onClick={exportCSV} disabled={!rows.length}>
+            <button
+              className="btn btn-outline-secondary"
+              onClick={exportCSV}
+              disabled={!rows.length}
+            >
               Exportar CSV
             </button>
             <button className="btn btn-outline-secondary" onClick={resendPending}>
@@ -129,26 +159,50 @@ export default function AdminPayments() {
           </div>
         </div>
 
-        <div className="row g-2 mb-3">
+        {/* Filtros (no auto-buscan; esperan a "Buscar") */}
+        <form
+          className="row g-2 mb-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSearch();
+          }}
+        >
           <div className="col-12 col-md-3">
             <label className="form-label">Desde</label>
-            <input type="date" className="form-control" value={from} onChange={e => setFrom(e.target.value)} />
+            <input
+              type="date"
+              className="form-control"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+            />
           </div>
           <div className="col-12 col-md-3">
             <label className="form-label">Hasta</label>
-            <input type="date" className="form-control" value={to} onChange={e => setTo(e.target.value)} />
+            <input
+              type="date"
+              className="form-control"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+            />
           </div>
           <div className="col-12 col-md-3">
             <label className="form-label">Alumno (studentId)</label>
-            <input type="text" className="form-control" value={studentId} onChange={e => setStudentId(e.target.value)} placeholder="Opcional" />
+            <input
+              type="text"
+              className="form-control"
+              value={studentId}
+              onChange={(e) => setStudentId(e.target.value)}
+              placeholder="Opcional"
+            />
           </div>
           <div className="col-12 col-md-3 d-flex align-items-end">
-            <button className="btn btn-primary w-100" onClick={handleSearch} disabled={loading}>
+            <button className="btn btn-primary w-100" type="submit" disabled={loading}>
               {loading ? 'Cargando...' : 'Buscar'}
             </button>
           </div>
-        </div>
+        </form>
 
+        {/* Encabezado de resumen */}
         <div className="d-flex align-items-center mb-2">
           <span className="badge bg-success fs-6">Total: {currency(total)}</span>
           <div className="ms-auto d-flex align-items-center gap-2">
@@ -157,14 +211,11 @@ export default function AdminPayments() {
               className="form-select form-select-sm"
               style={{ width: 160 }}
               value={groupBy}
-              onChange={e => setGroupBy(e.target.value)}
+              onChange={(e) => setGroupBy(e.target.value)}
             >
               <option value="day">Día</option>
               <option value="student">Alumno</option>
             </select>
-            <button className="btn btn-outline-primary btn-sm" onClick={fetchSummary}>
-              Actualizar resumen
-            </button>
           </div>
         </div>
 
@@ -181,15 +232,21 @@ export default function AdminPayments() {
             <tbody>
               {summary.map((r, idx) => (
                 <tr key={idx}>
-                  <td>{groupBy === 'student'
-                    ? r.studentId
-                    : dayjs(r.date).tz(TZ).format('YYYY-MM-DD')}</td>
+                  <td>
+                    {groupBy === 'student'
+                      ? r.studentId
+                      : dayjs(r.date).tz(TZ).format('YYYY-MM-DD')}
+                  </td>
                   <td>{currency(r.total)}</td>
                   <td>{r.count}</td>
                 </tr>
               ))}
               {!summary.length && (
-                <tr><td colSpan="3" className="text-center text-muted">Sin datos de resumen.</td></tr>
+                <tr>
+                  <td colSpan="3" className="text-center text-muted">
+                    Sin datos de resumen.
+                  </td>
+                </tr>
               )}
             </tbody>
             {summary.length > 0 && (
@@ -209,7 +266,7 @@ export default function AdminPayments() {
           <table className="table table-sm table-striped">
             <thead>
               <tr>
-                <th style={{whiteSpace:'nowrap'}}>Fecha</th>
+                <th style={{ whiteSpace: 'nowrap' }}>Fecha</th>
                 <th>Ticket</th>
                 <th>Alumno</th>
                 <th>Monto</th>
@@ -218,9 +275,9 @@ export default function AdminPayments() {
               </tr>
             </thead>
             <tbody>
-              {rows.map(r => (
+              {rows.map((r) => (
                 <tr key={r._id}>
-                  <td style={{whiteSpace:'nowrap'}}>
+                  <td style={{ whiteSpace: 'nowrap' }}>
                     {dayjs(r.date).tz(TZ).format('YYYY-MM-DD HH:mm')}
                   </td>
                   <td>{r.ticketNumber}</td>
@@ -231,7 +288,11 @@ export default function AdminPayments() {
                 </tr>
               ))}
               {!rows.length && (
-                <tr><td colSpan="6" className="text-center text-muted">Sin pagos en el rango.</td></tr>
+                <tr>
+                  <td colSpan="6" className="text-center text-muted">
+                    Sin pagos en el rango.
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>

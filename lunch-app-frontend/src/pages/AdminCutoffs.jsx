@@ -1,3 +1,4 @@
+// src/pages/AdminCutoffs.jsx
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
@@ -9,7 +10,21 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 const TZ = 'America/Mexico_City';
 
-const currency = (n) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n ?? 0);
+const currency = (n) =>
+  new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n ?? 0);
+
+// Normaliza el shape que venga del BE:
+// - { cutoffs: [...] }  ó  [...]
+function normalizeHistoryPayload(hist) {
+  const arr = Array.isArray(hist) ? hist : hist?.cutoffs || [];
+  return arr.map((c) => ({
+    _id: c._id,
+    amount: c.amount ?? c.total ?? 0,
+    from: c.from ?? null,
+    to: c.to ?? null,
+    createdAt: c.createdAt ?? c.date ?? null, // algunos BE mandan "date"
+  }));
+}
 
 export default function AdminCutoffs() {
   const API = import.meta.env.VITE_API_URL;
@@ -26,10 +41,10 @@ export default function AdminCutoffs() {
     try {
       const [{ data: pend }, { data: hist }] = await Promise.all([
         axios.get(`${API}/cutoffs/pending`, { headers }),
-        axios.get(`${API}/cutoffs`, { headers })
+        axios.get(`${API}/cutoffs`, { headers }),
       ]);
       setPending(pend || { total: 0, from: null, to: null });
-      setHistory(hist?.cutoffs || []);
+      setHistory(normalizeHistoryPayload(hist));
     } catch (e) {
       console.error(e);
       alert(e?.response?.data?.error || 'Error al cargar información de cortes');
@@ -46,7 +61,8 @@ export default function AdminCutoffs() {
     setBusy(true);
     try {
       const { data } = await axios.post(`${API}/cutoffs`, {}, { headers });
-      alert(`Corte registrado por ${currency(data.amount)}`);
+      const amount = data.amount ?? data.total ?? 0;
+      alert(`Corte registrado por ${currency(amount)}`);
       await load();
     } catch (e) {
       console.error(e);
@@ -59,9 +75,9 @@ export default function AdminCutoffs() {
   const exportHistoryCSV = () => {
     if (!history.length) return;
     const header = 'Fecha de corte,Monto,Desde,Hasta\n';
-    const lines = history.map(c => {
-      const fecha = dayjs(c.createdAt).tz(TZ).format('YYYY-MM-DD HH:mm');
-      const monto = c.amount;
+    const lines = history.map((c) => {
+      const fecha = c.createdAt ? dayjs(c.createdAt).tz(TZ).format('YYYY-MM-DD HH:mm') : '';
+      const monto = c.amount ?? 0;
       const desde = c.from ? dayjs(c.from).tz(TZ).format('YYYY-MM-DD HH:mm') : '';
       const hasta = c.to ? dayjs(c.to).tz(TZ).format('YYYY-MM-DD HH:mm') : '';
       return `${fecha},${monto},${desde},${hasta}`;
@@ -75,7 +91,10 @@ export default function AdminCutoffs() {
     URL.revokeObjectURL(url);
   };
 
-  useEffect(() => { load(); }, []); // inicial
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <>
@@ -88,7 +107,11 @@ export default function AdminCutoffs() {
             <button className="btn btn-outline-secondary" onClick={load} disabled={loading}>
               {loading ? 'Actualizando...' : 'Actualizar'}
             </button>
-            <button className="btn btn-outline-secondary" onClick={exportHistoryCSV} disabled={!history.length}>
+            <button
+              className="btn btn-outline-secondary"
+              onClick={exportHistoryCSV}
+              disabled={!history.length}
+            >
               Exportar historial CSV
             </button>
           </div>
@@ -100,9 +123,15 @@ export default function AdminCutoffs() {
               Pendiente: {currency(pending.total || 0)}
             </div>
             <div className="text-muted">
-              {pending.from && pending.to
-                ? <>Rango: <strong>{dayjs(pending.from).tz(TZ).format('YYYY-MM-DD HH:mm')}</strong> → <strong>{dayjs(pending.to).tz(TZ).format('YYYY-MM-DD HH:mm')}</strong></>
-                : 'Sin rango pendiente'}
+              {pending.from && pending.to ? (
+                <>
+                  Rango:{' '}
+                  <strong>{dayjs(pending.from).tz(TZ).format('YYYY-MM-DD HH:mm')}</strong> →{' '}
+                  <strong>{dayjs(pending.to).tz(TZ).format('YYYY-MM-DD HH:mm')}</strong>
+                </>
+              ) : (
+                'Sin rango pendiente'
+              )}
             </div>
             <button
               className="btn btn-danger ms-auto"
@@ -127,16 +156,20 @@ export default function AdminCutoffs() {
               </tr>
             </thead>
             <tbody>
-              {history.map(c => (
+              {history.map((c) => (
                 <tr key={c._id}>
-                  <td>{dayjs(c.createdAt).tz(TZ).format('YYYY-MM-DD HH:mm')}</td>
+                  <td>{c.createdAt ? dayjs(c.createdAt).tz(TZ).format('YYYY-MM-DD HH:mm') : '—'}</td>
                   <td>{currency(c.amount)}</td>
                   <td>{c.from ? dayjs(c.from).tz(TZ).format('YYYY-MM-DD HH:mm') : '—'}</td>
                   <td>{c.to ? dayjs(c.to).tz(TZ).format('YYYY-MM-DD HH:mm') : '—'}</td>
                 </tr>
               ))}
               {!history.length && (
-                <tr><td colSpan="4" className="text-center text-muted">Sin cortes registrados.</td></tr>
+                <tr>
+                  <td colSpan="4" className="text-center text-muted">
+                    Sin cortes registrados.
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
