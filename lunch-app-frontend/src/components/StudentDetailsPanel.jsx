@@ -131,7 +131,7 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
         });
       }
 
-      // Guardar cambios generales del estudiante
+      // Guardar cambios generales del estudiante (incluye email)
       await axios.put(`${import.meta.env.VITE_API_URL}/students/${student._id}`, form, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -145,6 +145,18 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
     }
   };
 
+  const getValidDaysCount = (start, end) => {
+    if (!start || !end) return 0;
+    const s = dayjs(start).startOf('day');
+    const e = dayjs(end).startOf('day');
+    let c = s;
+    let valid = 0;
+    while (c.isSameOrBefore(e, 'day')) {
+      if (!isDateInvalid(c)) valid++;
+      c = c.add(1, 'day');
+    }
+    return valid;
+  };
 
   const exportCSV = () => {
     if (!isAdmin) return;
@@ -248,6 +260,20 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
             />
           </div>
 
+          {/* NUEVO: Email para envío de tickets */}
+          <div className="mb-3">
+            <label className="form-label">Email (para tickets):</label>
+            <input
+              type="email"
+              className="form-control"
+              value={form.email || ''}
+              onChange={(e) => handleChange('email', e.target.value)}
+              disabled={isReadOnly}
+              placeholder="padre@mimail.com"
+            />
+            <div className="form-text">Se usará para enviar el ticket de pago.</div>
+          </div>
+
           <div className="row mb-3">
             <div className="col-md-6">
               <label className="form-label">Nivel:</label>
@@ -331,9 +357,8 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
                 Para modificar un periodo, utiliza la sección "Ajustar desayunos" más abajo.
               </div>
               {isAdmin && (
-                <>
                 <div className="row mb-3">
-                 <button
+                  <button
                     className="btn btn-outline-danger mb-3"
                     onClick={handleDeletePeriod}
                     disabled={saving}
@@ -341,19 +366,16 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
                     {saving ? 'Eliminando...' : 'Eliminar periodo especial'}
                   </button>
                 </div>
-                </>
               )}
             </>
           )}
 
           {isAdmin && (
-            <>
-             <div className="row mb-3">
-                <button className="btn btn-primary mb-3" onClick={handleSave} disabled={saving}>
-                  {saving ? 'Guardando...' : 'Guardar cambios'}
-                </button>
-             </div>
-            </>
+            <div className="row mb-3">
+              <button className="btn btn-primary mb-3" onClick={handleSave} disabled={saving}>
+                {saving ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            </div>
           )}
         </div>
       </div>

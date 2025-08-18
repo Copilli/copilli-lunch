@@ -36,9 +36,11 @@ const authRoutes = require('./routes/auth');
 const studentRoutes = require('./routes/students');
 const tokenMovementsRoutes = require('./routes/tokenMovements');
 const invalidDatesRoutes = require('./routes/invalidDates');
+const paymentRoutes = require('./routes/payments');
+const cutoffRoutes = require('./routes/cutoffs');
 
-if (!authRoutes || !studentRoutes || !tokenMovementsRoutes || !invalidDatesRoutes) {
-  console.error('❌ Uno de los archivos de rutas no se pudo cargar. Verifica los nombres y exports.');
+if (!authRoutes || !studentRoutes || !tokenMovementsRoutes || !invalidDatesRoutes || !paymentRoutes || !cutoffRoutes) {
+  console.error('❌ Uno de los archivos de rutas no se pudo cargar.');
   process.exit(1);
 }
 
@@ -46,6 +48,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/token-movements', tokenMovementsRoutes);
 app.use('/api/invalid-dates', invalidDatesRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/cutoffs', cutoffRoutes);
 
 // 🕒 CRON: Ejecutar manualmente para activar/desactivar periodos
 app.get('/api/cron/wake', async (req, res) => {

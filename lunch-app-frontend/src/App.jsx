@@ -5,6 +5,9 @@ import Login from './pages/Login';
 import AdminPanel from './pages/AdminPanel';
 import OficinaPanel from './pages/OficinaPanel';
 import CocinaPanel from './pages/CocinaPanel';
+import AdminPayments from './pages/AdminPayments';
+import AdminCutoffs from './pages/AdminCutoffs';
+
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -60,6 +63,8 @@ const App = () => {
       <Route path="/admin" element={<AdminPanel setUser={setUser} />} />
       <Route path="/oficina" element={<OficinaPanel setUser={setUser} />} />
       <Route path="/cocina" element={<CocinaPanel setUser={setUser} />} />
+      <Route path="/admin/payments" element={<AdminPayments />} />
+      <Route path="/admin/cutoffs" element={<AdminCutoffs />} />
 
       {/* Cualquier otra ruta redirige al login */}
       <Route path="*" element={<Navigate to="/" />} />

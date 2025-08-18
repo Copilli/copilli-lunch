@@ -27,12 +27,15 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser?.(null);
-    navigate(`${import.meta.env.base}`, { replace: true }); // redirige al inicio
+    navigate(`${import.meta.env.base}`, { replace: true });
   };
 
   const handleHome = () => {
     window.location.href = `${import.meta.env.base}`;
   };
+
+  const goPayments = () => navigate('/admin/payments');
+  const goCutoffs  = () => navigate('/admin/cutoffs');
 
   return (
     <div className="d-flex align-items-center p-3 bg-light border-bottom" style={{ gap: 16 }}>
@@ -42,7 +45,24 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
           Inicio
         </button>
       </div>
-      {/* Centro-izquierda: Importar (si aplica) */}
+
+      {/* Admin shortcuts: Pagos / Cortes */}
+      {user?.role === 'admin' && (
+        <>
+          <div>
+            <button className="btn btn-outline-secondary" onClick={goPayments}>
+              Pagos
+            </button>
+          </div>
+          <div>
+            <button className="btn btn-outline-secondary" onClick={goCutoffs}>
+              Cortes
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Importar (si aplica) */}
       {showImport && (
         <div>
           <button className="btn btn-success" onClick={onImportClick}>
@@ -50,10 +70,12 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
           </button>
         </div>
       )}
+
       {/* Centro: SearchBar u otros children */}
       <div className="flex-grow-1 d-flex justify-content-center align-items-center">
         {children}
       </div>
+
       {/* Derecha: Cerrar sesión */}
       <div>
         <button className="btn btn-outline-danger" onClick={handleLogout}>

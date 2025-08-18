@@ -1,8 +1,14 @@
-import { useEffect, useState } from 'react';
+// src/pages/StudentLunchActions.jsx
+import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+dayjs.extend(isSameOrBefore);
+
+const PRICE_PER_TOKEN = 40; // solo display (BE es la fuente real)
+const PRICE_PER_DAY = 35;   // solo display
 
 const StudentLunchActions = ({ student, onUpdate }) => {
   const [actionType, setActionType] = useState('tokens');
@@ -21,6 +27,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
 
   const user = JSON.parse(localStorage.getItem('user'));
   const isAdmin = user?.role === 'admin';
+  const API = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     if (!student) {
@@ -36,22 +43,20 @@ const StudentLunchActions = ({ student, onUpdate }) => {
       setSubmitting(false);
       setFormError('');
     } else {
-      if (!isAdmin) {
-        setReason('pago');
-      }
+      if (!isAdmin) setReason('pago');
     }
-  }, [student]);
+  }, [student, isAdmin]);
 
   useEffect(() => {
     const fetchInvalidDates = async () => {
       const token = localStorage.getItem('token');
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/invalid-dates`, {
+      const res = await axios.get(`${API}/invalid-dates`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setInvalidDates(res.data.map(d => dayjs(d.date).toDate()));
     };
     fetchInvalidDates();
-  }, []);
+  }, [API]);
 
   const showError = (msg) => {
     setFormError(msg);
@@ -60,25 +65,30 @@ const StudentLunchActions = ({ student, onUpdate }) => {
 
   const showSuccess = (msg) => {
     setSuccessMsg(msg);
-    setTimeout(() => setSuccessMsg(''), 3000);
+    setTimeout(() => setSuccessMsg(''), 3500);
   };
 
   const isDateInvalid = (date) => {
-  if (!date) return false;
-  return invalidDates.some(d => dayjs(d).isSame(dayjs(date), 'day'));
-};
+    if (!date) return false;
+    return invalidDates.some(d => dayjs(d).isSame(dayjs(date), 'day'));
+  };
 
   const getValidDaysCount = (start, end) => {
-    const validDays = [];
-    let current = dayjs(start);
-    const final = dayjs(end);
-    while (current.isSameOrBefore(final)) {
-      if (!invalidDates.some(d => dayjs(d).isSame(current, 'day')))
-        validDays.push(current.format('YYYY-MM-DD'));
-      current = current.add(1, 'day');
+    if (!start || !end) return 0;
+    let valid = 0;
+    let c = dayjs(start);
+    const e = dayjs(end);
+    while (c.isSameOrBefore(e, 'day')) {
+      if (!invalidDates.some(d => dayjs(d).isSame(c, 'day'))) valid++;
+      c = c.add(1, 'day');
     }
-    return validDays.length;
+    return valid;
   };
+
+  // Totales para mostrar en confirmación
+  const validDaysForPeriod = useMemo(() => getValidDaysCount(startDate, endDate), [startDate, endDate, invalidDates]);
+  const totalForTokens = useMemo(() => (reason === 'pago' ? tokenAmount * PRICE_PER_TOKEN : 0), [tokenAmount, reason]);
+  const totalForPeriod = useMemo(() => (reason === 'pago' ? validDaysForPeriod * PRICE_PER_DAY : 0), [validDaysForPeriod, reason]);
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -91,24 +101,29 @@ const StudentLunchActions = ({ student, onUpdate }) => {
           setSubmitting(false);
           return;
         }
-
-        if ((reason === 'pago' || reason === 'justificado') && !note.trim()) {
+        if (tokenAmount <= 0) {
+          showError('Especifica una cantidad de tokens mayor a 0.');
+          setSubmitting(false);
+          return;
+        }
+        // Para no-pago exigimos nota
+        if (reason !== 'pago' && !note.trim()) {
           showError('La nota es obligatoria para este motivo.');
           setSubmitting(false);
           return;
         }
 
-        await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/tokens`, {
+        const resp = await axios.patch(`${API}/students/${student._id}/tokens`, {
           delta: tokenAmount,
           reason,
-          note,
+          note, // opcional para pago
           performedBy: user?.username || 'desconocido',
           userRole: user?.role || 'oficina'
-        }, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        }, { headers: { Authorization: `Bearer ${token}` } });
 
-        showSuccess('Tokens actualizados correctamente.');
+        const ticket = resp?.data?.paymentTicket;
+        const amount = resp?.data?.paymentAmount;
+        showSuccess(ticket ? `Pago registrado. Ticket: ${ticket} ($${amount})` : 'Tokens actualizados correctamente.');
         setConfirming(false);
 
       } else if (actionType === 'period') {
@@ -117,38 +132,40 @@ const StudentLunchActions = ({ student, onUpdate }) => {
           setSubmitting(false);
           return;
         }
-
-        if (!note.trim() || !reason.trim()) {
-          showError('Debes proporcionar un motivo y una nota para el periodo.');
+        if (!startDate || !endDate) {
+          showError('Especifica las fechas de inicio y fin.');
           setSubmitting(false);
           return;
         }
-
         if (isDateInvalid(startDate) || isDateInvalid(endDate)) {
           showError('La fecha de inicio o fin no puede ser un día inválido.');
           setSubmitting(false);
           return;
         }
-
-        const validCount = getValidDaysCount(startDate, endDate);
-        if (validCount < 5) {
+        if (validDaysForPeriod < 5) {
           showError('El periodo debe tener al menos 5 días válidos.');
           setSubmitting(false);
           return;
         }
+        // Para no-pago exigimos nota
+        if (reason !== 'pago' && !note.trim()) {
+          showError('La nota es obligatoria para este motivo.');
+          setSubmitting(false);
+          return;
+        }
 
-        await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/period`, {
+        const resp = await axios.patch(`${API}/students/${student._id}/period`, {
           startDate,
           endDate,
           reason,
           note,
           performedBy: user?.username || 'desconocido',
           userRole: user?.role || 'oficina'
-        }, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        }, { headers: { Authorization: `Bearer ${token}` } });
 
-        showSuccess('Periodo especial registrado correctamente.');
+        const ticket = resp?.data?.paymentTicket;
+        const amount = resp?.data?.paymentAmount;
+        showSuccess(ticket ? `Periodo registrado. Ticket: ${ticket} ($${amount})` : 'Periodo especial registrado correctamente.');
         setConfirming(false);
 
       } else if (actionType === 'manual-consumption') {
@@ -158,21 +175,20 @@ const StudentLunchActions = ({ student, onUpdate }) => {
           return;
         }
 
-        await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/tokens`, {
+        await axios.patch(`${API}/students/${student._id}/tokens`, {
           delta: -1,
           reason: consumptionReason,
           note: `Consumo manual (${dayjs(consumptionDate).format('YYYY-MM-DD')})`,
           performedBy: user?.username || 'admin',
           userRole: user?.role || 'admin',
           customDate: dayjs(consumptionDate).startOf('day').toISOString()
-        }, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        }, { headers: { Authorization: `Bearer ${token}` } });
 
         showSuccess('Consumo manual registrado correctamente.');
         setConfirming(false);
       }
 
+      // reset
       setFormError('');
       setTokenAmount(0);
       setNote('');
@@ -180,7 +196,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
       setEndDate(null);
       setConsumptionDate(null);
       setConsumptionReason('');
-      onUpdate();
+      onUpdate && onUpdate();
 
     } catch (err) {
       console.error(err);
@@ -205,13 +221,14 @@ const StudentLunchActions = ({ student, onUpdate }) => {
       showError('Debes seleccionar motivo y fecha para registrar el consumo.');
       return;
     }
-
     setFormError('');
     setConfirming(true);
   };
 
+  if (!student) return null;
+
   return (
-     <>
+    <>
       {formError && (
         <div className="alert alert-danger position-fixed top-0 start-50 translate-middle-x mt-3 z-3" role="alert" style={{ zIndex: 9999 }}>
           {formError}
@@ -263,43 +280,45 @@ const StudentLunchActions = ({ student, onUpdate }) => {
               </div>
             </div>
 
-            <div className="mb-3">
-              <label className="form-label">Nota:</label>
-              <textarea
-                className="form-control"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Especifica detalles o ticket"
-              />
-            </div>
+            {reason !== 'pago' && (
+              <div className="mb-3">
+                <label className="form-label">Nota:</label>
+                <textarea
+                  className="form-control"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Especifica detalles"
+                />
+              </div>
+            )}
           </>
         )}
 
         {actionType === 'period' && (
-    <>
-      <div className="mb-3">
-        <label className="form-label">Fecha inicio:</label>
-        <DatePicker
-          selected={startDate}
-          onChange={(date) => setStartDate(date)}
-          excludeDates={invalidDates}
-          dateFormat="yyyy-MM-dd"
-          className="form-control"
-          placeholderText="Selecciona una fecha válida"
-        />
-      </div>
+          <>
+            <div className="mb-3">
+              <label className="form-label">Fecha inicio:</label>
+              <DatePicker
+                selected={startDate}
+                onChange={(date) => setStartDate(date)}
+                excludeDates={invalidDates}
+                dateFormat="yyyy-MM-dd"
+                className="form-control"
+                placeholderText="Selecciona una fecha válida"
+              />
+            </div>
 
-      <div className="mb-3">
-        <label className="form-label">Fecha fin:</label>
-        <DatePicker
-          selected={endDate}
-          onChange={(date) => setEndDate(date)}
-          excludeDates={invalidDates}
-          dateFormat="yyyy-MM-dd"
-          className="form-control"
-          placeholderText="Selecciona una fecha válida"
-        />
-        </div>
+            <div className="mb-3">
+              <label className="form-label">Fecha fin:</label>
+              <DatePicker
+                selected={endDate}
+                onChange={(date) => setEndDate(date)}
+                excludeDates={invalidDates}
+                dateFormat="yyyy-MM-dd"
+                className="form-control"
+                placeholderText="Selecciona una fecha válida"
+              />
+            </div>
 
             <div className="mb-3">
               <label className="form-label">Motivo:</label>
@@ -314,15 +333,17 @@ const StudentLunchActions = ({ student, onUpdate }) => {
               )}
             </div>
 
-            <div className="mb-3">
-              <label className="form-label">Nota:</label>
-              <textarea
-                className="form-control"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Especifica detalles o ticket"
-              />
-            </div>
+            {reason !== 'pago' && (
+              <div className="mb-3">
+                <label className="form-label">Nota:</label>
+                <textarea
+                  className="form-control"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Especifica detalles"
+                />
+              </div>
+            )}
           </>
         )}
 
@@ -355,6 +376,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
         </button>
       </div>
 
+      {/* MODAL DE CONFIRMACIÓN */}
       {confirming && (
         <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
@@ -368,20 +390,31 @@ const StudentLunchActions = ({ student, onUpdate }) => {
                   <>
                     <p>Tokens actuales: {student.tokens} → Total: {student.tokens + tokenAmount}</p>
                     <p><strong>Motivo:</strong> {reason}</p>
-                    <p><strong>Nota:</strong> {note}</p>
+                    {reason === 'pago' ? (
+                      <p className="mb-0"><strong>Total a pagar:</strong> ${totalForTokens}</p>
+                    ) : (
+                      <p><strong>Nota:</strong> {note || '(sin nota)'}</p>
+                    )}
                   </>
                 )}
+
                 {actionType === 'period' && (
                   <>
-                    <p>Periodo: {dayjs(startDate).format('YYYY-MM-DD')} a {dayjs(endDate).format('YYYY-MM-DD')}</p>
+                    <p>Periodo: {startDate ? dayjs(startDate).format('YYYY-MM-DD') : '—'} a {endDate ? dayjs(endDate).format('YYYY-MM-DD') : '—'}</p>
+                    <p>Días válidos (sin inválidos): <strong>{validDaysForPeriod}</strong></p>
                     <p><strong>Motivo:</strong> {reason}</p>
-                    <p><strong>Nota:</strong> {note}</p>
+                    {reason === 'pago' ? (
+                      <p className="mb-0"><strong>Total a pagar:</strong> ${totalForPeriod}</p>
+                    ) : (
+                      <p><strong>Nota:</strong> {note || '(sin nota)'}</p>
+                    )}
                   </>
                 )}
+
                 {actionType === 'manual-consumption' && (
                   <>
                     <p>Registrar -1 token por consumo no anotado.</p>
-                    <p><strong>Fecha:</strong> {dayjs(consumptionDate).format('YYYY-MM-DD')}</p>
+                    <p><strong>Fecha:</strong> {consumptionDate ? dayjs(consumptionDate).format('YYYY-MM-DD') : '—'}</p>
                     <p><strong>Motivo:</strong> {consumptionReason}</p>
                   </>
                 )}

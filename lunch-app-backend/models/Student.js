@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const studentSchema = new mongoose.Schema({
   name: String,
   studentId: String,
+  email: { type: String, required: true, default: '' },
   group: {
     level: { type: String, enum: ['preescolar', 'primaria', 'secundaria'], required: true },
     name: String
