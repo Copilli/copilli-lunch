@@ -10,12 +10,7 @@ const CSV_HEADERS_FULL = [
 ];
 
 // Solo campos mínimos requeridos
-const CSV_HEADERS_TEMPLATE = [
-  'name',
-  'email',
-  'level', // preescolar | primaria | secundaria
-  'group'  // Ej: 3B, A, 1A
-];
+const CSV_HEADERS_TEMPLATE = ['name','email','level','group']; // level: preescolar | primaria | secundaria
 
 function toCsvRow(values) {
   return values.map(v => `"${(v ?? '').toString().replace(/"/g,'""')}"`).join(',');
@@ -42,7 +37,7 @@ async function fetchAllStudentsFlat() {
   return await res.json();
 }
 
-const StudentImportPanel = ({ onSuccess }) => {
+const StudentImportPanel = ({ onSuccess, onCancel }) => {
   const fileInputRef = useRef(null);
   const [fileName, setFileName] = useState('');
   const [result, setResult] = useState(null);
@@ -50,6 +45,7 @@ const StudentImportPanel = ({ onSuccess }) => {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
+  // === Descargas ===
   const handleDownloadFullCSV = async () => {
     try {
       const list = await fetchAllStudentsFlat();
@@ -68,15 +64,15 @@ const StudentImportPanel = ({ onSuccess }) => {
   };
 
   const handleDownloadTemplateCSV = () => {
-    // Solo encabezados mínimos, sin ejemplo
-    const rows = [];
+    // Solo encabezados mínimos, sin fila ejemplo
     downloadCsv(
       `students_template_min_${dayjs().format('YYYYMMDD_HHmm')}.csv`,
       CSV_HEADERS_TEMPLATE,
-      rows
+      []
     );
   };
 
+  // === Importación ===
   const handleFileUpload = async (e) => {
     e.preventDefault();
     const file = fileInputRef.current?.files?.[0];
@@ -92,18 +88,21 @@ const StudentImportPanel = ({ onSuccess }) => {
       complete: async (results) => {
         try {
           const transformed = results.data.map(row => {
-            const { 'group.level': level, 'group.name': name,
-                    'specialPeriod.startDate': startDate,
-                    'specialPeriod.endDate': endDate, ...rest } = row;
+            const {
+              'group.level': level, 'group.name': name,
+              'specialPeriod.startDate': startDate,
+              'specialPeriod.endDate': endDate, ...rest
+            } = row;
 
             return {
               ...rest,
               tokens: parseInt(row.tokens || 0, 10),
               hasSpecialPeriod: row.hasSpecialPeriod === 'TRUE' || row.hasSpecialPeriod === true,
-              group: { level: level?.toLowerCase(), name },
+              group: { level: (level || row.level || '').toLowerCase(), name: name || row.group },
               specialPeriod:
                 (row.hasSpecialPeriod === 'TRUE' || row.hasSpecialPeriod === true)
-                  ? { startDate: startDate || null, endDate: endDate || null }
+                  ? { startDate: startDate || row['specialPeriod.startDate'] || null,
+                      endDate: endDate || row['specialPeriod.endDate'] || null }
                   : undefined
             };
           });
@@ -132,55 +131,134 @@ const StudentImportPanel = ({ onSuccess }) => {
   const onFileChange = (e) => setFileName(e.target.files?.[0]?.name || '');
 
   return (
-    <form onSubmit={handleFileUpload} className="sip-card">
-      <div className="sip-header">
-        <h5 className="m-0">Importar estudiantes desde CSV</h5>
+    <form onSubmit={handleFileUpload}>
+      {/* Título se asume fuera en el modal; si lo necesitas aquí, añade un h5 */}
+      {errorMsg && <div className="alert alert-danger mb-3">{errorMsg}</div>}
+      {successMsg && <div className="alert alert-success mb-3">{successMsg}</div>}
+
+      {/* Paso 1: Descargas */}
+      <div className="mb-3">
+        <div className="d-flex align-items-center mb-2">
+          <span className="badge rounded-pill text-bg-primary me-2">1</span>
+          <h6 className="m-0">Descargar archivos CSV</h6>
+        </div>
+
+        <div className="d-grid gap-2 d-md-flex">
+          <button
+            type="button"
+            className="btn btn-outline-primary btn-lg d-flex align-items-center"
+            onClick={handleDownloadFullCSV}
+            disabled={loading}
+          >
+            <span className="me-2">⬇️</span> Descargar la información de los estudiantes (CSV completo)
+          </button>
+          <button
+            type="button"
+            className="btn btn-outline-secondary btn-lg d-flex align-items-center"
+            onClick={handleDownloadTemplateCSV}
+            disabled={loading}
+          >
+            <span className="me-2">⬇️</span> Descargar la plantilla CSV en blanco (mínima)
+          </button>
+        </div>
       </div>
 
-      <div className="sip-body">
-        {errorMsg && <div className="alert alert-danger mb-3">{errorMsg}</div>}
-        {successMsg && <div className="alert alert-success mb-3">{successMsg}</div>}
+      {/* Paso 2: Instrucciones + tabla muestra */}
+      <div className="mb-3">
+        <div className="d-flex align-items-center mb-2">
+          <span className="badge rounded-pill text-bg-primary me-2">2</span>
+          <h6 className="m-0">Agregar o editar la información en la plantilla</h6>
+        </div>
+        <p className="text-muted mb-2">
+          Campos obligatorios: <code>name</code>, <code>email</code>, <code>level</code>, <code>group</code>.
+          El <code>studentId</code> se genera automáticamente para altas nuevas.
+        </p>
 
-        <div className="sip-file">
-          <label htmlFor="csvFile" className="sip-file-label">
-            <span className="sip-file-title">Selecciona archivo</span>
-            <span className="sip-file-name">{fileName || 'Ningún archivo seleccionado'}</span>
-          </label>
+        {/* Tabla de ejemplo (solo encabezados mínimos) */}
+        <div className="table-responsive">
+          <table className="table table-sm table-bordered align-middle mb-2">
+            <thead className="table-light">
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Level</th>
+                <th>Group</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Juan Pérez</td>
+                <td>juan@colegio.mx</td>
+                <td>primaria</td>
+                <td>3B</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <small className="text-muted">
+          Formato de fecha cuando aplique: <code>YYYY-MM-DD</code>. Para actualizaciones masivas usa el CSV completo.
+        </small>
+      </div>
+
+      {/* Paso 3: Subir CSV */}
+      <div className="mb-4">
+        <div className="d-flex align-items-center mb-2">
+          <span className="badge rounded-pill text-bg-primary me-2">3</span>
+          <h6 className="m-0">Subir un archivo CSV</h6>
+        </div>
+
+        <div className="input-group">
           <input
-            id="csvFile"
             type="file"
             accept=".csv,text/csv"
+            className="form-control"
+            id="csvFile"
             ref={fileInputRef}
             onChange={onFileChange}
           />
+          <label className="input-group-text" htmlFor="csvFile">
+            {fileName ? 'Cambiar' : 'Elegir archivo'}
+          </label>
         </div>
+        {fileName && <div className="form-text">Seleccionado: {fileName}</div>}
 
         {result && (
-          <div className="mt-2 small">
-            ✔️ {result.created} creados, ♻️ {result.updated} actualizados
+          <div className="alert alert-info mt-3 mb-0">
+            <div><strong>Resultado:</strong></div>
+            <div>✔️ {result.created} creados, ♻️ {result.updated} actualizados</div>
             {result.errores?.length > 0 && (
-              <details>
+              <details className="mt-1">
                 <summary>⚠️ Errores ({result.errores.length})</summary>
-                <ul>{result.errores.map((e,i)=><li key={i}>{e}</li>)}</ul>
+                <ul className="mb-0">{result.errores.map((e,i)=><li key={i}>{e}</li>)}</ul>
               </details>
             )}
           </div>
         )}
       </div>
 
-      <div className="sip-footer">
-        <div className="sip-actions-left">
-          <button type="button" className="btn btn-outline-secondary" onClick={handleDownloadFullCSV} disabled={loading}>
-            ⬇️ Descargar CSV (todos)
+      {/* Footer de acciones */}
+      <div className="d-flex justify-content-between align-items-center">
+        <div className="text-muted small">
+          Tamaño recomendado &lt; 5MB. Si vas a subir más de 150,000 registros, usa carga por API.
+        </div>
+        <div className="d-flex gap-2">
+          <button
+            type="button"
+            className="btn btn-light"
+            onClick={onCancel}
+            disabled={loading}
+          >
+            Cancelar
           </button>
-          <button type="button" className="btn btn-outline-secondary" onClick={handleDownloadTemplateCSV} disabled={loading}>
-            ⬇️ Descargar plantilla mínima
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={loading}
+          >
+            {loading ? 'Importando…' : 'Importar'}
           </button>
         </div>
-
-        <button type="submit" className="btn btn-primary sip-primary" disabled={loading}>
-          {loading ? 'Importando…' : 'Importar'}
-        </button>
       </div>
     </form>
   );
