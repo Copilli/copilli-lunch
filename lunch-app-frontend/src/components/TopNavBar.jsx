@@ -1,47 +1,65 @@
+// src/components/TopNavBar.jsx
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = JSON.parse(localStorage.getItem('user'));
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
 
-  // 🔁 Redirección automática si se entra en "/"
+  // BASE real de la app en GH Pages (siempre termina con "/")
+  const BASE = import.meta.env.BASE_URL || '/';
+
+  // helper SPA + fallback absoluto respetando BASE
+  const go = (path, { replace = false } = {}) => {
+    try { navigate(path, { replace }); } catch {}
+  };
+
+  // 🔁 Si entro al root lógico ("/"), redirigir al panel del rol
+  //     siempre con un token de refresh en la query
   useEffect(() => {
     if (location.pathname === '/') {
+      const r = Date.now();
       if (!user) {
-        navigate('/login', { replace: true });
+        go(`/login?refresh=${r}`, { replace: true });
       } else if (user.role === 'admin') {
-        navigate('/admin', { replace: true });
+        go(`/admin?refresh=${r}`, { replace: true });
       } else if (user.role === 'oficina') {
-        navigate('/oficina', { replace: true });
+        go(`/oficina?refresh=${r}`, { replace: true });
       } else if (user.role === 'cocina') {
-        navigate('/cocina', { replace: true });
+        go(`/cocina?refresh=${r}`, { replace: true });
       } else {
-        navigate('/login', { replace: true });
+        go(`/login?refresh=${r}`, { replace: true });
       }
     }
-  }, [location.pathname, navigate, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, user?.role]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser?.(null);
-    navigate(`${import.meta.env.base}`, { replace: true });
+    // salir a login con refresh para limpiar estados
+    const r = Date.now();
+    go(`/login?refresh=${r}`, { replace: true });
   };
 
   const handleHome = () => {
-    window.location.href = `${import.meta.env.base}`;
+    // SOFT: navegar a "/" para que el efecto anterior te mande a /admin?refresh=...
+    go('/', { replace: true });
+
+    // Si prefieres recargar duro (como antes), descomenta:
+    // window.location.replace(BASE);
   };
 
-  const goPayments = () => navigate('/admin/payments');
-  const goCutoffs  = () => navigate('/admin/cutoffs');
+  const goPayments = () => go('/admin/payments');
+  const goCutoffs  = () => go('/admin/cutoffs');
 
   return (
     <div className="d-flex align-items-center p-3 bg-light border-bottom" style={{ gap: 16 }}>
       {/* Izquierda: Inicio */}
       <div>
-        <button className="btn btn-outline-primary" onClick={handleHome}>
+        <button type="button" className="btn btn-outline-primary" onClick={handleHome}>
           Inicio
         </button>
       </div>
@@ -50,12 +68,12 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
       {user?.role === 'admin' && (
         <>
           <div>
-            <button className="btn btn-outline-secondary" onClick={goPayments}>
+            <button type="button" className="btn btn-outline-secondary" onClick={goPayments}>
               Pagos
             </button>
           </div>
           <div>
-            <button className="btn btn-outline-secondary" onClick={goCutoffs}>
+            <button type="button" className="btn btn-outline-secondary" onClick={goCutoffs}>
               Cortes
             </button>
           </div>
@@ -65,7 +83,7 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
       {/* Importar (si aplica) */}
       {showImport && (
         <div>
-          <button className="btn btn-success" onClick={onImportClick}>
+          <button type="button" className="btn btn-success" onClick={onImportClick}>
             Importar estudiantes
           </button>
         </div>
@@ -78,7 +96,7 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
 
       {/* Derecha: Cerrar sesión */}
       <div>
-        <button className="btn btn-outline-danger" onClick={handleLogout}>
+        <button type="button" className="btn btn-outline-danger" onClick={handleLogout}>
           Cerrar sesión
         </button>
       </div>

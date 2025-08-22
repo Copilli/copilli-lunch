@@ -9,6 +9,7 @@ import { StudentCalendarContainer } from '../components/StudentCalendarTable';
 import StudentSummaryCard from '../components/StudentSummaryCard';
 import StudentDetailsPanel from '../components/StudentDetailsPanel';
 import StudentImportPanel from '../components/StudentImportPanel';
+import { useLocation } from 'react-router-dom';
 
 const AdminPanel = ({ setUser }) => {
   const [students, setStudents] = useState([]);
@@ -23,6 +24,7 @@ const AdminPanel = ({ setUser }) => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [invalidDates, setInvalidDates] = useState([]);
   const user = JSON.parse(localStorage.getItem('user'));
+  const location = useLocation();
 
   const fetchStudents = async () => {
     const token = localStorage.getItem('token');
@@ -50,6 +52,10 @@ const AdminPanel = ({ setUser }) => {
       reason: d.reason || 'Día no válido'
     })));
   };
+
+  useEffect(() => {
+    initLoad(); 
+  }, [location.search]); 
 
   useEffect(() => {
     fetchStudents();

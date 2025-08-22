@@ -320,16 +320,21 @@ const StudentLunchActions = ({ student, onUpdate }) => {
               />
             </div>
 
-            <div className="mb-3">
-              <label className="form-label">Motivo:</label>
+            <div className="mb-3 d-flex align-items-center gap-2 flex-wrap">
+              <label className="form-label mb-0 me-1">Motivo:</label>
               {isAdmin ? (
-                <select className="form-select" value={reason} onChange={(e) => setReason(e.target.value)}>
+                <select
+                  className="form-select w-auto"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                >
                   <option value="pago">Pago</option>
                   <option value="justificado">Justificado</option>
                   <option value="ajuste manual">Ajuste manual</option>
                 </select>
               ) : (
-                <div className="form-control-plaintext">Pago</div>
+                // usar span en vez de div para evitar salto de línea
+                <span className="form-control-plaintext mb-0">Pago</span>
               )}
             </div>
 

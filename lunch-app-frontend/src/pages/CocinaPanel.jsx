@@ -5,6 +5,7 @@ import TopNavBar from '../components/TopNavBar';
 import SearchBar from '../components/SearchBar';
 import LevelCard from '../components/LevelCard';
 import GroupCard from '../components/GroupCard';
+import { useLocation } from 'react-router-dom';
 
 const CocinaPanel = ({ setUser }) => {
   const [students, setStudents] = useState([]);
@@ -17,6 +18,7 @@ const CocinaPanel = ({ setUser }) => {
   const [confirming, setConfirming] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const location = useLocation();
 
   const showError = (msg) => {
     setFormError(msg);
@@ -35,6 +37,11 @@ const CocinaPanel = ({ setUser }) => {
     });
     setStudents(res.data);
   };
+
+  useEffect(() => {
+    initLoad(); 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
 
   useEffect(() => {
     fetchStudents();

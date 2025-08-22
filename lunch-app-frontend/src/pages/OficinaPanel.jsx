@@ -8,6 +8,7 @@ import GroupCard from '../components/GroupCard';
 import { StudentCalendarContainer } from '../components/StudentCalendarTable';
 import StudentSummaryCard from '../components/StudentSummaryCard';
 import StudentDetailsPanel from '../components/StudentDetailsPanel';
+import { useLocation } from 'react-router-dom';
 
 const OficinaPanel = ({ setUser }) => {
   const [students, setStudents] = useState([]);
@@ -20,6 +21,7 @@ const OficinaPanel = ({ setUser }) => {
   const [calendarMonth, setCalendarMonth] = useState(dayjs().month() + 1);
   const [calendarYear, setCalendarYear] = useState(dayjs().year());
   const [showDetails, setShowDetails] = useState(false);
+  const location = useLocation();
 
   const token = localStorage.getItem('token');
   const API = import.meta.env.VITE_API_URL;
@@ -47,6 +49,10 @@ const OficinaPanel = ({ setUser }) => {
       reason: d.reason || 'Día no válido'
     })));
   };
+
+  useEffect(() => {
+    initLoad(); 
+  }, [location.search]); 
 
   useEffect(() => {
     fetchStudents();

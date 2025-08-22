@@ -44,34 +44,64 @@ function countValidDays(start, end, invalidSet) {
 /* ------------------------- Rutas ------------------------- */
 
 // Obtener todos los estudiantes o buscar por nombre/grupo
+const toFlatStudent = (s) => ({
+  studentId: s.studentId || '',
+  name: s.name || '',
+  email: s.email || '',
+  level: s.group?.level || '',
+  groupName: s.group?.name || '',
+  tokens: typeof s.tokens === 'number' ? s.tokens : 0,
+  status: s.status || 'sin-fondos',
+  hasSpecialPeriod: !!s.hasSpecialPeriod,
+  specialStartDate: s.specialPeriod?.startDate ? dayjs(s.specialPeriod.startDate).format('YYYY-MM-DD') : '',
+  specialEndDate: s.specialPeriod?.endDate ? dayjs(s.specialPeriod.endDate).format('YYYY-MM-DD') : '',
+  notes: s.notes || '',
+  photoUrl: s.photoUrl || ''
+});
+
+// GET /api/students  (igual que antes, con opción ?flat=1)
 router.get('/', async (req, res) => {
   try {
-    const { name, groupName, level } = req.query;
+    const { name, groupName, level, flat } = req.query;
+
     const filter = {};
+    if (name)       filter.name = new RegExp(name, 'i');
+    if (groupName)  filter['group.name']  = groupName;
+    if (level)      filter['group.level'] = level;
 
-    if (name) filter.name = new RegExp(name, 'i');
-    if (groupName) filter['group.name'] = groupName;
-    if (level) filter['group.level'] = level;
+    const docs = await Student.find(filter)
+      .sort({ 'group.level': 1, 'group.name': 1, name: 1 })
+      .lean();
 
-    const students = await Student.find(filter);
-    res.json(students);
+    if (flat === '1' || flat === 'true') {
+      return res.json(docs.map(toFlatStudent));
+    }
+
+    // comportamiento original
+    res.json(docs);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Error al obtener estudiantes' });
   }
 });
 
-// Crear un nuevo estudiante (soporta email si viene)
+// Crear un nuevo estudiante
 router.post('/', async (req, res) => {
   try {
-    const newStudent = new Student(req.body);
+    const { name, email, group } = req.body;
+    if (!name || !email || !group?.level || !group?.name) {
+      return res.status(400).json({ error: 'Faltan campos obligatorios: name, email, group.level y group.name' });
+    }
+    const newStudent = new Student(req.body); // studentId se autogenera si falta
     await newStudent.save();
     res.status(201).json(newStudent);
   } catch (err) {
-    res.status(400).json({ error: 'Error al crear estudiante' });
+    res.status(400).json({ error: 'Error al crear estudiante', detail: err.message });
   }
 });
 
-// Importación masiva
+
+// POST /api/students/import-bulk
 router.post('/import-bulk', verifyToken, allowRoles('admin'), async (req, res) => {
   try {
     const students = req.body.students;
@@ -83,28 +113,35 @@ router.post('/import-bulk', verifyToken, allowRoles('admin'), async (req, res) =
 
     for (const stu of students) {
       try {
-        if (!VALID_STATUSES.includes(stu.status)) {
-          throw new Error(`Status inválido para ${stu.studentId}: ${stu.status}`);
+        if (!stu.name || !stu.email || !stu.group?.level || !stu.group?.name) {
+          throw new Error(`Faltan campos obligatorios (name, email, group.level, group.name) para registro`);
         }
-        if (!stu.group || !VALID_LEVELS.includes(stu.group.level) || !stu.group.name) {
-          throw new Error(`Grupo inválido o incompleto para ${stu.studentId}`);
-        }
-        if (typeof stu.tokens !== 'number' || isNaN(stu.tokens)) {
-          throw new Error(`Tokens inválidos para ${stu.studentId}: ${stu.tokens}`);
-        }
+
+        // Defaults y validaciones suaves
+        if (typeof stu.tokens !== 'number' || isNaN(stu.tokens)) stu.tokens = 0;
+        const VALID_STATUSES = ['periodo-activo', 'con-fondos', 'sin-fondos', 'bloqueado'];
+        if (!VALID_STATUSES.includes(stu.status)) stu.status = 'sin-fondos';
+
+        // Validar periodo si viene
         if (stu.hasSpecialPeriod) {
           const start = dayjs(stu.specialPeriod?.startDate);
           const end = dayjs(stu.specialPeriod?.endDate);
           if (!start.isValid() || !end.isValid()) {
-            throw new Error(`Fechas inválidas para ${stu.studentId}`);
+            throw new Error(`Fechas inválidas en periodo especial para ${stu.name}`);
           }
         }
 
-        const existing = await Student.findOne({ studentId: stu.studentId });
+        //  Si trae studentId, intentamos actualizar; si no, creamos.
+        let existing = null;
+        if (stu.studentId) {
+          existing = await Student.findOne({ studentId: stu.studentId });
+        }
+
         if (existing) {
-          await Student.updateOne({ studentId: stu.studentId }, { $set: stu }); // email incluido si viene
+          await Student.updateOne({ studentId: stu.studentId }, { $set: stu });
           results.updated += 1;
         } else {
+          // studentId se autogenera en pre('save')
           await Student.create(stu);
           results.created += 1;
         }

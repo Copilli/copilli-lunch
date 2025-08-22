@@ -120,7 +120,6 @@ app.get('/api/cron/wake', async (req, res) => {
   }
 });
 
-
 app.get('/', (req, res) => {
   res.send('API de desayunos funcionando ✅');
 });
@@ -128,9 +127,6 @@ app.get('/', (req, res) => {
 app.use((req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada' });
 });
-
-
-
 
 // 🕒 CRON: Desactivar periodos vencidos + registrar movimiento
 cron.schedule('5 0 * * 1-5', async () => {
