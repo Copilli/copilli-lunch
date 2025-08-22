@@ -1,72 +1,44 @@
-// src/components/TopNavBar.jsx
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  const user = JSON.parse(localStorage.getItem('user'));
+  // Base segura (Vite expone BASE_URL); fallback a "/"
+  const BASE = (import.meta.env?.base || import.meta.env?.BASE_URL || '/');
 
-  // 👇 MUY IMPORTANTE en Vite: BASE_URL (no "base")
-  // En GH Pages suele ser "/copilli-lunch/" y SIEMPRE termina con "/"
-  const BASE = (import.meta.env.BASE_URL || '/');
-
-  // Helper para construir rutas absolutas respetando el base path
-  const abs = (p = '') => `${BASE}${String(p).replace(/^\//, '')}`;
-
-  // Navegación SPA con fallback a redirección dura (para páginas “pesadas”).
-  const go = (path, { replace = false } = {}) => {
-    try {
-      navigate(path, { replace });
-    } catch (_) {
-      // ignore
-    } finally {
-      // Garantiza que la URL final respete el BASE, útil en GH Pages
-      // (evita quedarse “atorado” en /admin/payments con token inválido)
-      if (replace) {
-        window.location.replace(abs(path));
-      } else {
-        window.location.assign(abs(path));
-      }
-    }
-  };
-
-  // 🔁 Redirección automática si se entra al root lógico de la app
-  // Nota: si usas <BrowserRouter basename={import.meta.env.BASE_URL} />,
-  // cuando estás en "/copilli-lunch/" el pathname expuesto será "/".
+  // 🔁 Redirección automática si se entra en "/"
   useEffect(() => {
     if (location.pathname === '/') {
       if (!user) {
-        go('login', { replace: true });
+        navigate('/login', { replace: true });
       } else if (user.role === 'admin') {
-        go('admin', { replace: true });
+        navigate('/admin', { replace: true });
       } else if (user.role === 'oficina') {
-        go('oficina', { replace: true });
+        navigate('/oficina', { replace: true });
       } else if (user.role === 'cocina') {
-        go('cocina', { replace: true });
+        navigate('/cocina', { replace: true });
       } else {
-        go('login', { replace: true });
+        navigate('/login', { replace: true });
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname, user?.role]);
+  }, [location.pathname, navigate, user]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser?.(null);
-    // Forzamos ir a /copilli-lunch/login (o el BASE que corresponda)
-    // replace = true evita que vuelvan atrás a una pantalla protegida.
-    go('login', { replace: true });
-  };
-
-  const handleHome = () => {
-    // Ir al inicio real de la app respetando BASE (hard redirect para limpiar estado)
+    // Redirección "dura" al root/base (evita quedarse en /admin/payments o /admin/cutoffs)
     window.location.replace(BASE);
   };
 
-  const goPayments = () => go('/admin/payments'); // SPA + fallback a /copilli-lunch/admin/payments
-  const goCutoffs  = () => go('/admin/cutoffs');
+  const handleHome = () => {
+    window.location.href = BASE;
+  };
+
+  const goPayments = () => navigate('/admin/payments');
+  const goCutoffs  = () => navigate('/admin/cutoffs');
 
   return (
     <div className="d-flex align-items-center p-3 bg-light border-bottom" style={{ gap: 16 }}>
@@ -109,7 +81,6 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
 
       {/* Derecha: Cerrar sesión */}
       <div>
-        {/* type="button" evita submits accidentales si hay formularios en la página */}
         <button type="button" className="btn btn-outline-danger" onClick={handleLogout}>
           Cerrar sesión
         </button>
