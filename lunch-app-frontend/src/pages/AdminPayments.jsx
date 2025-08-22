@@ -15,6 +15,7 @@ const currency = (n) =>
 
 export default function AdminPayments() {
   const API = import.meta.env.VITE_API_URL;
+  const BASE = (import.meta.env?.base || import.meta.env?.BASE_URL || '/'); // p.ej. "/copilli-lunch/"
   const token = localStorage.getItem('token');
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
@@ -138,6 +139,9 @@ export default function AdminPayments() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupBy]);
 
+  // Helper para link al detalle con base path correcto
+  const studentLink = (sid) => `${BASE}admin?studentId=${encodeURIComponent(sid)}`;
+
   return (
     <>
       <TopNavBar />
@@ -233,9 +237,13 @@ export default function AdminPayments() {
               {summary.map((r, idx) => (
                 <tr key={idx}>
                   <td>
-                    {groupBy === 'student'
-                      ? r.studentId
-                      : dayjs(r.date).tz(TZ).format('YYYY-MM-DD')}
+                    {groupBy === 'student' ? (
+                      <a href={studentLink(r.studentId)} className="link-primary">
+                        {r.studentId}
+                      </a>
+                    ) : (
+                      dayjs(r.date).tz(TZ).format('YYYY-MM-DD')
+                    )}
                   </td>
                   <td>{currency(r.total)}</td>
                   <td>{r.count}</td>
@@ -281,7 +289,11 @@ export default function AdminPayments() {
                     {dayjs(r.date).tz(TZ).format('YYYY-MM-DD HH:mm')}
                   </td>
                   <td>{r.ticketNumber}</td>
-                  <td>{r.studentId}</td>
+                  <td>
+                    <a href={studentLink(r.studentId)} className="link-primary">
+                      {r.studentId}
+                    </a>
+                  </td>
                   <td>{currency(r.amount)}</td>
                   <td>{r.sentEmail ? 'Enviado' : 'Pendiente'}</td>
                   <td>{r?.tokenMovementId?.note || ''}</td>
