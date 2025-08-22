@@ -51,8 +51,24 @@ const OficinaPanel = ({ setUser }) => {
   };
 
   useEffect(() => {
-    initLoad(); 
-  }, [location.search]); 
+    const qp = new URLSearchParams(location.search);
+    if (!qp.has('refresh')) return;
+
+    // Reset UI a estado inicial
+    setSearch('');
+    setSelectedLevel(null);
+    setSelectedGroup(null);
+    setSelectedStudent(null);
+    setShowDetails(false);
+    setCalendarMonth(dayjs().month() + 1);
+    setCalendarYear(dayjs().year());
+
+    // Recarga de datos
+    fetchStudents();
+    fetchMovements();
+    fetchInvalidDates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
 
   useEffect(() => {
     fetchStudents();

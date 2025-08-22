@@ -333,7 +333,6 @@ const StudentLunchActions = ({ student, onUpdate }) => {
                   <option value="ajuste manual">Ajuste manual</option>
                 </select>
               ) : (
-                // usar span en vez de div para evitar salto de línea
                 <span className="form-control-plaintext mb-0">Pago</span>
               )}
             </div>
