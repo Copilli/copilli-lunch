@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import TopNavBar from '../components/TopNavBar';
@@ -23,6 +24,22 @@ const AdminPanel = ({ setUser }) => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [invalidDates, setInvalidDates] = useState([]);
   const user = JSON.parse(localStorage.getItem('user'));
+  const location = useLocation();
+  const API = import.meta.env.VITE_API_URL;
+  const token = localStorage.getItem('token');
+
+  const selectStudentForDetails = (student) => {
+    setSelectedLevel(student.group.level);
+    setSelectedGroup(student.group.name);
+    setSelectedStudent(null);
+    setShowDetails(false);
+    setTimeout(() => {
+      setSelectedStudent(student);
+      setShowDetails(true);
+    }, 100);
+  };
+
+  const openedFromQueryRef = useRef(false);
 
   const fetchStudents = async () => {
     const token = localStorage.getItem('token');
@@ -50,6 +67,30 @@ const AdminPanel = ({ setUser }) => {
       reason: d.reason || 'Día no válido'
     })));
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const sid = params.get('studentId');
+    if (!sid || openedFromQueryRef.current) return;
+
+    const tryOpen = (list) => {
+      const student = Array.isArray(list) ? list.find(s => s.studentId === sid) : null;
+      if (student) {
+        openedFromQueryRef.current = true;
+        selectStudentForDetails(student);
+        navigate('/admin', { replace: true });
+      }
+    };
+    // 1) Si ya tienes estudiantes cargados, intenta directo
+    if (Array.isArray(students) && students.length) {
+      tryOpen(students);
+      return;
+    }
+    // 2) Si aún no están, pide la lista y luego intenta
+    axios.get(`${API}/students`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(({ data }) => tryOpen(data))
+      .catch(() => { /* silencioso */ });
+  }, [location.search, students]);
 
   useEffect(() => {
     fetchStudents();
