@@ -320,7 +320,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
               />
             </div>
 
-            <div className="mb-3 d-flex align-items-center gap-2 flex-wrap">
+            <div className="mb-3 d-flex align-items-center gap-2">
               <label className="form-label mb-0 me-1">Motivo:</label>
               {isAdmin ? (
                 <select
