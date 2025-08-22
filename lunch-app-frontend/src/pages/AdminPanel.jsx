@@ -9,7 +9,6 @@ import { StudentCalendarContainer } from '../components/StudentCalendarTable';
 import StudentSummaryCard from '../components/StudentSummaryCard';
 import StudentDetailsPanel from '../components/StudentDetailsPanel';
 import StudentImportPanel from '../components/StudentImportPanel';
-import { useLocation } from 'react-router-dom';
 
 const AdminPanel = ({ setUser }) => {
   const [students, setStudents] = useState([]);
@@ -24,7 +23,6 @@ const AdminPanel = ({ setUser }) => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [invalidDates, setInvalidDates] = useState([]);
   const user = JSON.parse(localStorage.getItem('user'));
-  const location = useLocation();
 
   const fetchStudents = async () => {
     const token = localStorage.getItem('token');
@@ -54,33 +52,11 @@ const AdminPanel = ({ setUser }) => {
   };
 
   useEffect(() => {
-    const qp = new URLSearchParams(location.search);
-    if (!qp.has('refresh')) return;
-
-    // Reset UI a estado inicial
-    setSearch('');
-    setSelectedLevel(null);
-    setSelectedGroup(null);
-    setSelectedStudent(null);
-    setShowDetails(false);
-    setCalendarMonth(dayjs().month() + 1);
-    setCalendarYear(dayjs().year());
-
-    // Recarga de datos
-    fetchStudents();
-    fetchMovements();
-    fetchInvalidDates();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.search]);
-
-  // Carga inicial
-  useEffect(() => {
     fetchStudents();
     fetchMovements();
     fetchInvalidDates();
   }, []);
 
-  // Al cambiar de nivel/grupo, cerrar detalles
   useEffect(() => {
     setShowDetails(false);
     setSelectedStudent(null);

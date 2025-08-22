@@ -7,29 +7,45 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
   const location = useLocation();
   const user = JSON.parse(localStorage.getItem('user') || 'null');
 
-  // BASE real de la app en GH Pages (siempre termina con "/")
-  const BASE = import.meta.env.BASE_URL || '/';
+  // 👇 MUY IMPORTANTE en Vite: BASE_URL (no "base")
+  // En GH Pages suele ser "/copilli-lunch/" y SIEMPRE termina con "/"
+  const BASE = (import.meta.env.BASE_URL || '/');
 
-  // helper SPA + fallback absoluto respetando BASE
+  // Helper para construir rutas absolutas respetando el base path
+  const abs = (p = '') => `${BASE}${String(p).replace(/^\//, '')}`;
+
+  // Navegación SPA con fallback a redirección dura (para páginas “pesadas”).
   const go = (path, { replace = false } = {}) => {
-    try { navigate(path, { replace }); } catch {}
+    try {
+      navigate(path, { replace });
+    } catch (_) {
+      // ignore
+    } finally {
+      // Garantiza que la URL final respete el BASE, útil en GH Pages
+      // (evita quedarse “atorado” en /admin/payments con token inválido)
+      if (replace) {
+        window.location.replace(abs(path));
+      } else {
+        window.location.assign(abs(path));
+      }
+    }
   };
 
-  // 🔁 Si entro al root lógico ("/"), redirigir al panel del rol
-  //     siempre con un token de refresh en la query
+  // 🔁 Redirección automática si se entra al root lógico de la app
+  // Nota: si usas <BrowserRouter basename={import.meta.env.BASE_URL} />,
+  // cuando estás en "/copilli-lunch/" el pathname expuesto será "/".
   useEffect(() => {
     if (location.pathname === '/') {
-      const r = Date.now();
       if (!user) {
-        go(`/login?refresh=${r}`, { replace: true });
+        go('login', { replace: true });
       } else if (user.role === 'admin') {
-        go(`/admin?refresh=${r}`, { replace: true });
+        go('admin', { replace: true });
       } else if (user.role === 'oficina') {
-        go(`/oficina?refresh=${r}`, { replace: true });
+        go('oficina', { replace: true });
       } else if (user.role === 'cocina') {
-        go(`/cocina?refresh=${r}`, { replace: true });
+        go('cocina', { replace: true });
       } else {
-        go(`/login?refresh=${r}`, { replace: true });
+        go('login', { replace: true });
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -39,20 +55,17 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser?.(null);
-    // salir a login con refresh para limpiar estados
-    const r = Date.now();
-    go(`/login?refresh=${r}`, { replace: true });
+    // Forzamos ir a /copilli-lunch/login (o el BASE que corresponda)
+    // replace = true evita que vuelvan atrás a una pantalla protegida.
+    go('login', { replace: true });
   };
 
   const handleHome = () => {
-    // SOFT: navegar a "/" para que el efecto anterior te mande a /admin?refresh=...
-    go('/', { replace: true });
-
-    // Si prefieres recargar duro (como antes), descomenta:
-    // window.location.replace(BASE);
+    // Ir al inicio real de la app respetando BASE (hard redirect para limpiar estado)
+    window.location.replace(BASE);
   };
 
-  const goPayments = () => go('/admin/payments');
+  const goPayments = () => go('/admin/payments'); // SPA + fallback a /copilli-lunch/admin/payments
   const goCutoffs  = () => go('/admin/cutoffs');
 
   return (
@@ -96,6 +109,7 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
 
       {/* Derecha: Cerrar sesión */}
       <div>
+        {/* type="button" evita submits accidentales si hay formularios en la página */}
         <button type="button" className="btn btn-outline-danger" onClick={handleLogout}>
           Cerrar sesión
         </button>
