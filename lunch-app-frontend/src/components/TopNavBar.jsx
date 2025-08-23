@@ -41,9 +41,9 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
   const goCutoffs  = () => navigate('/admin/cutoffs');
 
   return (
-    <div className="d-flex align-items-center p-3 bg-light border-bottom" style={{ gap: 16 }}>
+    <div className="d-flex align-items-center p-3 bg-light border-bottom flex-wrap" style={{ gap: 16 }}>
       {/* Izquierda: Inicio */}
-      <div>
+      <div className="mb-2 mb-md-0">
         <button type="button" className="btn btn-outline-primary" onClick={handleHome}>
           Inicio
         </button>
@@ -51,18 +51,14 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
 
       {/* Admin shortcuts: Pagos / Cortes */}
       {user?.role === 'admin' && (
-        <>
-          <div>
-            <button type="button" className="btn btn-outline-secondary" onClick={goPayments}>
-              Pagos
-            </button>
-          </div>
-          <div>
-            <button type="button" className="btn btn-outline-secondary" onClick={goCutoffs}>
-              Cortes
-            </button>
-          </div>
-        </>
+        <div className="d-flex align-items-center" style={{ gap: 8 }}>
+          <button type="button" className="btn btn-outline-secondary" onClick={goPayments}>
+            Pagos
+          </button>
+          <button type="button" className="btn btn-outline-secondary" onClick={goCutoffs}>
+            Cortes
+          </button>
+        </div>
       )}
 
       {/* Importar (si aplica) */}
@@ -75,12 +71,12 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
       )}
 
       {/* Centro: SearchBar u otros children */}
-      <div className="flex-grow-1 d-flex justify-content-center align-items-center">
+      <div className="flex-grow-1 d-flex justify-content-center align-items-center order-3 order-md-0 w-100 w-md-auto">
         {children}
       </div>
 
       {/* Derecha: Cerrar sesión */}
-      <div>
+      <div className="ms-md-auto">
         <button type="button" className="btn btn-outline-danger" onClick={handleLogout}>
           Cerrar sesión
         </button>

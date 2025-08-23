@@ -1,4 +1,4 @@
-// src/pages/AdminPayments.jsx
+// (versión completa más reciente con <Link> en alumno)
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -19,25 +19,21 @@ export default function AdminPayments() {
   const token = localStorage.getItem('token');
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
-  // Fechas (local CDMX)
   const [from, setFrom] = useState(dayjs().tz(TZ).format('YYYY-MM-DD'));
   const [to, setTo] = useState(dayjs().tz(TZ).format('YYYY-MM-DD'));
   const [studentId, setStudentId] = useState('');
 
-  // Datos
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // Resumen
   const [groupBy, setGroupBy] = useState('day'); // 'day' | 'student'
   const [summary, setSummary] = useState([]);
   const [overallTotal, setOverallTotal] = useState(0);
 
-  // Convierte días locales a ISO (UTC) cubriendo todo el día local
   const rangeToISO = (fromDay, toDay) => ({
     fromISO: dayjs.tz(fromDay, 'YYYY-MM-DD', TZ).startOf('day').toISOString(),
-    toISO: dayjs.tz(toDay, 'YYYY-MM-DD', TZ).endOf('day').toISOString(),
+    toISO:   dayjs.tz(toDay,   'YYYY-MM-DD', TZ).endOf('day').toISOString(),
   });
 
   const fetchPayments = async () => {
@@ -46,7 +42,7 @@ export default function AdminPayments() {
       const { fromISO, toISO } = rangeToISO(from, to);
       const { data } = await axios.get(`${API}/payments`, {
         params: { from: fromISO, to: toISO, studentId: studentId || undefined },
-        headers,
+        headers
       });
       setRows(data.payments || []);
       setTotal(data.total || 0);
@@ -63,7 +59,7 @@ export default function AdminPayments() {
       const { fromISO, toISO } = rangeToISO(from, to);
       const { data } = await axios.get(`${API}/payments/summary`, {
         params: { from: fromISO, to: toISO, groupBy, tz: TZ },
-        headers,
+        headers
       });
       setSummary(data.rows || []);
       setOverallTotal(data.overallTotal || 0);
@@ -73,7 +69,6 @@ export default function AdminPayments() {
   };
 
   const handleSearch = async () => {
-    // valida rango
     const { fromISO, toISO } = rangeToISO(from, to);
     if (new Date(fromISO) > new Date(toISO)) {
       alert('La fecha "Desde" no puede ser mayor que "Hasta".');
@@ -86,11 +81,9 @@ export default function AdminPayments() {
   const resendPending = async () => {
     try {
       const { fromISO, toISO } = rangeToISO(from, to);
-      const { data } = await axios.post(
-        `${API}/payments/resend-mails`,
-        { from: fromISO, to: toISO, studentId: studentId || undefined },
-        { headers }
-      );
+      const { data } = await axios.post(`${API}/payments/resend-mails`, {
+        from: fromISO, to: toISO, studentId: studentId || undefined
+      }, { headers });
       alert(`Reenviados: ${data.sent} / Intentados: ${data.attempted}`);
       handleSearch();
     } catch (e) {
@@ -102,7 +95,7 @@ export default function AdminPayments() {
   const exportCSV = () => {
     if (!rows.length) return;
     const header = 'Fecha,Ticket,Alumno,Monto,Correo Enviado,Nota\n';
-    const lines = rows.map((r) => {
+    const lines = rows.map(r => {
       const fecha = dayjs(r.date).tz(TZ).format('YYYY-MM-DD HH:mm');
       const ticket = r.ticketNumber;
       const alumno = r.studentId;
@@ -111,9 +104,7 @@ export default function AdminPayments() {
       const nota = r?.tokenMovementId?.note?.replace(/[\r\n,]/g, ' ') || '';
       return `${fecha},${ticket},${alumno},${monto},${mail},${nota}`;
     });
-    const blob = new Blob([header + lines.join('\n')], {
-      type: 'text/csv;charset=utf-8;',
-    });
+    const blob = new Blob([header + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -122,22 +113,16 @@ export default function AdminPayments() {
     URL.revokeObjectURL(url);
   };
 
-  // Carga inicial (día actual)
-  useEffect(() => {
-    handleSearch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(() => { handleSearch(); /* eslint-disable-next-line */ }, []);
 
-  // Auto-actualiza SOLO el resumen cuando cambia el agrupador (Día/Alumno)
   const didMount = useRef(false);
   useEffect(() => {
-    if (!didMount.current) {
-      didMount.current = true;
-      return;
-    }
+    if (!didMount.current) { didMount.current = true; return; }
     fetchSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupBy]);
+
+  const currencyFmt = (v) => currency(v);
 
   return (
     <>
@@ -147,11 +132,7 @@ export default function AdminPayments() {
         <div className="d-flex align-items-center mb-3">
           <h4 className="mb-0">Pagos</h4>
           <div className="ms-auto d-flex gap-2">
-            <button
-              className="btn btn-outline-secondary"
-              onClick={exportCSV}
-              disabled={!rows.length}
-            >
+            <button className="btn btn-outline-secondary" onClick={exportCSV} disabled={!rows.length}>
               Exportar CSV
             </button>
             <button className="btn btn-outline-secondary" onClick={resendPending}>
@@ -160,41 +141,18 @@ export default function AdminPayments() {
           </div>
         </div>
 
-        {/* Filtros (no auto-buscan; esperan a "Buscar") */}
-        <form
-          className="row g-2 mb-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSearch();
-          }}
-        >
+        <form className="row g-2 mb-3" onSubmit={(e) => { e.preventDefault(); handleSearch(); }}>
           <div className="col-12 col-md-3">
             <label className="form-label">Desde</label>
-            <input
-              type="date"
-              className="form-control"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-            />
+            <input type="date" className="form-control" value={from} onChange={e => setFrom(e.target.value)} />
           </div>
           <div className="col-12 col-md-3">
             <label className="form-label">Hasta</label>
-            <input
-              type="date"
-              className="form-control"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-            />
+            <input type="date" className="form-control" value={to} onChange={e => setTo(e.target.value)} />
           </div>
           <div className="col-12 col-md-3">
             <label className="form-label">Alumno (studentId)</label>
-            <input
-              type="text"
-              className="form-control"
-              value={studentId}
-              onChange={(e) => setStudentId(e.target.value)}
-              placeholder="Opcional"
-            />
+            <input type="text" className="form-control" value={studentId} onChange={e => setStudentId(e.target.value)} placeholder="Opcional" />
           </div>
           <div className="col-12 col-md-3 d-flex align-items-end">
             <button className="btn btn-primary w-100" type="submit" disabled={loading}>
@@ -203,16 +161,15 @@ export default function AdminPayments() {
           </div>
         </form>
 
-        {/* Encabezado de resumen */}
         <div className="d-flex align-items-center mb-2">
-          <span className="badge bg-success fs-6">Total: {currency(total)}</span>
+          <span className="badge bg-success fs-6">Total: {currencyFmt(total)}</span>
           <div className="ms-auto d-flex align-items-center gap-2">
             <span className="text-muted">Resumen por:</span>
             <select
               className="form-select form-select-sm"
               style={{ width: 160 }}
               value={groupBy}
-              onChange={(e) => setGroupBy(e.target.value)}
+              onChange={e => setGroupBy(e.target.value)}
             >
               <option value="day">Día</option>
               <option value="student">Alumno</option>
@@ -234,34 +191,23 @@ export default function AdminPayments() {
               {summary.map((r, idx) => (
                 <tr key={idx}>
                   <td>
-                    {groupBy === 'student' ? (
-                      <Link
-                        to={`/admin?studentId=${encodeURIComponent(r.studentId)}`}
-                        className="link-primary"
-                      >
-                        {r.studentId}
-                      </Link>
-                    ) : (
-                      dayjs(r.date).tz(TZ).format('YYYY-MM-DD')
-                    )}
+                    {groupBy === 'student'
+                      ? (<Link to={`/admin?studentId=${encodeURIComponent(r.studentId)}`} className="link-primary">{r.studentId}</Link>)
+                      : dayjs(r.date).tz(TZ).format('YYYY-MM-DD')}
                   </td>
-                  <td>{currency(r.total)}</td>
+                  <td>{currencyFmt(r.total)}</td>
                   <td>{r.count}</td>
                 </tr>
               ))}
               {!summary.length && (
-                <tr>
-                  <td colSpan="3" className="text-center text-muted">
-                    Sin datos de resumen.
-                  </td>
-                </tr>
+                <tr><td colSpan="3" className="text-center text-muted">Sin datos de resumen.</td></tr>
               )}
             </tbody>
             {summary.length > 0 && (
               <tfoot>
                 <tr>
                   <th>Total periodo</th>
-                  <th>{currency(overallTotal)}</th>
+                  <th>{currencyFmt(overallTotal)}</th>
                   <th></th>
                 </tr>
               </tfoot>
@@ -274,7 +220,7 @@ export default function AdminPayments() {
           <table className="table table-sm table-striped">
             <thead>
               <tr>
-                <th style={{ whiteSpace: 'nowrap' }}>Fecha</th>
+                <th style={{whiteSpace:'nowrap'}}>Fecha</th>
                 <th>Ticket</th>
                 <th>Alumno</th>
                 <th>Monto</th>
@@ -283,31 +229,22 @@ export default function AdminPayments() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {rows.map(r => (
                 <tr key={r._id}>
-                  <td style={{ whiteSpace: 'nowrap' }}>
-                    {dayjs(r.date).tz(TZ).format('YYYY-MM-DD HH:mm')}
-                  </td>
+                  <td style={{whiteSpace:'nowrap'}}>{dayjs(r.date).tz(TZ).format('YYYY-MM-DD HH:mm')}</td>
                   <td>{r.ticketNumber}</td>
                   <td>
-                    <Link
-                      to={`/admin?studentId=${encodeURIComponent(r.studentId)}`}
-                      className="link-primary"
-                    >
+                    <Link to={`/admin?studentId=${encodeURIComponent(r.studentId)}`} className="link-primary">
                       {r.studentId}
                     </Link>
                   </td>
-                  <td>{currency(r.amount)}</td>
+                  <td>{currencyFmt(r.amount)}</td>
                   <td>{r.sentEmail ? 'Enviado' : 'Pendiente'}</td>
                   <td>{r?.tokenMovementId?.note || ''}</td>
                 </tr>
               ))}
               {!rows.length && (
-                <tr>
-                  <td colSpan="6" className="text-center text-muted">
-                    Sin pagos en el rango.
-                  </td>
-                </tr>
+                <tr><td colSpan="6" className="text-center text-muted">Sin pagos en el rango.</td></tr>
               )}
             </tbody>
           </table>

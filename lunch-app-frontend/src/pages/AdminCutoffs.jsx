@@ -1,4 +1,3 @@
-// src/pages/AdminCutoffs.jsx
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
@@ -13,8 +12,6 @@ const TZ = 'America/Mexico_City';
 const currency = (n) =>
   new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n ?? 0);
 
-// Normaliza el shape que venga del BE:
-// - { cutoffs: [...] }  ó  [...]
 function normalizeHistoryPayload(hist) {
   const arr = Array.isArray(hist) ? hist : hist?.cutoffs || [];
   return arr.map((c) => ({
@@ -22,7 +19,7 @@ function normalizeHistoryPayload(hist) {
     amount: c.amount ?? c.total ?? 0,
     from: c.from ?? null,
     to: c.to ?? null,
-    createdAt: c.createdAt ?? c.date ?? null, // algunos BE mandan "date"
+    createdAt: c.createdAt ?? c.date ?? null,
   }));
 }
 
@@ -91,47 +88,32 @@ export default function AdminCutoffs() {
     URL.revokeObjectURL(url);
   };
 
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
 
   return (
     <>
       <TopNavBar />
 
       <div className="container py-3">
-        <div className="d-flex align-items-center mb-3">
-          <h4 className="mb-0">Corte de caja</h4>
-          <div className="ms-auto d-flex gap-2">
-            <button className="btn btn-outline-secondary" onClick={load} disabled={loading}>
-              {loading ? 'Actualizando...' : 'Actualizar'}
-            </button>
-            <button
-              className="btn btn-outline-secondary"
-              onClick={exportHistoryCSV}
-              disabled={!history.length}
-            >
-              Exportar historial CSV
-            </button>
-          </div>
+        <div className="d-flex align-items-center mb-3 flex-wrap" style={{ gap: 8 }}>
+          <h4 className="mb-0 me-auto">Corte de caja</h4>
+          <button className="btn btn-outline-secondary" onClick={load} disabled={loading}>
+            {loading ? 'Actualizando...' : 'Actualizar'}
+          </button>
+          <button className="btn btn-outline-secondary" onClick={exportHistoryCSV} disabled={!history.length}>
+            Exportar historial CSV
+          </button>
         </div>
 
         <div className="card mb-4">
-          <div className="card-body d-flex align-items-center" style={{ gap: 16 }}>
+          <div className="card-body d-flex align-items-center flex-wrap" style={{ gap: 16 }}>
             <div className="badge bg-warning text-dark fs-6">
               Pendiente: {currency(pending.total || 0)}
             </div>
             <div className="text-muted">
               {pending.from && pending.to ? (
-                <>
-                  Rango:{' '}
-                  <strong>{dayjs(pending.from).tz(TZ).format('YYYY-MM-DD HH:mm')}</strong> →{' '}
-                  <strong>{dayjs(pending.to).tz(TZ).format('YYYY-MM-DD HH:mm')}</strong>
-                </>
-              ) : (
-                'Sin rango pendiente'
-              )}
+                <>Rango: <strong>{dayjs(pending.from).tz(TZ).format('YYYY-MM-DD HH:mm')}</strong> → <strong>{dayjs(pending.to).tz(TZ).format('YYYY-MM-DD HH:mm')}</strong></>
+              ) : 'Sin rango pendiente'}
             </div>
             <button
               className="btn btn-danger ms-auto"
@@ -165,11 +147,7 @@ export default function AdminCutoffs() {
                 </tr>
               ))}
               {!history.length && (
-                <tr>
-                  <td colSpan="4" className="text-center text-muted">
-                    Sin cortes registrados.
-                  </td>
-                </tr>
+                <tr><td colSpan="4" className="text-center text-muted">Sin cortes registrados.</td></tr>
               )}
             </tbody>
           </table>
