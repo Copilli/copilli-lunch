@@ -2,6 +2,7 @@
 import { useState } from 'react';
 
 const LABEL = { preescolar: 'Preescolar', primaria: 'Primaria', secundaria: 'Secundaria' };
+const ICON  = { preescolar: '🎨', primaria: '📘', secundaria: '🧪' };
 
 const accent = '#0d6efd';
 const softBg = 'rgba(13,110,253,.1)';
@@ -31,11 +32,9 @@ const LevelCard = ({ level, onClick }) => {
             style={{ width: 44, height: 44, background: softBg, color: accent, fontSize: 20 }}
             aria-hidden
           >
+            {ICON[level] || '🏫'}
           </div>
           <h5 className="mb-0">{LABEL[level] || level}</h5>
-        </div>
-        <div className="mt-auto pt-1">
-          <span className="badge bg-primary">Seleccionar</span>
         </div>
       </div>
     </div>

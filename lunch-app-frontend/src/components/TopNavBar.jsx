@@ -5,10 +5,9 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = JSON.parse(localStorage.getItem('user'));
-  // Base segura (Vite expone BASE_URL); fallback a "/"
   const BASE = (import.meta.env?.base || import.meta.env?.BASE_URL || '/');
 
-  // 🔁 Redirección automática si se entra en "/"
+  // Redirección al entrar en "/"
   useEffect(() => {
     if (location.pathname === '/') {
       if (!user) {
@@ -29,57 +28,66 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser?.(null);
-    // Redirección "dura" al root/base (evita quedarse en /admin/payments o /admin/cutoffs)
+    // salir “duro” al root para no quedar en /admin/payments o /admin/cutoffs
     window.location.replace(BASE);
   };
 
-  const handleHome = () => {
-    window.location.href = BASE;
-  };
-
+  const handleHome = () => { window.location.href = BASE; };
   const goPayments = () => navigate('/admin/payments');
   const goCutoffs  = () => navigate('/admin/cutoffs');
 
   return (
-    <div className="d-flex align-items-center p-3 bg-light border-bottom flex-wrap" style={{ gap: 16 }}>
-      {/* Izquierda: Inicio */}
-      <div className="mb-2 mb-md-0">
-        <button type="button" className="btn btn-outline-primary" onClick={handleHome}>
-          Inicio
-        </button>
-      </div>
+    <div className="bg-light border-bottom">
+      <div className="container py-2">
+        {/* Fila de acciones */}
+        <div className="row g-2 align-items-center">
+          {/* Grupo de navegación izquierda */}
+          <div className="col-12 col-md-auto">
+            <div className="btn-group" role="group" aria-label="Navegación principal">
+              <button type="button" className="btn btn-outline-primary" onClick={handleHome}>
+                Inicio
+              </button>
+              {user?.role === 'admin' && (
+                <>
+                  <button type="button" className="btn btn-outline-secondary" onClick={goPayments}>
+                    Pagos
+                  </button>
+                  <button type="button" className="btn btn-outline-secondary" onClick={goCutoffs}>
+                    Cortes
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
 
-      {/* Admin shortcuts: Pagos / Cortes */}
-      {user?.role === 'admin' && (
-        <div className="d-flex align-items-center" style={{ gap: 8 }}>
-          <button type="button" className="btn btn-outline-secondary" onClick={goPayments}>
-            Pagos
-          </button>
-          <button type="button" className="btn btn-outline-secondary" onClick={goCutoffs}>
-            Cortes
-          </button>
+          {/* Import (si aplica) */}
+          {showImport && (
+            <div className="col-6 col-md-auto">
+              <button type="button" className="btn btn-success w-100" onClick={onImportClick}>
+                Importar estudiantes
+              </button>
+            </div>
+          )}
+
+          {/* Logout a la derecha */}
+          <div className="col-6 col-md-auto ms-md-auto">
+            <button type="button" className="btn btn-outline-danger w-100" onClick={handleLogout}>
+              Cerrar sesión
+            </button>
+          </div>
+
+          {/* Search centrado en una fila aparte; 100% en móvil, máx. 800px en desktop */}
+          {children && (
+            <div className="col-12">
+              <div
+                className="mx-auto"
+                style={{ maxWidth: 800 }}
+              >
+                {children}
+              </div>
+            </div>
+          )}
         </div>
-      )}
-
-      {/* Importar (si aplica) */}
-      {showImport && (
-        <div>
-          <button type="button" className="btn btn-success" onClick={onImportClick}>
-            Importar estudiantes
-          </button>
-        </div>
-      )}
-
-      {/* Centro: SearchBar u otros children */}
-      <div className="flex-grow-1 d-flex justify-content-center align-items-center order-3 order-md-0 w-100 w-md-auto">
-        {children}
-      </div>
-
-      {/* Derecha: Cerrar sesión */}
-      <div className="ms-md-auto">
-        <button type="button" className="btn btn-outline-danger" onClick={handleLogout}>
-          Cerrar sesión
-        </button>
       </div>
     </div>
   );
