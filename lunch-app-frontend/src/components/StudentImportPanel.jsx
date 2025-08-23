@@ -64,7 +64,6 @@ const StudentImportPanel = ({ onSuccess, onCancel }) => {
   };
 
   const handleDownloadTemplateCSV = () => {
-    // Solo encabezados mínimos, sin fila ejemplo
     downloadCsv(
       `students_template_min_${dayjs().format('YYYYMMDD_HHmm')}.csv`,
       CSV_HEADERS_TEMPLATE,
@@ -130,11 +129,26 @@ const StudentImportPanel = ({ onSuccess, onCancel }) => {
 
   const onFileChange = (e) => setFileName(e.target.files?.[0]?.name || '');
 
+  // === Cancelar ===
+  const handleCancel = () => {
+    if (typeof onCancel === 'function') {
+      onCancel();
+      return;
+    }
+    // Fallback: reset local del formulario
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setFileName('');
+    setResult(null);
+    setLoading(false);
+    setErrorMsg('');
+    setSuccessMsg('');
+  };
+
   return (
-    <form onSubmit={handleFileUpload}>
-      {/* Título se asume fuera en el modal; si lo necesitas aquí, añade un h5 */}
-      {errorMsg && <div className="alert alert-danger mb-3">{errorMsg}</div>}
-      {successMsg && <div className="alert alert-success mb-3">{successMsg}</div>}
+    <form onSubmit={handleFileUpload} className="card p-3 p-md-5 shadow-sm">
+      {/* Alertas */}
+      {errorMsg && <div className="alert alert-danger mb-3" role="alert">{errorMsg}</div>}
+      {successMsg && <div className="alert alert-success mb-3" role="alert">{successMsg}</div>}
 
       {/* Paso 1: Descargas */}
       <div className="mb-3">
@@ -143,22 +157,25 @@ const StudentImportPanel = ({ onSuccess, onCancel }) => {
           <h6 className="m-0">Descargar archivos CSV</h6>
         </div>
 
-        <div className="d-grid gap-2 d-md-flex">
+        {/* En móvil: botones a 100% ancho; en escritorio siguen grandes pero contenidos */}
+        <div className="d-grid gap-2">
           <button
             type="button"
-            className="btn btn-outline-primary btn-lg d-flex align-items-center"
+            className="btn btn-outline-primary btn-lg w-100"
             onClick={handleDownloadFullCSV}
             disabled={loading}
+            aria-label="Descargar CSV completo de estudiantes"
           >
-            <span className="me-2">⬇️</span> Descargar la información de los estudiantes (CSV completo)
+            <span className="me-2">⬇️</span> Descargar la información de los usuarios en un archivo CSV
           </button>
           <button
             type="button"
-            className="btn btn-outline-secondary btn-lg d-flex align-items-center"
+            className="btn btn-outline-secondary btn-lg w-100"
             onClick={handleDownloadTemplateCSV}
             disabled={loading}
+            aria-label="Descargar plantilla CSV"
           >
-            <span className="me-2">⬇️</span> Descargar la plantilla CSV en blanco (mínima)
+            <span className="me-2">⬇️</span> Descargar la plantilla CSV en blanco
           </button>
         </div>
       </div>
@@ -174,7 +191,7 @@ const StudentImportPanel = ({ onSuccess, onCancel }) => {
           El <code>studentId</code> se genera automáticamente para altas nuevas.
         </p>
 
-        {/* Tabla de ejemplo (solo encabezados mínimos) */}
+        {/* Tabla responsive (compacta en pantallas pequeñas) */}
         <div className="table-responsive">
           <table className="table table-sm table-bordered align-middle mb-2">
             <thead className="table-light">
@@ -208,7 +225,8 @@ const StudentImportPanel = ({ onSuccess, onCancel }) => {
           <h6 className="m-0">Subir un archivo CSV</h6>
         </div>
 
-        <div className="input-group">
+        {/* En móvil apila, en escritorio se muestra en línea */}
+        <div className="input-group flex-column flex-md-row">
           <input
             type="file"
             accept=".csv,text/csv"
@@ -216,12 +234,15 @@ const StudentImportPanel = ({ onSuccess, onCancel }) => {
             id="csvFile"
             ref={fileInputRef}
             onChange={onFileChange}
+            aria-describedby="csvHelp"
           />
-          <label className="input-group-text" htmlFor="csvFile">
+          <label className="input-group-text w-100 w-md-auto" htmlFor="csvFile">
             {fileName ? 'Cambiar' : 'Elegir archivo'}
           </label>
         </div>
-        {fileName && <div className="form-text">Seleccionado: {fileName}</div>}
+        <div id="csvHelp" className="form-text">
+          {fileName ? `Seleccionado: ${fileName}` : 'Selecciona un archivo .csv'}
+        </div>
 
         {result && (
           <div className="alert alert-info mt-3 mb-0">
@@ -237,23 +258,23 @@ const StudentImportPanel = ({ onSuccess, onCancel }) => {
         )}
       </div>
 
-      {/* Footer de acciones */}
-      <div className="d-flex justify-content-between align-items-center">
+      {/* Footer de acciones: apilado en móvil, horizontal desde sm */}
+      <div className="d-flex flex-column flex-sm-row justify-content-between align-items-stretch gap-2">
         <div className="text-muted small">
-          Tamaño recomendado &lt; 5MB. Si vas a subir más de 150,000 registros, usa carga por API.
+          Tamaño recomendado &lt; 5MB.
         </div>
-        <div className="d-flex gap-2">
+        <div className="d-flex flex-column flex-sm-row gap-2">
           <button
             type="button"
-            className="btn btn-light"
-            onClick={onCancel}
+            className="btn btn-light w-100 w-sm-auto"
+            onClick={handleCancel}
             disabled={loading}
           >
             Cancelar
           </button>
           <button
             type="submit"
-            className="btn btn-primary"
+            className="btn btn-primary w-100 w-sm-auto"
             disabled={loading}
           >
             {loading ? 'Importando…' : 'Importar'}

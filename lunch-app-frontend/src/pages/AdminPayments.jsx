@@ -1,5 +1,6 @@
 // src/pages/AdminPayments.jsx
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -15,7 +16,6 @@ const currency = (n) =>
 
 export default function AdminPayments() {
   const API = import.meta.env.VITE_API_URL;
-  const BASE = (import.meta.env?.base || import.meta.env?.BASE_URL || '/'); // p.ej. "/copilli-lunch/"
   const token = localStorage.getItem('token');
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
@@ -139,9 +139,6 @@ export default function AdminPayments() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupBy]);
 
-  // Helper para link al detalle con base path correcto
-  const studentLink = (sid) => `${BASE}admin?studentId=${encodeURIComponent(sid)}`;
-
   return (
     <>
       <TopNavBar />
@@ -238,9 +235,12 @@ export default function AdminPayments() {
                 <tr key={idx}>
                   <td>
                     {groupBy === 'student' ? (
-                      <a href={studentLink(r.studentId)} className="link-primary">
+                      <Link
+                        to={`/admin?studentId=${encodeURIComponent(r.studentId)}`}
+                        className="link-primary"
+                      >
                         {r.studentId}
-                      </a>
+                      </Link>
                     ) : (
                       dayjs(r.date).tz(TZ).format('YYYY-MM-DD')
                     )}
@@ -290,9 +290,12 @@ export default function AdminPayments() {
                   </td>
                   <td>{r.ticketNumber}</td>
                   <td>
-                    <a href={studentLink(r.studentId)} className="link-primary">
+                    <Link
+                      to={`/admin?studentId=${encodeURIComponent(r.studentId)}`}
+                      className="link-primary"
+                    >
                       {r.studentId}
-                    </a>
+                    </Link>
                   </td>
                   <td>{currency(r.amount)}</td>
                   <td>{r.sentEmail ? 'Enviado' : 'Pendiente'}</td>
