@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import TopNavBar from '../components/TopNavBar';
@@ -12,6 +12,7 @@ import StudentDetailsPanel from '../components/StudentDetailsPanel';
 import StudentImportPanel from '../components/StudentImportPanel';
 
 const AdminPanel = ({ setUser }) => {
+  const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [movements, setMovements] = useState([]);
   const [search, setSearch] = useState('');
@@ -154,7 +155,7 @@ const AdminPanel = ({ setUser }) => {
 
       {showImportModal && (
         <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-dialog-centered">
+          <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Importar estudiantes</h5>

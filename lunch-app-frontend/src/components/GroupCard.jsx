@@ -1,44 +1,72 @@
-// src/components/GroupCard.jsx
-import { useState } from 'react';
+// src/components/LevelCard.jsx
+import React from "react";
 
-const accent = '#0d6efd';
-const softBg = 'rgba(13,110,253,.1)';
+/**
+ * Props:
+ * - title: string (p. ej. "Preescolar")
+ * - icon:  ReactNode (emoji o SVG)
+ * - subtitle?: string
+ * - count?: number   // alumnos u otro dato opcional
+ * - selected?: boolean
+ * - disabled?: boolean
+ * - onClick?: () => void
+ * - className?: string
+ */
+export default function LevelCard({
+  title,
+  icon = "🎒",
+  subtitle,
+  count,
+  selected = false,
+  disabled = false,
+  onClick,
+  className = "",
+}) {
+  const base =
+    "card border-0 shadow-sm rounded-4 p-3 card-hover w-100 text-start";
+  const state = [
+    selected ? "border border-2 border-primary bg-primary-subtle" : "bg-white",
+    disabled ? "opacity-50 pe-none" : "",
+  ]
+    .join(" ")
+    .trim();
 
-const GroupCard = ({ group, onClick, studentsCount }) => {
-  const [hover, setHover] = useState(false);
   return (
-    <button
-      type="button"
-      className="btn w-100 text-start border bg-white h-100 p-3 shadow-sm"
-      style={{
-        borderRadius: 12,
-        boxShadow: hover ? '0 .5rem 1rem rgba(0,0,0,.08)' : undefined,
-        transition: 'box-shadow .15s ease, transform .05s ease',
-        transform: hover ? 'translateY(-1px)' : 'none',
-        cursor: 'pointer'
+    <div
+      role="button"
+      aria-pressed={selected}
+      aria-disabled={disabled}
+      tabIndex={disabled ? -1 : 0}
+      onClick={disabled ? undefined : onClick}
+      onKeyDown={(e) => {
+        if (!disabled && (e.key === "Enter" || e.key === " ")) onClick?.();
       }}
-      onClick={() => onClick?.(group)}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      aria-label={`Grupo ${group}`}
+      className={`${base} ${state} ${className}`}
+      style={{ transition: "box-shadow .2s, transform .15s" }}
     >
-      <div className="d-flex align-items-center" style={{ gap: 10 }}>
+      <div className="d-flex align-items-center gap-3">
         <div
-          className="rounded-circle d-flex align-items-center justify-content-center"
-          style={{ width: 40, height: 40, background: softBg, color: accent, fontSize: 18 }}
-          aria-hidden
+          className={`rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 ${
+            selected ? "bg-white" : "bg-light"
+          }`}
+          style={{ width: 48, height: 48, fontSize: 24 }}
+          aria-hidden="true"
         >
-          🏷️
+          {icon}
         </div>
-        <div className="min-w-0">
-          <div className="fw-semibold text-truncate">Grupo {group}</div>
-          {typeof studentsCount === 'number' && (
-            <div className="text-muted small">Alumnos: {studentsCount}</div>
+
+        <div className="flex-grow-1">
+          <div className="d-flex align-items-center justify-content-between">
+            <h3 className="h6 mb-0 fw-semibold">{title}</h3>
+            {typeof count === "number" && (
+              <span className="badge text-bg-secondary">{count}</span>
+            )}
+          </div>
+          {subtitle && (
+            <div className="text-muted small mt-1">{subtitle}</div>
           )}
         </div>
       </div>
-    </button>
+    </div>
   );
-};
-
-export default GroupCard;
+}

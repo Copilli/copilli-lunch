@@ -1,3 +1,4 @@
+// src/components/TopNavBar.jsx
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -28,68 +29,74 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser?.(null);
-    // salir “duro” al root para no quedar en /admin/payments o /admin/cutoffs
     window.location.replace(BASE);
   };
 
-  const handleHome = () => { window.location.href = BASE; };
-  const goPayments = () => navigate('/admin/payments');
-  const goCutoffs  = () => navigate('/admin/cutoffs');
-
   return (
-    <div className="bg-light border-bottom">
-      <div className="container py-2">
-        {/* Fila de acciones */}
-        <div className="row g-2 align-items-center">
-          {/* Grupo de navegación izquierda */}
-          <div className="col-12 col-md-auto">
-            <div className="btn-group" role="group" aria-label="Navegación principal">
-              <button type="button" className="btn btn-outline-primary" onClick={handleHome}>
-                Inicio
-              </button>
-              {user?.role === 'admin' && (
-                <>
-                  <button type="button" className="btn btn-outline-secondary" onClick={goPayments}>
-                    Pagos
-                  </button>
-                  <button type="button" className="btn btn-outline-secondary" onClick={goCutoffs}>
-                    Cortes
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
+    <nav className="navbar navbar-expand-md navbar-light bg-light border-bottom shadow-sm">
+      <div className="container-fluid">
+        {/* Brand / Inicio */}
+        <button
+          className="btn btn-outline-primary me-2"
+          onClick={() => (window.location.href = BASE)}
+        >
+          Inicio
+        </button>
 
-          {/* Import (si aplica) */}
-          {showImport && (
-            <div className="col-6 col-md-auto">
-              <button type="button" className="btn btn-success w-100" onClick={onImportClick}>
-                Importar estudiantes
-              </button>
+        {/* Toggler para móvil */}
+        <button
+          className="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarMain"
+          aria-controls="navbarMain"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span className="navbar-toggler-icon"></span>
+        </button>
+
+        {/* Contenido colapsable */}
+        <div className="collapse navbar-collapse" id="navbarMain">
+          {/* Links de admin */}
+          {user?.role === 'admin' && (
+            <ul className="navbar-nav me-3">
+              <li className="nav-item">
+                <button className="btn btn-outline-secondary me-2" onClick={() => navigate('/admin/payments')}>
+                  Pagos
+                </button>
+              </li>
+              <li className="nav-item">
+                <button className="btn btn-outline-secondary me-2" onClick={() => navigate('/admin/cutoffs')}>
+                  Cortes
+                </button>
+              </li>
+              {showImport && (
+                <li className="nav-item">
+                  <button className="btn btn-success me-2" onClick={onImportClick}>
+                    Importar estudiantes
+                  </button>
+                </li>
+              )}
+            </ul>
+          )}
+
+          {/* Search centrado */}
+          {children && (
+            <div className="mx-auto my-2 my-md-0" style={{ maxWidth: 600, flex: 1 }}>
+              {children}
             </div>
           )}
 
-          {/* Logout a la derecha */}
-          <div className="col-6 col-md-auto ms-md-auto">
-            <button type="button" className="btn btn-outline-danger w-100" onClick={handleLogout}>
+          {/* Logout siempre a la derecha */}
+          <div className="ms-auto">
+            <button className="btn btn-outline-danger" onClick={handleLogout}>
               Cerrar sesión
             </button>
           </div>
-
-          {/* Search centrado en una fila aparte; 100% en móvil, máx. 800px en desktop */}
-          {children && (
-            <div className="col-12">
-              <div
-                className="mx-auto"
-                style={{ maxWidth: 800 }}
-              >
-                {children}
-              </div>
-            </div>
-          )}
         </div>
       </div>
-    </div>
+    </nav>
   );
 };
 

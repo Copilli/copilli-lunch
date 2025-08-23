@@ -219,58 +219,69 @@ const StudentImportPanel = ({ onSuccess, onCancel }) => {
       </div>
 
       {/* Paso 3: Subir CSV */}
-      <input
-        type="file"
-        accept=".csv,text/csv"
-        id="csvFile"
-        ref={fileInputRef}
-        onChange={onFileChange}
-        className="visually-hidden"
-      />
-
-      {/* UI custom: botón + “campo” con el nombre, apilado en móvil */}
-      <div className="d-flex flex-column flex-md-row gap-2">
-        <button
-          type="button"
-          className="btn btn-outline-secondary"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={loading}
-          aria-controls="csvFile"
-        >
-          {fileName ? 'Cambiar' : 'Elegir archivo'}
-        </button>
-
-        <div className="form-control text-truncate" aria-live="polite">
-          {fileName || 'Ningún archivo seleccionado'}
+      <div className="mb-4">
+        <div className="d-flex align-items-center mb-2">
+          <span className="badge rounded-pill text-bg-primary me-2">3</span>
+          <h6 className="m-0">Subir un archivo CSV</h6>
         </div>
-      </div>
 
-      <small id="csvHelp" className="form-text">
-        {fileName ? `Seleccionado: ${fileName}` : 'Selecciona un archivo .csv'}
-      </small>
+        {/* En móvil apila, en escritorio se muestra en línea */}
+        <input
+          type="file"
+          accept=".csv,text/csv"
+          id="csvFile"
+          ref={fileInputRef}
+          onChange={onFileChange}
+          className="visually-hidden"
+        />
+
+        {/* UI custom: botón + “campo” con el nombre, apilado en móvil */}
+        <div className="d-flex flex-column flex-md-row gap-2">
+          <button
+            type="button"
+            className="btn btn-outline-secondary"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={loading}
+            aria-controls="csvFile"
+          >
+            {fileName ? 'Cambiar' : 'Elegir archivo'}
+          </button>
+
+          <div className="form-control text-truncate" aria-live="polite">
+            {fileName || 'Ningún archivo seleccionado'}
+          </div>
+        </div>
+
+        <small id="csvHelp" className="form-text">
+          {fileName ? `Seleccionado: ${fileName}` : 'Selecciona un archivo .csv'}
+        </small>
+
+        {result && (
+          <div className="alert alert-info mt-3 mb-0">
+            <div><strong>Resultado:</strong></div>
+            <div>✔️ {result.created} creados, ♻️ {result.updated} actualizados</div>
+            {result.errores?.length > 0 && (
+              <details className="mt-1">
+                <summary>⚠️ Errores ({result.errores.length})</summary>
+                <ul className="mb-0">{result.errores.map((e,i)=><li key={i}>{e}</li>)}</ul>
+              </details>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Footer de acciones: apilado en móvil, horizontal desde sm */}
       <div className="d-flex flex-column flex-sm-row justify-content-between align-items-stretch gap-2">
         <div className="text-muted small">
           Tamaño recomendado &lt; 5MB.
         </div>
-        <div className="d-flex flex-column flex-sm-row gap-2">
-          <button
-            type="button"
-            className="btn btn-light w-100 w-sm-auto"
-            onClick={handleCancel}
-            disabled={loading}
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            className="btn btn-primary w-100 w-sm-auto"
-            disabled={loading}
-          >
-            {loading ? 'Importando…' : 'Importar'}
-          </button>
-        </div>
+        <button
+          type="submit"
+          className="btn btn-primary w-100 w-sm-auto"
+          disabled={loading}
+        >
+          {loading ? 'Importando…' : 'Importar'}
+        </button>
       </div>
     </form>
   );

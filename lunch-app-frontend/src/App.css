@@ -66,3 +66,22 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Efecto sutil al pasar el mouse */
+.card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 .25rem .9rem rgba(0,0,0,.08);
+}
+
+/* Contenedores para que no queden pegados */
+.level-list, .group-list {
+  display: grid;
+  gap: 0.75rem; /* separa las tarjetas verticalmente */
+}
+
+/* En pantallas grandes, las tarjetas de nivel pueden ir en columna con aire */
+@media (min-width: 992px) {
+  .level-list {
+    max-width: 420px;
+  }
+}
