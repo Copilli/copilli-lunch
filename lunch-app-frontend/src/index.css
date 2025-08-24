@@ -248,3 +248,19 @@ img { max-width: 100%; display: block; }
     width: 120px !important;
   }
 }
+
+/* Centrado horizontal de toda la app, sin afectar la grid */
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;   /* centra horizontalmente todo lo que cuelga del root */
+}
+
+/* Un contenedor ancho para el contenido principal */
+.app-container {
+  width: 100%;
+  max-width: 1200px;     /* ajusta si quieres más/menos ancho */
+  margin: 0 auto;
+  padding: 1.25rem;
+}
