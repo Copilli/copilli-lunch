@@ -100,46 +100,43 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport, searchHideAt 
             </div>
           </div>
 
-          {/* ======== DESKTOP (≥ md): layout en línea ======== */}
-          <div className="d-none d-md-flex align-items-center w-100">
+          {/* ======== DESKTOP (≥ md): layout centrado ======== */}
+          <div className="d-none d-md-flex align-items-center justify-content-center gap-2">
             {/* Brand / Inicio - desktop */}
             <button type="button" className="btn btn-outline-primary" onClick={handleHome}>
               Inicio
             </button>
-            {/* Izquierda: navegación */}
-            <div className="btn-group ms-2 me-2" role="group" aria-label="Navegación principal">
-              {user?.role === 'admin' && (
-                <>
-                  <button type="button" className="btn btn-outline-secondary" onClick={goPayments}>
-                    Pagos
-                  </button>
-                  <button type="button" className="btn btn-outline-secondary" onClick={goCutoffs}>
-                    Cortes
-                  </button>
-                </>
-              )}
-            </div>
+
+            {/* Navegación */}
+            {user?.role === 'admin' && (
+              <>
+                <button type="button" className="btn btn-outline-secondary" onClick={goPayments}>
+                  Pagos
+                </button>
+                <button type="button" className="btn btn-outline-secondary" onClick={goCutoffs}>
+                  Cortes
+                </button>
+              </>
+            )}
 
             {/* Import opcional */}
             {showImport && (
-              <button type="button" className="btn btn-success me-2" onClick={onImportClick}>
+              <button type="button" className="btn btn-success" onClick={onImportClick}>
                 Importar estudiantes
               </button>
             )}
 
-            {/* Buscador centrado: add me-2 for spacing */}
+            {/* Buscador (centrado con el resto) */}
             {children && (
-              <div className="flex-grow-1 topnav-search-desktop me-2" style={{ maxWidth: 800 }}>
+              <div className="topnav-search-desktop" style={{ maxWidth: 500 }}>
                 {children}
               </div>
             )}
 
-            {/* Logout a la derecha */}
-            <div>
-              <button type="button" className="btn btn-outline-danger" onClick={handleLogout}>
-                Cerrar sesión
-              </button>
-            </div>
+            {/* Logout (centrado junto con todo) */}
+            <button type="button" className="btn btn-outline-danger" onClick={handleLogout}>
+              Cerrar sesión
+            </button>
           </div>
         </div>
       </div>
