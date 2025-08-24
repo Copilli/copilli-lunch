@@ -243,20 +243,11 @@ const CocinaPanel = ({ setUser }) => {
 
           {selectedLevel && !selectedGroup && (
             <div className="mt-3">
-              <div className="d-flex align-items-baseline justify-content-between flex-wrap gap-2 mb-3">
-                <div>
-                  <h3 className="mb-0">Grupos en {selectedLevel}</h3>
-                  <div className="text-muted small">
-                    {groupsInLevel.length} grupo{groupsInLevel.length !== 1 ? 's' : ''}
-                  </div>
+              <div className="mb-3">
+                <h3 className="mb-0">Grupos en {selectedLevel}</h3>
+                <div className="text-muted small">
+                  {groupsInLevel.length} grupo{groupsInLevel.length !== 1 ? 's' : ''}
                 </div>
-
-                <button
-                  onClick={() => setSelectedLevel(null)}
-                  className="btn btn-secondary"
-                >
-                  ← Volver a niveles
-                </button>
               </div>
 
               {groupsInLevel.length === 0 ? (
@@ -267,16 +258,18 @@ const CocinaPanel = ({ setUser }) => {
                 <div className="row g-3">
                   {groupsInLevel.map((group) => (
                     <div key={group} className="col-12 col-sm-6 col-md-4">
-                      <GroupCard
-                        group={group}
-                        onClick={setSelectedGroup}
-                        // si tienes lista de estudiantes disponible:
-                        // studentsCount={students.filter(s => s.group?.level === selectedLevel && s.group?.name === group).length}
-                      />
+                      <GroupCard group={group} onClick={setSelectedGroup} />
                     </div>
                   ))}
                 </div>
               )}
+
+              {/* Botón al final */}
+              <div className="d-flex justify-content-start">
+                <button onClick={() => setSelectedLevel(null)} className="btn btn-secondary mt-3">
+                  ← Volver a niveles
+                </button>
+              </div>
             </div>
           )}
 
