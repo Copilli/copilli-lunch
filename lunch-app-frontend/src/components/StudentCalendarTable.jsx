@@ -78,7 +78,7 @@ const StudentCalendarTable = ({
       overscrollBehaviorX: 'contain',
     },
     table: {
-      minWidth: 720, // fuerza scroll horizontal en pantallas chicas
+      minWidth: 980, // fuerza scroll horizontal y asegura barra visible
       position: 'relative',
     },
     thDay: {
@@ -141,8 +141,8 @@ const StudentCalendarTable = ({
 
       {/* Solo el grid de días scrollea en X; la columna Alumno queda fija */}
       <div style={styles.wrap}>
-        <div style={styles.scrollX} className="table-responsive">
-          <table className="table table-bordered table-sm text-center mb-0" style={styles.table}>
+        <div style={styles.scrollX} className="table-responsive calendar-scroll-x">
+          <table className="table table-bordered table-sm text-center mb-0 calendar-table" style={styles.table}>
             <thead className="table-light">
               <tr>
                 <th style={{ ...styles.thDay, ...styles.thAlumno, textAlign: 'left' }}>Alumno</th>
@@ -218,10 +218,34 @@ const StudentCalendarTable = ({
         </div>
       </div>
 
-      {/* Ajustes tipográficos en móvil */}
+      {/* Estilos del scroll/barra y compactación móvil */}
       <style>{`
+        .calendar-scroll-x {
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior-x: contain;
+          scroll-snap-type: x proximity; /* anclajes suaves al deslizar */
+        }
+
+        /* Sombra en la columna fija para marcar el "corte" visual */
+        .calendar-table th:first-child,
+        .calendar-table td:first-child {
+          box-shadow: 3px 0 6px rgba(0,0,0,.06);
+        }
+
+        /* Compacto en pantallas pequeñas: 1 renglón por alumno */
         @media (max-width: 576px) {
-          .table thead th { font-size: 11px; padding: 6px 6px; }
+          .calendar-table thead th {
+            font-size: 11px;
+            padding: 4px 6px;
+            white-space: nowrap;
+          }
+          .calendar-table td {
+            height: 26px;
+            line-height: 26px;
+            padding: 0;
+            font-size: 11px;
+            white-space: nowrap;
+          }
         }
       `}</style>
     </>

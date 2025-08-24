@@ -2,7 +2,14 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
+/**
+ * Props:
+ * - setUser?: fn
+ * - onImportClick?: fn
+ * - showImport?: boolean
+ * - searchHideAt?: number   // px; oculta el buscador en desktop por debajo de este ancho, antes del colapso
+ */
+const TopNavBar = ({ children, setUser, onImportClick, showImport, searchHideAt = 1100 }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = JSON.parse(localStorage.getItem('user'));
@@ -37,10 +44,10 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
   const goCutoffs  = () => navigate('/admin/cutoffs');
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-light border-bottom shadow-sm mb-3 mb-md-4">
+    <nav className="navbar navbar-expand-md navbar-light bg-light border-bottom shadow-sm mb-3 mb-md-4">
       <div className="container-fluid">
         {/* Brand / Inicio */}
-        <button className="btn btn-outline-primary me-2 flex-shrink-0" onClick={handleHome}>
+        <button className="btn btn-outline-primary me-2" onClick={handleHome}>
           Inicio
         </button>
 
@@ -59,8 +66,8 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
 
         {/* Contenido colapsable */}
         <div className="collapse navbar-collapse" id="navbarMain">
-          {/* ======== MÓVIL (≤ lg): botones a ancho completo ======== */}
-          <div className="d-lg-none w-100">
+          {/* ======== MÓVIL (≤ md): botones a ancho completo ======== */}
+          <div className="d-md-none w-100">
             <div className="d-grid gap-2">
               {user?.role === 'admin' && (
                 <>
@@ -79,8 +86,12 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
                 </button>
               )}
 
-              {/* Buscador a 100% */}
-              {children && <div className="my-1">{children}</div>}
+              {/* Buscador en móvil (siempre visible dentro del colapso) */}
+              {children && (
+                <div className="my-1 topnav-search-mobile">
+                  {children}
+                </div>
+              )}
 
               <button className="btn btn-outline-danger w-100" onClick={handleLogout}>
                 Cerrar sesión
@@ -88,10 +99,10 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
             </div>
           </div>
 
-          {/* ======== DESKTOP (≥ lg): en línea, sin wraps ======== */}
-          <div className="d-none d-lg-flex align-items-center w-100 flex-nowrap overflow-hidden">
-            {/* Navegación izquierda */}
-            <div className="btn-group me-2 flex-shrink-0" role="group" aria-label="Navegación principal">
+          {/* ======== DESKTOP (≥ md): layout en línea ======== */}
+          <div className="d-none d-md-flex align-items-center w-100">
+            {/* Izquierda: navegación */}
+            <div className="btn-group me-2" role="group" aria-label="Navegación principal">
               {user?.role === 'admin' && (
                 <>
                   <button type="button" className="btn btn-outline-secondary" onClick={goPayments}>
@@ -106,25 +117,20 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
 
             {/* Import opcional */}
             {showImport && (
-              <button
-                type="button"
-                className="btn btn-success me-2 flex-shrink-0"
-                onClick={onImportClick}
-                title="Importar estudiantes"
-              >
+              <button type="button" className="btn btn-success me-2" onClick={onImportClick}>
                 Importar estudiantes
               </button>
             )}
 
-            {/* Buscador centrado: se reduce antes de romper */}
+            {/* Buscador centrado: se oculta en desktop cuando la ventana es angosta (antes del colapso) */}
             {children && (
-              <div className="flex-grow-1 mx-2" style={{ maxWidth: 'min(600px, 70vw)' }}>
+              <div className="flex-grow-1 topnav-search-desktop" style={{ maxWidth: 800 }}>
                 {children}
               </div>
             )}
 
             {/* Logout a la derecha */}
-            <div className="ms-auto flex-shrink-0">
+            <div className="ms-auto">
               <button type="button" className="btn btn-outline-danger" onClick={handleLogout}>
                 Cerrar sesión
               </button>
@@ -133,11 +139,17 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
         </div>
       </div>
 
-      {/* Ajustes finos de spacing en móvil */}
+      {/* Ajustes finos + regla para ocultar buscador en desktop bajo cierto ancho */}
       <style>{`
         @media (max-width: 767.98px) {
           .navbar .btn { border-radius: .75rem; }
           .navbar .form-control { border-radius: .75rem; }
+        }
+
+        /* Oculta SOLO el buscador de la vista desktop cuando el viewport
+           es menor al umbral pero aún ≥ md (no afecta el de móvil). */
+        @media (max-width: ${searchHideAt}px) and (min-width: 768px) {
+          .topnav-search-desktop { display: none !important; }
         }
       `}</style>
     </nav>
