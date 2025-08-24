@@ -1,4 +1,4 @@
-// components/StudentCalendarTable.jsx
+// src/components/StudentCalendarTable.jsx
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
@@ -37,7 +37,7 @@ const StudentCalendarTable = ({
 }) => {
   const days = useMemo(() => getDaysInMonth(month, year), [month, year]);
 
-  // normaliza invalidDates (puede venir como [{date,reason}] o como ['YYYY-MM-DD', ...])
+  // normaliza invalidDates (string o {date, reason})
   const invalidSet = useMemo(() => {
     const list = invalidDates.map(d =>
       typeof d === 'string' ? d : dayjs(d.date).utc().startOf('day').format('YYYY-MM-DD')
@@ -78,7 +78,7 @@ const StudentCalendarTable = ({
       overscrollBehaviorX: 'contain',
     },
     table: {
-      minWidth: 720, // asegura scroll horizontal en móvil
+      minWidth: 720, // fuerza scroll horizontal en pantallas chicas
       position: 'relative',
     },
     thDay: {
@@ -95,13 +95,21 @@ const StudentCalendarTable = ({
       left: 0,
       zIndex: 4,
       background: '#f8f9fa',
+      width: 220,
+      minWidth: 180,
+      maxWidth: 260,
     },
     tdAlumno: {
       position: 'sticky',
       left: 0,
       zIndex: 2,
       background: '#fff',
-      maxWidth: 220,
+      width: 220,
+      minWidth: 180,
+      maxWidth: 260,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
     },
     dayCell: {
       width: 30,
@@ -131,7 +139,7 @@ const StudentCalendarTable = ({
     <>
       <CalendarLegend />
 
-      {/* Sólo el calendario scrollea en X */}
+      {/* Solo el grid de días scrollea en X; la columna Alumno queda fija */}
       <div style={styles.wrap}>
         <div style={styles.scrollX} className="table-responsive">
           <table className="table table-bordered table-sm text-center mb-0" style={styles.table}>
@@ -145,7 +153,7 @@ const StudentCalendarTable = ({
             </thead>
             <tbody>
               {students.map((student) => {
-                // movimientos de ese alumno, indexados por día
+                // movimientos del alumno indexados por YYYY-MM-DD
                 const studentMovs = movements
                   .filter(m => String(m.studentId) === String(student.studentId))
                   .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
@@ -160,14 +168,19 @@ const StudentCalendarTable = ({
 
                 return (
                   <tr key={student.studentId}>
-                    <td className="fw-bold text-start" style={styles.tdAlumno} title={student.studentId}>
+                    <td
+                      className="fw-bold text-start"
+                      style={styles.tdAlumno}
+                      title={`${student.name} (${student.studentId})`}
+                    >
                       {student.name}
                     </td>
 
                     {days.map(d => {
                       const dayStr   = String(d).padStart(2, '0');
                       const monthStr = String(month).padStart(2, '0');
-                      const current  = `${year}-${monthStr}-${dayStr}`; // YYYY-MM-DD (UTC start)
+                      const current  = `${year}-${monthStr}-${dayStr}`;
+
                       const movement = (tokenByDay[current] || [])
                         .find(m => m.reason === 'uso-con-deuda') ||
                         (tokenByDay[current] || []).find(m => m.reason === 'uso');
@@ -176,10 +189,10 @@ const StudentCalendarTable = ({
                       const isInvalid = invalidSet.has(current);
 
                       let bg = '';
-                      if (isInvalid) bg = '#b0b0b0';                // inválido
-                      else if (movement?.reason === 'uso-con-deuda') bg = '#ffb3b3'; // deuda
-                      else if (movement?.reason === 'uso')           bg = '#add8e6'; // uso
-                      else if (inPeriod)                             bg = '#c1f0c1'; // periodo
+                      if (isInvalid) bg = '#b0b0b0';
+                      else if (movement?.reason === 'uso-con-deuda') bg = '#ffb3b3';
+                      else if (movement?.reason === 'uso')           bg = '#add8e6';
+                      else if (inPeriod)                             bg = '#c1f0c1';
 
                       const title =
                         isInvalid ? (invalidReasonMap.get(current) || 'Día no válido') :
@@ -205,10 +218,9 @@ const StudentCalendarTable = ({
         </div>
       </div>
 
-      {/* CSS responsivo específico de este componente */}
+      {/* Ajustes tipográficos en móvil */}
       <style>{`
         @media (max-width: 576px) {
-          /* compacta un poco el header en móviles */
           .table thead th { font-size: 11px; padding: 6px 6px; }
         }
       `}</style>
