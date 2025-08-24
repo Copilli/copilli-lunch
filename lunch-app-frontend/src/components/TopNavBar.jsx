@@ -66,7 +66,7 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport, searchHideAt 
         </button>
 
         {/* Contenido colapsable */}
-        <div className="collapse navbar-collapse" id="navbarMain">
+        <div className="collapse navbar-collapse justify-content-md-center" id="navbarMain">
           {/* ======== MÓVIL (≤ md): botones a ancho completo ======== */}
           <div className="d-md-none w-100">
             <div className="d-grid gap-2">
@@ -101,13 +101,13 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport, searchHideAt 
           </div>
 
           {/* ======== DESKTOP (≥ md): layout centrado ======== */}
-          <div className="d-none d-md-flex align-items-center justify-content-center gap-2">
+          <div className="d-none d-md-flex align-items-center justify-content-center gap-2 w-100 mx-auto">
             {/* Brand / Inicio - desktop */}
             <button type="button" className="btn btn-outline-primary" onClick={handleHome}>
               Inicio
             </button>
 
-            {/* Navegación */}
+            {/* Navegación (solo admin) */}
             {user?.role === 'admin' && (
               <>
                 <button type="button" className="btn btn-outline-secondary" onClick={goPayments}>
@@ -133,7 +133,7 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport, searchHideAt 
               </div>
             )}
 
-            {/* Logout (centrado junto con todo) */}
+            {/* Logout */}
             <button type="button" className="btn btn-outline-danger" onClick={handleLogout}>
               Cerrar sesión
             </button>
@@ -151,7 +151,6 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport, searchHideAt 
             margin-bottom: 0.5rem;
           }
         }
-
         /* Oculta SOLO el buscador de la vista desktop cuando el viewport
            es menor al umbral pero aún ≥ md (no afecta el de móvil). */
         @media (max-width: ${searchHideAt}px) and (min-width: 768px) {
