@@ -32,18 +32,19 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
     window.location.replace(BASE);
   };
 
+  const handleHome = () => { window.location.href = BASE; };
+  const goPayments = () => navigate('/admin/payments');
+  const goCutoffs  = () => navigate('/admin/cutoffs');
+
   return (
-    <nav className="navbar navbar-expand-md navbar-light bg-light border-bottom shadow-sm">
+    <nav className="navbar navbar-expand-md navbar-light bg-light border-bottom shadow-sm mb-3 mb-md-4">
       <div className="container-fluid">
         {/* Brand / Inicio */}
-        <button
-          className="btn btn-outline-primary me-2"
-          onClick={() => (window.location.href = BASE)}
-        >
+        <button className="btn btn-outline-primary me-2" onClick={handleHome}>
           Inicio
         </button>
 
-        {/* Toggler para móvil */}
+        {/* Toggler */}
         <button
           className="navbar-toggler"
           type="button"
@@ -58,44 +59,93 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
 
         {/* Contenido colapsable */}
         <div className="collapse navbar-collapse" id="navbarMain">
-          {/* Links de admin */}
-          {user?.role === 'admin' && (
-            <ul className="navbar-nav me-3">
-              <li className="nav-item">
-                <button className="btn btn-outline-secondary me-2" onClick={() => navigate('/admin/payments')}>
-                  Pagos
-                </button>
-              </li>
-              <li className="nav-item">
-                <button className="btn btn-outline-secondary me-2" onClick={() => navigate('/admin/cutoffs')}>
-                  Cortes
-                </button>
-              </li>
-              {showImport && (
-                <li className="nav-item">
-                  <button className="btn btn-success me-2" onClick={onImportClick}>
-                    Importar estudiantes
+          {/* ======== MÓVIL (≤ md): botones a ancho completo, espaciados uniformes ======== */}
+          <div className="d-md-none w-100">
+            <div className="d-grid gap-2">
+              <button className="btn btn-outline-primary w-100" onClick={handleHome}>
+                Inicio
+              </button>
+
+              {user?.role === 'admin' && (
+                <>
+                  <button className="btn btn-outline-secondary w-100" onClick={goPayments}>
+                    Pagos
                   </button>
-                </li>
+                  <button className="btn btn-outline-secondary w-100" onClick={goCutoffs}>
+                    Cortes
+                  </button>
+                </>
               )}
-            </ul>
-          )}
 
-          {/* Search centrado */}
-          {children && (
-            <div className="mx-auto my-2 my-md-0" style={{ maxWidth: 600, flex: 1 }}>
-              {children}
+              {showImport && (
+                <button className="btn btn-success w-100" onClick={onImportClick}>
+                  Importar estudiantes
+                </button>
+              )}
+
+              {/* Buscador a 100% con margen vertical */}
+              {children && (
+                <div className="my-1">
+                  {children}
+                </div>
+              )}
+
+              <button className="btn btn-outline-danger w-100" onClick={handleLogout}>
+                Cerrar sesión
+              </button>
             </div>
-          )}
+          </div>
 
-          {/* Logout siempre a la derecha */}
-          <div className="ms-auto">
-            <button className="btn btn-outline-danger" onClick={handleLogout}>
-              Cerrar sesión
-            </button>
+          {/* ======== DESKTOP (≥ md): layout en línea y centrado ======== */}
+          <div className="d-none d-md-flex align-items-center w-100">
+            {/* Izquierda: navegación */}
+            <div className="btn-group me-2" role="group" aria-label="Navegación principal">
+              <button type="button" className="btn btn-outline-primary" onClick={handleHome}>
+                Inicio
+              </button>
+              {user?.role === 'admin' && (
+                <>
+                  <button type="button" className="btn btn-outline-secondary" onClick={goPayments}>
+                    Pagos
+                  </button>
+                  <button type="button" className="btn btn-outline-secondary" onClick={goCutoffs}>
+                    Cortes
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Import opcional */}
+            {showImport && (
+              <button type="button" className="btn btn-success me-2" onClick={onImportClick}>
+                Importar estudiantes
+              </button>
+            )}
+
+            {/* Buscador centrado (máx 800px) */}
+            {children && (
+              <div className="flex-grow-1" style={{ maxWidth: 800 }}>
+                {children}
+              </div>
+            )}
+
+            {/* Logout a la derecha */}
+            <div className="ms-auto">
+              <button type="button" className="btn btn-outline-danger" onClick={handleLogout}>
+                Cerrar sesión
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Ajustes finos de spacing en móvil */}
+      <style>{`
+        @media (max-width: 767.98px) {
+          .navbar .btn { border-radius: .75rem; }         /* look más suave */
+          .navbar .form-control { border-radius: .75rem; }
+        }
+      `}</style>
     </nav>
   );
 };

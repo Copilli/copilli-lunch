@@ -242,20 +242,41 @@ const CocinaPanel = ({ setUser }) => {
           )}
 
           {selectedLevel && !selectedGroup && (
-            <div>
-              <h3>Grupos en {selectedLevel}</h3>
-
-              <div className="row g-3">
-                {groupsInLevel.map(group => (
-                  <div key={group} className="col-12 col-sm-6 col-md-4">
-                    <GroupCard group={group} onClick={setSelectedGroup} />
+            <div className="mt-3">
+              <div className="d-flex align-items-baseline justify-content-between flex-wrap gap-2 mb-3">
+                <div>
+                  <h3 className="mb-0">Grupos en {selectedLevel}</h3>
+                  <div className="text-muted small">
+                    {groupsInLevel.length} grupo{groupsInLevel.length !== 1 ? 's' : ''}
                   </div>
-                ))}
+                </div>
+
+                <button
+                  onClick={() => setSelectedLevel(null)}
+                  className="btn btn-secondary"
+                >
+                  ← Volver a niveles
+                </button>
               </div>
 
-              <button onClick={() => setSelectedLevel(null)} className="btn btn-secondary mt-3">
-                ← Volver a niveles
-              </button>
+              {groupsInLevel.length === 0 ? (
+                <div className="text-center text-muted py-5 border rounded-4">
+                  No hay grupos en este nivel.
+                </div>
+              ) : (
+                <div className="row g-3">
+                  {groupsInLevel.map((group) => (
+                    <div key={group} className="col-12 col-sm-6 col-md-4">
+                      <GroupCard
+                        group={group}
+                        onClick={setSelectedGroup}
+                        // si tienes lista de estudiantes disponible:
+                        // studentsCount={students.filter(s => s.group?.level === selectedLevel && s.group?.name === group).length}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

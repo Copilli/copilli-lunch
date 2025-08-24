@@ -2,66 +2,59 @@
 import { useState } from 'react';
 
 const accent = '#0d6efd';
-const softBg = 'rgba(13,110,253,.12)';
+const softBg = 'rgba(13,110,253,.1)';
 
 const GroupCard = ({ group, onClick, studentsCount }) => {
   const [hover, setHover] = useState(false);
-  const [focus, setFocus] = useState(false);
 
   return (
-    <button
-      type="button"
+    <div
+      className="card h-100 shadow-sm border-0"
+      role="button"
       onClick={() => onClick?.(group)}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      onFocus={() => setFocus(true)}
-      onBlur={() => setFocus(false)}
+      style={{
+        borderRadius: 14,
+        boxShadow: hover ? '0 .5rem 1rem rgba(0,0,0,.08)' : undefined,
+        transition: 'box-shadow .15s ease, transform .05s ease',
+        transform: hover ? 'translateY(-1px)' : 'none',
+        cursor: 'pointer',
+        marginBottom: '1rem'
+      }}
       aria-label={`Grupo ${group}`}
-      className="w-100 text-start bg-white border-0 p-0"
-      style={{ cursor: 'pointer' }}
     >
-      <div
-        className="h-100 shadow-sm"
-        style={{
-          borderRadius: 14,
-          border: '1px solid #eef1f5',
-          padding: '14px 16px',
-          transition: 'box-shadow .15s ease, transform .05s ease',
-          boxShadow: hover ? '0 .65rem 1.25rem rgba(0,0,0,.08)' : '0 .25rem .5rem rgba(0,0,0,.04)',
-          transform: hover ? 'translateY(-1px)' : 'none',
-          outline: 'none',
-          ...(focus ? { boxShadow: '0 0 0 4px rgba(13,110,253,.15), 0 .25rem .5rem rgba(0,0,0,.05)' } : {})
-        }}
-      >
-        <div className="d-flex align-items-center" style={{ gap: 14, minHeight: 56 }}>
-          <div
-            className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-            style={{ width: 48, height: 48, background: softBg, color: accent, fontSize: 22 }}
-            aria-hidden
-          >
-            🏷️
-          </div>
+      <div className="card-body d-flex align-items-center" style={{ gap: 14 }}>
+        {/* Icono */}
+        <div
+          className="rounded-circle d-flex align-items-center justify-content-center"
+          style={{
+            width: 44,
+            height: 44,
+            background: softBg,
+            color: accent,
+            fontSize: 20,
+            flex: '0 0 44px'
+          }}
+          aria-hidden
+        >
+          🏷️
+        </div>
 
-          <div className="min-w-0 flex-grow-1">
-            <div className="fw-semibold text-truncate" style={{ fontSize: 16 }}>
-              Grupo {group}
-            </div>
+        {/* Texto */}
+        <div className="min-w-0 flex-grow-1">
+          <div className="fw-semibold text-truncate mb-1">Grupo {group}</div>
+          {typeof studentsCount === 'number' && (
             <div className="text-muted small">
-              {typeof studentsCount === 'number' ? `Alumnos: ${studentsCount}` : 'Ver estudiantes'}
-            </div>
-          </div>
-
-          {/* badge/caret a la derecha para balance visual */}
-          {typeof studentsCount === 'number' ? (
-            <span className="badge text-bg-secondary ms-2 flex-shrink-0">{studentsCount}</span>
-          ) : (
-            <div className="ms-2 text-muted flex-shrink-0" aria-hidden style={{ fontSize: 18, opacity: .7 }}>
-              ›
+              {studentsCount} alumno{studentsCount !== 1 ? 's' : ''}
             </div>
           )}
         </div>
+
+        {/* Chevron */}
+        <div className="text-muted" aria-hidden style={{ fontSize: 18 }}>›</div>
       </div>
-    </button>
+    </div>
   );
 };
 
