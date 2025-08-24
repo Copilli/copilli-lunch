@@ -37,10 +37,10 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
   const goCutoffs  = () => navigate('/admin/cutoffs');
 
   return (
-    <nav className="navbar navbar-expand-md navbar-light bg-light border-bottom shadow-sm mb-3 mb-md-4">
+    <nav className="navbar navbar-expand-lg navbar-light bg-light border-bottom shadow-sm mb-3 mb-md-4">
       <div className="container-fluid">
         {/* Brand / Inicio */}
-        <button className="btn btn-outline-primary me-2" onClick={handleHome}>
+        <button className="btn btn-outline-primary me-2 flex-shrink-0" onClick={handleHome}>
           Inicio
         </button>
 
@@ -59,8 +59,8 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
 
         {/* Contenido colapsable */}
         <div className="collapse navbar-collapse" id="navbarMain">
-          {/* ======== MÓVIL (≤ md): botones a ancho completo, espaciados uniformes ======== */}
-          <div className="d-md-none w-100">
+          {/* ======== MÓVIL (≤ lg): botones a ancho completo ======== */}
+          <div className="d-lg-none w-100">
             <div className="d-grid gap-2">
               {user?.role === 'admin' && (
                 <>
@@ -79,12 +79,8 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
                 </button>
               )}
 
-              {/* Buscador a 100% con margen vertical */}
-              {children && (
-                <div className="my-1">
-                  {children}
-                </div>
-              )}
+              {/* Buscador a 100% */}
+              {children && <div className="my-1">{children}</div>}
 
               <button className="btn btn-outline-danger w-100" onClick={handleLogout}>
                 Cerrar sesión
@@ -92,13 +88,10 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
             </div>
           </div>
 
-          {/* ======== DESKTOP (≥ md): layout en línea y centrado ======== */}
-          <div className="d-none d-md-flex align-items-center w-100">
-            {/* Izquierda: navegación */}
-            <div className="btn-group me-2" role="group" aria-label="Navegación principal">
-              <button type="button" className="btn btn-outline-primary" onClick={handleHome}>
-                Inicio
-              </button>
+          {/* ======== DESKTOP (≥ lg): en línea, sin wraps ======== */}
+          <div className="d-none d-lg-flex align-items-center w-100 flex-nowrap overflow-hidden">
+            {/* Navegación izquierda */}
+            <div className="btn-group me-2 flex-shrink-0" role="group" aria-label="Navegación principal">
               {user?.role === 'admin' && (
                 <>
                   <button type="button" className="btn btn-outline-secondary" onClick={goPayments}>
@@ -113,20 +106,25 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
 
             {/* Import opcional */}
             {showImport && (
-              <button type="button" className="btn btn-success me-2" onClick={onImportClick}>
+              <button
+                type="button"
+                className="btn btn-success me-2 flex-shrink-0"
+                onClick={onImportClick}
+                title="Importar estudiantes"
+              >
                 Importar estudiantes
               </button>
             )}
 
-            {/* Buscador centrado (máx 800px) */}
+            {/* Buscador centrado: se reduce antes de romper */}
             {children && (
-              <div className="flex-grow-1" style={{ maxWidth: 800 }}>
+              <div className="flex-grow-1 mx-2" style={{ maxWidth: 'min(600px, 70vw)' }}>
                 {children}
               </div>
             )}
 
             {/* Logout a la derecha */}
-            <div className="ms-auto">
+            <div className="ms-auto flex-shrink-0">
               <button type="button" className="btn btn-outline-danger" onClick={handleLogout}>
                 Cerrar sesión
               </button>
@@ -138,7 +136,7 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
       {/* Ajustes finos de spacing en móvil */}
       <style>{`
         @media (max-width: 767.98px) {
-          .navbar .btn { border-radius: .75rem; }         /* look más suave */
+          .navbar .btn { border-radius: .75rem; }
           .navbar .form-control { border-radius: .75rem; }
         }
       `}</style>
