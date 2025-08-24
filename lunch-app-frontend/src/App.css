@@ -1,0 +1,12 @@
+body {
+  margin: 0;
+  background: #fff;
+}
+
+#root, .app-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;   /* centra horizontal */
+  justify-content: center; /* centra vertical */
+  min-height: 100vh;
+}

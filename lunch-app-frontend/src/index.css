@@ -56,24 +56,21 @@ img { max-width: 100%; display: block; }
 /* =========================
    Tarjetas unificadas (Level & Group)
    ========================= */
-/* Botón raíz que envuelve al tile */
 .tile-button {
   width: 100%;
   text-align: left;
   background: transparent;
   border: 0;
-  padding: 0;                /* evita padding heredado */
+  padding: 0;
   cursor: pointer;
 }
 
-/* Mantén accesibilidad de foco */
 .tile-button:focus-visible {
   outline: 4px solid rgba(13,110,253,.25);
   outline-offset: 2px;
-  border-radius: 16px; /* coincide con .tile */
+  border-radius: 16px;
 }
 
-/* Caja visual del card */
 .tile {
   position: relative;
   display: block;
@@ -82,13 +79,12 @@ img { max-width: 100%; display: block; }
   border: 1px solid #eef1f5;
   border-radius: 16px;
   padding: 14px 16px;
-  min-height: 88px;          /* altura común para ambos */
+  min-height: 88px;
   box-shadow: 0 .25rem .5rem rgba(0,0,0,.04);
   transition: box-shadow .15s ease, transform .05s ease;
-  overflow: hidden;          /* por si algo quisiera sobresalir */
+  overflow: hidden;
 }
 
-/* Hover/active */
 .tile-button:hover .tile {
   transform: translateY(-1px);
   box-shadow: 0 .65rem 1.25rem rgba(0,0,0,.08);
@@ -97,7 +93,6 @@ img { max-width: 100%; display: block; }
   transform: translateY(0);
 }
 
-/* Contenido interno en fila */
 .tile-content {
   display: flex;
   align-items: center;
@@ -105,7 +100,6 @@ img { max-width: 100%; display: block; }
   min-height: 56px;
 }
 
-/* Icono redondo a la izquierda */
 .tile-icon {
   flex-shrink: 0;
   width: 48px;
@@ -119,10 +113,9 @@ img { max-width: 100%; display: block; }
   line-height: 1;
 }
 
-/* Texto: permite truncado correcto en una fila flex */
 .tile-text {
   flex: 1 1 auto;
-  min-width: 0;                 /* necesario para text-overflow en flex */
+  min-width: 0;
 }
 .tile-title {
   font-weight: 600;
@@ -136,7 +129,6 @@ img { max-width: 100%; display: block; }
   font-size: 0.875rem;
 }
 
-/* Caret a la derecha */
 .tile-caret {
   margin-left: auto;
   color: #6c757d;
@@ -154,25 +146,12 @@ img { max-width: 100%; display: block; }
 /* =========================
    Clases semánticas
    ========================= */
-/* Aplica estas clases en tus componentes:
-   - LevelCard root:   className="tile-button level-card"
-   - GroupCard root:   className="tile-button group-card"
-   - contenedor visual: <div className="tile">
-   - fila interna:     <div className="tile-content">
-   - icono:            <div className="tile-icon">…</div>
-   - texto:            <div className="tile-text"><div class="tile-title">…</div><div class="tile-subtitle">…</div></div>
-   - caret:            <div className="tile-caret">›</div>
-*/
-
-/* Si quieres distinguir visualmente level/group a futuro: */
-.level-card .tile-icon { background: rgba(25,135,84,.12); color: #198754; }   /* ejemplo */
-.group-card .tile-icon { background: rgba(13,110,253,.12); color: #0d6efd; }  /* ejemplo */
+.level-card .tile-icon { background: rgba(25,135,84,.12); color: #198754; }
+.group-card .tile-icon { background: rgba(13,110,253,.12); color: #0d6efd; }
 
 /* =========================================================
-   ⬇⬇⬇  SECCIÓN NUEVA: Calendario (tabla horizontal sticky)
+   Calendario (tabla horizontal sticky)
    ========================================================= */
-
-/* Viewport del calendario: encierra la tabla y evita que el body reciba el overflow */
 .calendar-wrap {
   border: 1px solid #e5e7eb;
   border-radius: 8px;
@@ -182,7 +161,6 @@ img { max-width: 100%; display: block; }
   background: #fff;
 }
 
-/* Contenedor que RECEPCIONA el scroll horizontal */
 .calendar-scroll-x {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -198,15 +176,12 @@ img { max-width: 100%; display: block; }
 }
 .calendar-scroll-x::-webkit-scrollbar-track { background: #eee; }
 
-/* Tabla del calendario:
-   - importante width: max-content para que mida lo que requiere su contenido */
 .calendar-table {
   border-collapse: separate;
   border-spacing: 0;
-  width: max-content;        /* clave para dejar que el contenedor haga scroll */
+  width: max-content;
 }
 
-/* Encabezado de días sticky */
 .calendar-table thead th {
   position: sticky;
   top: 0;
@@ -215,20 +190,20 @@ img { max-width: 100%; display: block; }
   white-space: nowrap;
 }
 
-/* Columna fija "Alumno" sticky + sombra de corte */
 .calendar-table th:first-child,
 .calendar-table td:first-child {
   position: sticky;
   left: 0;
   background: #fff;
   z-index: 10;
-  box-shadow: 3px 0 6px rgba(0,0,0,.06);
+  box-shadow: 2px 0 4px rgba(0,0,0,.05);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  background-clip: padding-box;
+  border-right: 1px solid #dee2e6;
 }
 
-/* Celda de día: ancho controlado por clase (el JSX define minWidth también) */
 .calendar-day-cell {
   height: 30px;
   line-height: 30px;
@@ -238,6 +213,21 @@ img { max-width: 100%; display: block; }
   user-select: none;
   white-space: nowrap;
   text-align: center;
+}
+
+/* Bordes visibles entre filas/columnas */
+.calendar-table td,
+.calendar-table th {
+  border: 1px solid #dee2e6;
+}
+
+.calendar-table tbody tr > td {
+  border-bottom: 1px solid #dee2e6;
+}
+
+.table.table-sm.calendar-table > :not(caption) > * > * {
+  border-right-width: 1px;
+  border-left-width: 1px;
 }
 
 /* Compacto en pantallas pequeñas */
