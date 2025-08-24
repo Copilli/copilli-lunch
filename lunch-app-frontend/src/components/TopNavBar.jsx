@@ -44,7 +44,7 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport, searchHideAt 
   const goCutoffs  = () => navigate('/admin/cutoffs');
 
   return (
-    <nav className="navbar navbar-expand-md navbar-light bg-light border-bottom shadow-sm mb-3 mb-md-4">
+    <nav className="navbar navbar-expand-md navbar-light bg-light border-bottom shadow-sm mb-3 mb-md-4 justify-content-center">
       <div className="container-fluid">
         {/* Brand / Inicio - only for mobile */}
         <button className="btn btn-outline-primary d-md-none me-2" onClick={handleHome} style={{ marginBottom: '0.5rem' }}>

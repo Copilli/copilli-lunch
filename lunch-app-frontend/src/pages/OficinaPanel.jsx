@@ -80,8 +80,8 @@ const OficinaPanel = ({ setUser }) => {
     : [];
 
   return (
-    <div className="app-container" style={{ padding: '2rem' }}>
-      <h2>Panel de Oficina</h2>
+    <div className="app-container text-center" style={{ padding: '2rem' }}>
+      <h2 className='text-center'>Panel de Oficina</h2>
       <TopNavBar setUser={setUser}>
         <SearchBar
           search={search}
@@ -101,7 +101,7 @@ const OficinaPanel = ({ setUser }) => {
       </TopNavBar>
 
       {!search && !selectedLevel && (
-        <div className="row g-3">
+        <div className="row gx-3 gy-3 justify-content-center">
           {levels.map(level => (
             <div key={level} className="col-12 col-sm-6 col-md-4">
               <LevelCard level={level} onClick={setSelectedLevel} />
@@ -112,7 +112,7 @@ const OficinaPanel = ({ setUser }) => {
 
       {selectedLevel && !selectedGroup && (
         <div className="mt-3">
-          <div className="pb-2">
+          <div className="pb-2 text-center">
             <h3 className="mb-0">Grupos en {selectedLevel}</h3>
             <div className="text-muted small">
               {groupsInLevel.length} grupo{groupsInLevel.length !== 1 ? 's' : ''}
@@ -124,7 +124,7 @@ const OficinaPanel = ({ setUser }) => {
               No hay grupos en este nivel.
             </div>
           ) : (
-            <div className="row gx-3 gy-3">{/* ← antes: g-3 */}
+            <div className="row gx-3 gy-3 justify-content-center">{/* ← antes: g-3 */}
               {groupsInLevel.map((group) => {
                 const count = students.filter(
                   s => s.group.level === selectedLevel && s.group.name === group
