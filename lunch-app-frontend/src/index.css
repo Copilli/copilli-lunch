@@ -30,9 +30,6 @@ a:hover { text-decoration: underline; }
 
 /* Evita que estilos globales de "button" pisen a Bootstrap.
    Sólo estiliza botones "custom" si tienen clase .tile-button (ver abajo) */
-button:not(.tile-button):not(.btn) {
-  /* sin estilos extra */
-}
 
 /* Imágenes responsivas por defecto */
 img { max-width: 100%; display: block; }
