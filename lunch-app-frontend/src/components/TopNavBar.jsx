@@ -47,7 +47,7 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport, searchHideAt 
     <nav className="navbar navbar-expand-md navbar-light bg-light border-bottom shadow-sm mb-3 mb-md-4">
       <div className="container-fluid">
         {/* Brand / Inicio */}
-        <button className="btn btn-outline-primary me-2" onClick={handleHome}>
+        <button className="btn btn-outline-primary me-2" onClick={handleHome} style={{ marginBottom: '0.5rem' }}>
           Inicio
         </button>
 
@@ -60,6 +60,7 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport, searchHideAt 
           aria-controls="navbarMain"
           aria-expanded="false"
           aria-label="Toggle navigation"
+          style={{ marginBottom: '0.5rem' }}
         >
           <span className="navbar-toggler-icon"></span>
         </button>
@@ -74,14 +75,14 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport, searchHideAt 
                   <button className="btn btn-outline-secondary w-100" onClick={goPayments}>
                     Pagos
                   </button>
-                  <button className="btn btn-outline-secondary w-100 mb-2" onClick={goCutoffs}>
+                  <button className="btn btn-outline-secondary w-100" onClick={goCutoffs}>
                     Cortes
                   </button>
                 </>
               )}
 
               {showImport && (
-                <button className="btn btn-success w-100 mb-2" onClick={onImportClick}>
+                <button className="btn btn-success w-100" onClick={onImportClick}>
                   Importar estudiantes
                 </button>
               )}
@@ -93,7 +94,7 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport, searchHideAt 
                 </div>
               )}
 
-              <button className="btn btn-outline-danger w-100 mt-2" onClick={handleLogout}>
+              <button className="btn btn-outline-danger w-100" onClick={handleLogout}>
                 Cerrar sesión
               </button>
             </div>
@@ -144,6 +145,10 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport, searchHideAt 
         @media (max-width: 767.98px) {
           .navbar .btn { border-radius: .75rem; }
           .navbar .form-control { border-radius: .75rem; }
+          .navbar .btn-outline-primary,
+          .navbar .navbar-toggler {
+            margin-bottom: 0.5rem;
+          }
         }
 
         /* Oculta SOLO el buscador de la vista desktop cuando el viewport

@@ -18,15 +18,19 @@ const GroupCard = ({ group, onClick, studentsCount }) => {
       onBlur={() => setFocus(false)}
       aria-label={`Grupo ${group}`}
       className="w-100 text-start bg-white border-0 p-0"
-      style={{ cursor: 'pointer' }}
+      style={{ cursor: 'pointer', height: '100%' }} // Ensure button fills parent
     >
       <div
         className="h-100 shadow-sm"
         style={{
+          display: 'flex',                // Added for vertical alignment
+          alignItems: 'center',           // Center content vertically
           borderRadius: 14,
           border: '1px solid #eef1f5',
-          padding: '14px 16px',          // mismo padding que LevelCard
-          minHeight: 80,                  // altura cómoda
+          padding: '14px 16px',
+          minHeight: 80,
+          height: 80,                     // Fixed height to match LevelCard
+          overflow: 'hidden',             // Prevent overflow
           transition: 'box-shadow .15s ease, transform .05s ease',
           boxShadow: hover ? '0 .65rem 1.25rem rgba(0,0,0,.08)' : '0 .25rem .5rem rgba(0,0,0,.04)',
           transform: hover ? 'translateY(-1px)' : 'none',
@@ -34,7 +38,7 @@ const GroupCard = ({ group, onClick, studentsCount }) => {
           ...(focus ? { boxShadow: '0 0 0 4px rgba(13,110,253,.15), 0 .25rem .5rem rgba(0,0,0,.05)' } : {})
         }}
       >
-        <div className="d-flex align-items-center" style={{ gap: 14, minHeight: 56 }}>
+        <div className="d-flex align-items-center" style={{ gap: 14, minHeight: 56, width: '100%' }}>
           {/* Icono */}
           <div
             className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
