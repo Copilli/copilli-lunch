@@ -186,7 +186,7 @@ const AdminPanel = ({ setUser }) => {
 
       {selectedLevel && !selectedGroup && (
         <div className="mt-3">
-          <div className="mb-3">
+          <div className="pb-2">
             <h3 className="mb-0">Grupos en {selectedLevel}</h3>
             <div className="text-muted small">
               {groupsInLevel.length} grupo{groupsInLevel.length !== 1 ? 's' : ''}

@@ -74,26 +74,26 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport, searchHideAt 
                   <button className="btn btn-outline-secondary w-100" onClick={goPayments}>
                     Pagos
                   </button>
-                  <button className="btn btn-outline-secondary w-100" onClick={goCutoffs}>
+                  <button className="btn btn-outline-secondary w-100 mb-2" onClick={goCutoffs}>
                     Cortes
                   </button>
                 </>
               )}
 
               {showImport && (
-                <button className="btn btn-success w-100" onClick={onImportClick}>
+                <button className="btn btn-success w-100 mb-2" onClick={onImportClick}>
                   Importar estudiantes
                 </button>
               )}
 
               {/* Buscador en móvil (siempre visible dentro del colapso) */}
               {children && (
-                <div className="my-1 topnav-search-mobile">
+                <div className="my-2 topnav-search-mobile">
                   {children}
                 </div>
               )}
 
-              <button className="btn btn-outline-danger w-100" onClick={handleLogout}>
+              <button className="btn btn-outline-danger w-100 mt-2" onClick={handleLogout}>
                 Cerrar sesión
               </button>
             </div>
