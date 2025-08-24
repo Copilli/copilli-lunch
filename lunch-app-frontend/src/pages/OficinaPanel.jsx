@@ -101,9 +101,11 @@ const OficinaPanel = ({ setUser }) => {
       </TopNavBar>
 
       {!search && !selectedLevel && (
-        <div>
+        <div className="row g-3">
           {levels.map(level => (
-            <LevelCard key={level} level={level} onClick={setSelectedLevel} />
+            <div key={level} className="col-12 col-sm-6 col-md-4">
+              <LevelCard level={level} onClick={setSelectedLevel} />
+            </div>
           ))}
         </div>
       )}
@@ -111,10 +113,16 @@ const OficinaPanel = ({ setUser }) => {
       {selectedLevel && !selectedGroup && (
         <div>
           <h3>Grupos en {selectedLevel}</h3>
-          {groupsInLevel.map(group => (
-            <GroupCard key={group} group={group} onClick={setSelectedGroup} />
-          ))}
-          <button onClick={() => setSelectedLevel(null)} style={{ marginTop: '1rem' }}>
+
+          <div className="row g-3">
+            {groupsInLevel.map(group => (
+              <div key={group} className="col-12 col-sm-6 col-md-4">
+                <GroupCard group={group} onClick={setSelectedGroup} />
+              </div>
+            ))}
+          </div>
+
+          <button onClick={() => setSelectedLevel(null)} className="btn btn-secondary mt-3">
             ← Volver a niveles
           </button>
         </div>

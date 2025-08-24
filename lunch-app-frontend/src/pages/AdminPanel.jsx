@@ -155,7 +155,7 @@ const AdminPanel = ({ setUser }) => {
 
       {showImportModal && (
         <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
+          <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Importar estudiantes</h5>
@@ -175,9 +175,11 @@ const AdminPanel = ({ setUser }) => {
       )}
 
       {!search && !selectedLevel && (
-        <div>
+        <div className="row g-3">
           {levels.map(level => (
-            <LevelCard key={level} level={level} onClick={setSelectedLevel} />
+            <div key={level} className="col-12 col-sm-6 col-md-4">
+              <LevelCard level={level} onClick={setSelectedLevel} />
+            </div>
           ))}
         </div>
       )}
@@ -185,10 +187,16 @@ const AdminPanel = ({ setUser }) => {
       {selectedLevel && !selectedGroup && (
         <div>
           <h3>Grupos en {selectedLevel}</h3>
-          {groupsInLevel.map(group => (
-            <GroupCard key={group} group={group} onClick={setSelectedGroup} />
-          ))}
-          <button onClick={() => setSelectedLevel(null)} style={{ marginTop: '1rem' }}>
+
+          <div className="row g-3">
+            {groupsInLevel.map(group => (
+              <div key={group} className="col-12 col-sm-6 col-md-4">
+                <GroupCard group={group} onClick={setSelectedGroup} />
+              </div>
+            ))}
+          </div>
+
+          <button onClick={() => setSelectedLevel(null)} className="btn btn-secondary mt-3">
             ← Volver a niveles
           </button>
         </div>

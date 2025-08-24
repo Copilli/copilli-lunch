@@ -1,72 +1,68 @@
-// src/components/LevelCard.jsx
-import React from "react";
+// src/components/GroupCard.jsx
+import { useState } from 'react';
 
-/**
- * Props:
- * - title: string (p. ej. "Preescolar")
- * - icon:  ReactNode (emoji o SVG)
- * - subtitle?: string
- * - count?: number   // alumnos u otro dato opcional
- * - selected?: boolean
- * - disabled?: boolean
- * - onClick?: () => void
- * - className?: string
- */
-export default function LevelCard({
-  title,
-  icon = "🎒",
-  subtitle,
-  count,
-  selected = false,
-  disabled = false,
-  onClick,
-  className = "",
-}) {
-  const base =
-    "card border-0 shadow-sm rounded-4 p-3 card-hover w-100 text-start";
-  const state = [
-    selected ? "border border-2 border-primary bg-primary-subtle" : "bg-white",
-    disabled ? "opacity-50 pe-none" : "",
-  ]
-    .join(" ")
-    .trim();
+const accent = '#0d6efd';
+const softBg = 'rgba(13,110,253,.12)';
+
+const GroupCard = ({ group, onClick, studentsCount }) => {
+  const [hover, setHover] = useState(false);
+  const [focus, setFocus] = useState(false);
 
   return (
-    <div
-      role="button"
-      aria-pressed={selected}
-      aria-disabled={disabled}
-      tabIndex={disabled ? -1 : 0}
-      onClick={disabled ? undefined : onClick}
-      onKeyDown={(e) => {
-        if (!disabled && (e.key === "Enter" || e.key === " ")) onClick?.();
-      }}
-      className={`${base} ${state} ${className}`}
-      style={{ transition: "box-shadow .2s, transform .15s" }}
+    <button
+      type="button"
+      onClick={() => onClick?.(group)}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onFocus={() => setFocus(true)}
+      onBlur={() => setFocus(false)}
+      aria-label={`Grupo ${group}`}
+      className="w-100 text-start bg-white border-0 p-0"
+      style={{ cursor: 'pointer' }}
     >
-      <div className="d-flex align-items-center gap-3">
-        <div
-          className={`rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 ${
-            selected ? "bg-white" : "bg-light"
-          }`}
-          style={{ width: 48, height: 48, fontSize: 24 }}
-          aria-hidden="true"
-        >
-          {icon}
-        </div>
-
-        <div className="flex-grow-1">
-          <div className="d-flex align-items-center justify-content-between">
-            <h3 className="h6 mb-0 fw-semibold">{title}</h3>
-            {typeof count === "number" && (
-              <span className="badge text-bg-secondary">{count}</span>
-            )}
+      <div
+        className="h-100 shadow-sm"
+        style={{
+          borderRadius: 14,
+          border: '1px solid #eef1f5',
+          padding: '14px 16px',
+          transition: 'box-shadow .15s ease, transform .05s ease',
+          boxShadow: hover ? '0 .65rem 1.25rem rgba(0,0,0,.08)' : '0 .25rem .5rem rgba(0,0,0,.04)',
+          transform: hover ? 'translateY(-1px)' : 'none',
+          outline: 'none',
+          ...(focus ? { boxShadow: '0 0 0 4px rgba(13,110,253,.15), 0 .25rem .5rem rgba(0,0,0,.05)' } : {})
+        }}
+      >
+        <div className="d-flex align-items-center" style={{ gap: 14, minHeight: 56 }}>
+          <div
+            className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+            style={{ width: 48, height: 48, background: softBg, color: accent, fontSize: 22 }}
+            aria-hidden
+          >
+            🏷️
           </div>
-          {subtitle && (
-            <div className="text-muted small mt-1">{subtitle}</div>
+
+          <div className="min-w-0 flex-grow-1">
+            <div className="fw-semibold text-truncate" style={{ fontSize: 16 }}>
+              Grupo {group}
+            </div>
+            <div className="text-muted small">
+              {typeof studentsCount === 'number' ? `Alumnos: ${studentsCount}` : 'Ver estudiantes'}
+            </div>
+          </div>
+
+          {/* badge/caret a la derecha para balance visual */}
+          {typeof studentsCount === 'number' ? (
+            <span className="badge text-bg-secondary ms-2 flex-shrink-0">{studentsCount}</span>
+          ) : (
+            <div className="ms-2 text-muted flex-shrink-0" aria-hidden style={{ fontSize: 18, opacity: .7 }}>
+              ›
+            </div>
           )}
         </div>
       </div>
-    </div>
+    </button>
   );
-}
+};
+
+export default GroupCard;
