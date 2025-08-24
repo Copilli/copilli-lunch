@@ -18,19 +18,18 @@ const GroupCard = ({ group, onClick, studentsCount }) => {
       onBlur={() => setFocus(false)}
       aria-label={`Grupo ${group}`}
       className="w-100 text-start bg-white border-0 p-0"
-      style={{ cursor: 'pointer', height: '100%' }} // Ensure button fills parent
+      style={{ cursor: 'pointer', height: '100%' }}
     >
       <div
-        className="h-100 shadow-sm"
+        className="h-100 shadow-sm group-card"
         style={{
-          display: 'flex',                // Added for vertical alignment
-          alignItems: 'center',           // Center content vertically
+          display: 'flex',
+          alignItems: 'center',
           borderRadius: 14,
           border: '1px solid #eef1f5',
           padding: '14px 16px',
-          minHeight: 80,
-          height: 80,                     // Fixed height to match LevelCard
-          overflow: 'hidden',             // Prevent overflow
+          minHeight: 80,                  // Only minHeight, no fixed height
+          overflow: 'hidden',
           transition: 'box-shadow .15s ease, transform .05s ease',
           boxShadow: hover ? '0 .65rem 1.25rem rgba(0,0,0,.08)' : '0 .25rem .5rem rgba(0,0,0,.04)',
           transform: hover ? 'translateY(-1px)' : 'none',
@@ -47,7 +46,6 @@ const GroupCard = ({ group, onClick, studentsCount }) => {
           >
             🏷️
           </div>
-
           {/* Texto */}
           <div className="min-w-0 flex-grow-1">
             <div className="fw-semibold text-truncate" style={{ fontSize: 16 }}>
@@ -57,13 +55,23 @@ const GroupCard = ({ group, onClick, studentsCount }) => {
               Ver estudiantes{typeof studentsCount === 'number' ? ` · ${studentsCount}` : ''}
             </div>
           </div>
-
           {/* caret a la derecha */}
           <div className="ms-auto text-muted" aria-hidden style={{ fontSize: 18, opacity: .7 }}>
             ›
           </div>
         </div>
       </div>
+      <style>{`
+        @media (max-width: 576px) {
+          .group-card {
+            min-height: 56px !important;
+            padding: 10px 10px !important;
+          }
+          .group-card .fw-semibold {
+            font-size: 15px !important;
+          }
+        }
+      `}</style>
     </button>
   );
 };
