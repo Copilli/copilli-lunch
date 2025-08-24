@@ -46,8 +46,8 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport, searchHideAt 
   return (
     <nav className="navbar navbar-expand-md navbar-light bg-light border-bottom shadow-sm mb-3 mb-md-4">
       <div className="container-fluid">
-        {/* Brand / Inicio */}
-        <button className="btn btn-outline-primary me-2" onClick={handleHome} style={{ marginBottom: '0.5rem' }}>
+        {/* Brand / Inicio - only for mobile */}
+        <button className="btn btn-outline-primary d-md-none me-2" onClick={handleHome} style={{ marginBottom: '0.5rem' }}>
           Inicio
         </button>
 
@@ -102,8 +102,12 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport, searchHideAt 
 
           {/* ======== DESKTOP (≥ md): layout en línea ======== */}
           <div className="d-none d-md-flex align-items-center w-100">
+            {/* Brand / Inicio - desktop */}
+            <button type="button" className="btn btn-outline-primary" onClick={handleHome}>
+              Inicio
+            </button>
             {/* Izquierda: navegación */}
-            <div className="btn-group me-2" role="group" aria-label="Navegación principal">
+            <div className="btn-group ms-2 me-2" role="group" aria-label="Navegación principal">
               {user?.role === 'admin' && (
                 <>
                   <button type="button" className="btn btn-outline-secondary" onClick={goPayments}>
@@ -123,15 +127,15 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport, searchHideAt 
               </button>
             )}
 
-            {/* Buscador centrado: se oculta en desktop cuando la ventana es angosta (antes del colapso) */}
+            {/* Buscador centrado: add me-2 for spacing */}
             {children && (
-              <div className="flex-grow-1 topnav-search-desktop" style={{ maxWidth: 800 }}>
+              <div className="flex-grow-1 topnav-search-desktop me-2" style={{ maxWidth: 800 }}>
                 {children}
               </div>
             )}
 
             {/* Logout a la derecha */}
-            <div className="ms-auto">
+            <div>
               <button type="button" className="btn btn-outline-danger" onClick={handleLogout}>
                 Cerrar sesión
               </button>

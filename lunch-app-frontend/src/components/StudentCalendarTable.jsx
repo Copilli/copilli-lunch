@@ -71,15 +71,18 @@ const StudentCalendarTable = ({
       border: '1px solid #e5e7eb',
       borderRadius: 8,
       overflow: 'hidden',
+      width: '100%', // Ensure wrapper fills parent
     },
     scrollX: {
       overflowX: 'auto',
       WebkitOverflowScrolling: 'touch',
       overscrollBehaviorX: 'contain',
+      width: '100%', // Ensure scroll area fills parent
     },
     table: {
       minWidth: 980, // fuerza scroll horizontal y asegura barra visible
       position: 'relative',
+      width: '100%', // Table fills scroll area
     },
     thDay: {
       whiteSpace: 'nowrap',
@@ -175,7 +178,6 @@ const StudentCalendarTable = ({
                     >
                       {student.name}
                     </td>
-
                     {days.map(d => {
                       const dayStr   = String(d).padStart(2, '0');
                       const monthStr = String(month).padStart(2, '0');
@@ -223,17 +225,31 @@ const StudentCalendarTable = ({
         .calendar-scroll-x {
           -webkit-overflow-scrolling: touch;
           overscroll-behavior-x: contain;
-          scroll-snap-type: x proximity; /* anclajes suaves al deslizar */
+          scroll-snap-type: x proximity;
+          width: 100%;
         }
-
+        .calendar-table {
+          min-width: 980px;
+          width: 100%;
+        }
         /* Sombra en la columna fija para marcar el "corte" visual */
         .calendar-table th:first-child,
         .calendar-table td:first-child {
           box-shadow: 3px 0 6px rgba(0,0,0,.06);
         }
-
+        /* Sticky column for Alumno */
+        .calendar-table th:first-child,
+        .calendar-table td:first-child {
+          position: sticky;
+          left: 0;
+          background: #fff;
+          z-index: 10;
+        }
         /* Compacto en pantallas pequeñas: 1 renglón por alumno */
         @media (max-width: 576px) {
+          .calendar-table {
+            min-width: 600px; /* Reduce min-width for mobile */
+          }
           .calendar-table thead th {
             font-size: 11px;
             padding: 4px 6px;
