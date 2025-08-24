@@ -217,7 +217,7 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
         </div>
       )}
 
-      <div className="card mt-4">
+      <div className="card mt-4 student-details-card">
         <div className="card-header d-flex justify-content-between align-items-center">
           <h4 className="mb-0">Detalle del alumno</h4>
           <button className="btn btn-outline-secondary btn-sm" onClick={onClose}>Cerrar</button>
@@ -388,7 +388,7 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
         }}
       />
 
-      <div className="card mt-4">
+      <div className="card mt-4 student-details-card">
         <div className="card-body">
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h5 className="mb-0">Historial de movimientos</h5>
@@ -416,6 +416,27 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
           )}
         </div>
       </div>
+      <style>{`
+        @media (max-width: 576px) {
+          .student-details-card {
+            padding: 8px !important;
+            font-size: 14px !important;
+          }
+          .student-details-card .card-header,
+          .student-details-card .card-body {
+            padding: 8px !important;
+          }
+          .student-details-card img {
+            width: 60px !important;
+            height: 60px !important;
+          }
+          .student-details-card input,
+          .student-details-card select {
+            font-size: 13px !important;
+            padding: 6px !important;
+          }
+        }
+      `}</style>
     </>
   );
 };

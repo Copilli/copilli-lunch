@@ -142,9 +142,9 @@ const StudentCalendarTable = ({
     <>
       <CalendarLegend />
 
-      {/* Solo el grid de días scrollea en X; la columna Alumno queda fija */}
-      <div style={styles.wrap}>
-        <div style={styles.scrollX} className="table-responsive calendar-scroll-x">
+      {/* Responsive scroll wrapper */}
+      <div style={{ ...styles.wrap, width: '100%', overflowX: 'auto' }}>
+        <div style={{ ...styles.scrollX, width: '100%' }} className="calendar-scroll-x">
           <table className="table table-bordered table-sm text-center mb-0 calendar-table" style={styles.table}>
             <thead className="table-light">
               <tr>
@@ -227,6 +227,7 @@ const StudentCalendarTable = ({
           overscroll-behavior-x: contain;
           scroll-snap-type: x proximity;
           width: 100%;
+          overflow-x: auto;
         }
         .calendar-table {
           min-width: 980px;
@@ -245,10 +246,25 @@ const StudentCalendarTable = ({
           background: #fff;
           z-index: 10;
         }
+        /* Show scrollbar always for better UX */
+        .calendar-scroll-x {
+          scrollbar-width: thin;
+          scrollbar-color: #bbb #eee;
+        }
+        .calendar-scroll-x::-webkit-scrollbar {
+          height: 8px;
+        }
+        .calendar-scroll-x::-webkit-scrollbar-thumb {
+          background: #bbb;
+          border-radius: 4px;
+        }
+        .calendar-scroll-x::-webkit-scrollbar-track {
+          background: #eee;
+        }
         /* Compacto en pantallas pequeñas: 1 renglón por alumno */
         @media (max-width: 576px) {
           .calendar-table {
-            min-width: 600px; /* Reduce min-width for mobile */
+            min-width: 480px !important; /* Reduce min-width for mobile */
           }
           .calendar-table thead th {
             font-size: 11px;
@@ -261,6 +277,12 @@ const StudentCalendarTable = ({
             padding: 0;
             font-size: 11px;
             white-space: nowrap;
+          }
+          .calendar-table th:first-child,
+          .calendar-table td:first-child {
+            min-width: 120px !important;
+            max-width: 140px !important;
+            width: 120px !important;
           }
         }
       `}</style>
