@@ -1,93 +1,260 @@
+/* =========================
+   Reset/Ajustes globales
+   ========================= */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body { height: auto; }
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+  color-scheme: light;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
+/* Quita el flex-centering del boilerplate (causaba cortes con .row g-3) */
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
-  background-color: #fdfdfd;
+  display: block;         /* << NO flex aquí */
+  min-height: auto;       /* evitar alturas forzadas */
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans",
+               "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";
+  background-color: #ffffff;
+  color: #213547;
 }
 
+/* Enlaces por si no usas .btn-link */
+a { color: #0d6efd; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Evita que estilos globales de "button" pisen a Bootstrap.
+   Sólo estiliza botones "custom" si tienen clase .tile-button (ver abajo) */
+button:not(.tile-button):not(.btn) {
+  /* sin estilos extra */
+}
+
+/* Imágenes responsivas por defecto */
+img { max-width: 100%; display: block; }
+
+/* =========================
+   Layout app
+   ========================= */
 .app-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  padding: 1.25rem;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* Bootstrap usa márgenes negativos en .row cuando hay g-*.
+   Esto agrega un pequeño padding superior para evitar "morder" el primer card. */
+.app-container .row.g-3,
+.container .row.g-3 {
+  padding-top: 4px;  /* rompe el colapso de márgenes */
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
+/* =========================
+   Tarjetas unificadas (Level & Group)
+   ========================= */
+/* Botón raíz que envuelve al tile */
+.tile-button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 0;                /* evita padding heredado */
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+/* Mantén accesibilidad de foco */
+.tile-button:focus-visible {
+  outline: 4px solid rgba(13,110,253,.25);
+  outline-offset: 2px;
+  border-radius: 16px; /* coincide con .tile */
 }
 
-.slide-panel {
-  position: fixed;
+/* Caja visual del card */
+.tile {
+  position: relative;
+  display: block;
+  width: 100%;
+  background: #fff;
+  border: 1px solid #eef1f5;
+  border-radius: 16px;
+  padding: 14px 16px;
+  min-height: 88px;          /* altura común para ambos */
+  box-shadow: 0 .25rem .5rem rgba(0,0,0,.04);
+  transition: box-shadow .15s ease, transform .05s ease;
+  overflow: hidden;          /* por si algo quisiera sobresalir */
+}
+
+/* Hover/active */
+.tile-button:hover .tile {
+  transform: translateY(-1px);
+  box-shadow: 0 .65rem 1.25rem rgba(0,0,0,.08);
+}
+.tile-button:active .tile {
+  transform: translateY(0);
+}
+
+/* Contenido interno en fila */
+.tile-content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 56px;
+}
+
+/* Icono redondo a la izquierda */
+.tile-icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(13,110,253,.12);
+  color: #0d6efd;
+  font-size: 22px;
+  line-height: 1;
+}
+
+/* Texto: permite truncado correcto en una fila flex */
+.tile-text {
+  flex: 1 1 auto;
+  min-width: 0;                 /* necesario para text-overflow en flex */
+}
+.tile-title {
+  font-weight: 600;
+  font-size: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tile-subtitle {
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+/* Caret a la derecha */
+.tile-caret {
+  margin-left: auto;
+  color: #6c757d;
+  opacity: .7;
+  font-size: 18px;
+}
+
+/* =========================
+   Responsivo suave
+   ========================= */
+@media (min-width: 768px) {
+  .tile { min-height: 96px; }
+}
+
+/* =========================
+   Clases semánticas
+   ========================= */
+/* Aplica estas clases en tus componentes:
+   - LevelCard root:   className="tile-button level-card"
+   - GroupCard root:   className="tile-button group-card"
+   - contenedor visual: <div className="tile">
+   - fila interna:     <div className="tile-content">
+   - icono:            <div className="tile-icon">…</div>
+   - texto:            <div className="tile-text"><div class="tile-title">…</div><div class="tile-subtitle">…</div></div>
+   - caret:            <div className="tile-caret">›</div>
+*/
+
+/* Si quieres distinguir visualmente level/group a futuro: */
+.level-card .tile-icon { background: rgba(25,135,84,.12); color: #198754; }   /* ejemplo */
+.group-card .tile-icon { background: rgba(13,110,253,.12); color: #0d6efd; }  /* ejemplo */
+
+/* =========================================================
+   ⬇⬇⬇  SECCIÓN NUEVA: Calendario (tabla horizontal sticky)
+   ========================================================= */
+
+/* Viewport del calendario: encierra la tabla y evita que el body reciba el overflow */
+.calendar-wrap {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  background: #fff;
+}
+
+/* Contenedor que RECEPCIONA el scroll horizontal */
+.calendar-scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  width: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: #bbb #eee;
+}
+.calendar-scroll-x::-webkit-scrollbar { height: 8px; }
+.calendar-scroll-x::-webkit-scrollbar-thumb {
+  background: #bbb;
+  border-radius: 4px;
+}
+.calendar-scroll-x::-webkit-scrollbar-track { background: #eee; }
+
+/* Tabla del calendario:
+   - importante width: max-content para que mida lo que requiere su contenido */
+.calendar-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: max-content;        /* clave para dejar que el contenedor haga scroll */
+}
+
+/* Encabezado de días sticky */
+.calendar-table thead th {
+  position: sticky;
   top: 0;
-  right: 0;
-  width: 400px;
-  height: 100%;
-  background: white;
-  box-shadow: -2px 0 6px rgba(0,0,0,0.2);
-  transform: translateX(100%);
-  transition: transform 0.3s ease-in-out;
-  z-index: 1050;
-  overflow-y: auto;
+  z-index: 3;
+  background: #f8f9fa;
+  white-space: nowrap;
 }
 
-.slide-panel.show {
-  transform: translateX(0);
+/* Columna fija "Alumno" sticky + sombra de corte */
+.calendar-table th:first-child,
+.calendar-table td:first-child {
+  position: sticky;
+  left: 0;
+  background: #fff;
+  z-index: 10;
+  box-shadow: 3px 0 6px rgba(0,0,0,.06);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Celda de día: ancho controlado por clase (el JSX define minWidth también) */
+.calendar-day-cell {
+  height: 30px;
+  line-height: 30px;
+  padding: 0;
+  font-size: 12px;
+  vertical-align: middle;
+  user-select: none;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* Compacto en pantallas pequeñas */
+@media (max-width: 576px) {
+  .calendar-table thead th {
+    font-size: 11px;
+    padding: 4px 6px;
+  }
+  .calendar-day-cell {
+    height: 26px;
+    line-height: 26px;
+    font-size: 11px;
+  }
+  .calendar-table th:first-child,
+  .calendar-table td:first-child {
+    min-width: 120px !important;
+    max-width: 140px !important;
+    width: 120px !important;
+  }
 }

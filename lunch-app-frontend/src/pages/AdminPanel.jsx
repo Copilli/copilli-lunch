@@ -198,16 +198,20 @@ const AdminPanel = ({ setUser }) => {
               No hay grupos en este nivel.
             </div>
           ) : (
-            <div className="row g-3">
-              {groupsInLevel.map((group) => (
-                <div key={group} className="col-12 col-sm-6 col-md-4">
-                  <GroupCard group={group} onClick={setSelectedGroup} />
-                </div>
-              ))}
+            <div className="row gx-3 gy-3">{/* ← antes: g-3 */}
+              {groupsInLevel.map((group) => {
+                const count = students.filter(
+                  s => s.group.level === selectedLevel && s.group.name === group
+                ).length;
+                return (
+                  <div key={group} className="col-12 col-sm-6 col-md-4">
+                    <GroupCard group={group} studentsCount={count} onClick={setSelectedGroup} />
+                  </div>
+                );
+              })}
             </div>
           )}
 
-          {/* Botón al final */}
           <div className="d-flex justify-content-start">
             <button onClick={() => setSelectedLevel(null)} className="btn btn-secondary mt-3">
               ← Volver a niveles

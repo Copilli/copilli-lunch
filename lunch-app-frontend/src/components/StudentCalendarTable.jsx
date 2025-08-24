@@ -66,75 +66,22 @@ const StudentCalendarTable = ({
     return periodLogs || {};
   }, [periodLogs]);
 
-  const styles = {
-    wrap: {
-      border: '1px solid #e5e7eb',
-      borderRadius: 8,
-      overflow: 'hidden',
-      width: '100%', // Ensure wrapper fills parent
-    },
-    scrollX: {
-      overflowX: 'auto',
-      WebkitOverflowScrolling: 'touch',
-      overscrollBehaviorX: 'contain',
-      width: '100%', // Ensure scroll area fills parent
-    },
-    table: {
-      minWidth: 980, // fuerza scroll horizontal y asegura barra visible
-      position: 'relative',
-      width: '100%', // Table fills scroll area
-    },
-    thDay: {
-      whiteSpace: 'nowrap',
-      padding: '6px 8px',
-      fontSize: 12,
-      position: 'sticky',
-      top: 0,
-      zIndex: 3,
-      background: '#f8f9fa',
-    },
-    thAlumno: {
-      position: 'sticky',
-      left: 0,
-      zIndex: 4,
-      background: '#f8f9fa',
-      width: 220,
-      minWidth: 180,
-      maxWidth: 260,
-    },
-    tdAlumno: {
-      position: 'sticky',
-      left: 0,
-      zIndex: 2,
-      background: '#fff',
-      width: 220,
-      minWidth: 180,
-      maxWidth: 260,
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-    },
-    dayCell: {
-      width: 30,
-      minWidth: 30,
-      height: 30,
-      padding: 0,
-      verticalAlign: 'middle',
-      lineHeight: '30px',
-      fontSize: 12,
-      userSelect: 'none',
-    },
-    legendDot: (bg) => ({
-      width: 16, height: 16, backgroundColor: bg, border: '1px solid #ccc', display: 'inline-block', marginRight: 6
-    }),
+  // tamaños base (coordinados con CSS responsive)
+  const CELL_W = 30;        // ancho base de cada día
+  const FIRST_COL_W = 220;  // ancho base columna "Alumno"
+
+  // minWidth dinámico para forzar/permitir la barra horizontal
+  const tableDynamicStyle = {
+    minWidth: FIRST_COL_W + (days.length * CELL_W),
+    width: 'max-content',
   };
 
   const CalendarLegend = () => (
     <div className="d-flex justify-content-start align-items-center gap-3 mb-2 flex-wrap">
-      <span><span style={styles.legendDot('#c1f0c1')} />Periodo activo</span>
-      <span><span style={styles.legendDot('#add8e6')} />Uso normal</span>
-      <span><span style={styles.legendDot('#ffb3b3')} />Consumo con deuda</span>
-      <span><span style={styles.legendDot('#b0b0b0')} />Día sin clases</span>
+      <span><span style={{width:16,height:16,background:'#c1f0c1',border:'1px solid #ccc',display:'inline-block',marginRight:6}} />Periodo activo</span>
+      <span><span style={{width:16,height:16,background:'#add8e6',border:'1px solid #ccc',display:'inline-block',marginRight:6}} />Uso normal</span>
+      <span><span style={{width:16,height:16,background:'#ffb3b3',border:'1px solid #ccc',display:'inline-block',marginRight:6}} />Consumo con deuda</span>
+      <span><span style={{width:16,height:16,background:'#b0b0b0',border:'1px solid #ccc',display:'inline-block',marginRight:6}} />Día sin clases</span>
     </div>
   );
 
@@ -142,15 +89,21 @@ const StudentCalendarTable = ({
     <>
       <CalendarLegend />
 
-      {/* Responsive scroll wrapper */}
-      <div style={{ ...styles.wrap, width: '100%', overflowX: 'auto' }}>
-        <div style={{ ...styles.scrollX, width: '100%' }} className="calendar-scroll-x">
-          <table className="table table-bordered table-sm text-center mb-0 calendar-table" style={styles.table}>
+      {/* Viewport + contenedor con scroll horizontal */}
+      <div className="calendar-wrap">
+        <div className="calendar-scroll-x">
+          <table
+            className="table table-bordered table-sm text-center mb-0 calendar-table"
+            style={tableDynamicStyle}
+          >
             <thead className="table-light">
               <tr>
-                <th style={{ ...styles.thDay, ...styles.thAlumno, textAlign: 'left' }}>Alumno</th>
+                {/* th "Alumno" sticky (CSS global) */}
+                <th className="text-start" style={{minWidth: FIRST_COL_W}}>
+                  Alumno
+                </th>
                 {days.map(d => (
-                  <th key={d} style={styles.thDay}>{d}</th>
+                  <th key={d}>{d}</th>
                 ))}
               </tr>
             </thead>
@@ -171,13 +124,14 @@ const StudentCalendarTable = ({
 
                 return (
                   <tr key={student.studentId}>
+                    {/* Columna sticky "Alumno" (ancho controlado por CSS + minWidth de arriba) */}
                     <td
                       className="fw-bold text-start"
-                      style={styles.tdAlumno}
                       title={`${student.name} (${student.studentId})`}
                     >
                       {student.name}
                     </td>
+
                     {days.map(d => {
                       const dayStr   = String(d).padStart(2, '0');
                       const monthStr = String(month).padStart(2, '0');
@@ -204,7 +158,8 @@ const StudentCalendarTable = ({
                       return (
                         <td
                           key={d}
-                          style={{ ...styles.dayCell, backgroundColor: bg }}
+                          className="calendar-day-cell"
+                          style={{ backgroundColor: bg, minWidth: CELL_W, width: CELL_W }}
                           title={title}
                           aria-label={title}
                         >
@@ -219,73 +174,6 @@ const StudentCalendarTable = ({
           </table>
         </div>
       </div>
-
-      {/* Estilos del scroll/barra y compactación móvil */}
-      <style>{`
-        .calendar-scroll-x {
-          -webkit-overflow-scrolling: touch;
-          overscroll-behavior-x: contain;
-          scroll-snap-type: x proximity;
-          width: 100%;
-          overflow-x: auto;
-        }
-        .calendar-table {
-          min-width: 980px;
-          width: 100%;
-        }
-        /* Sombra en la columna fija para marcar el "corte" visual */
-        .calendar-table th:first-child,
-        .calendar-table td:first-child {
-          box-shadow: 3px 0 6px rgba(0,0,0,.06);
-        }
-        /* Sticky column for Alumno */
-        .calendar-table th:first-child,
-        .calendar-table td:first-child {
-          position: sticky;
-          left: 0;
-          background: #fff;
-          z-index: 10;
-        }
-        /* Show scrollbar always for better UX */
-        .calendar-scroll-x {
-          scrollbar-width: thin;
-          scrollbar-color: #bbb #eee;
-        }
-        .calendar-scroll-x::-webkit-scrollbar {
-          height: 8px;
-        }
-        .calendar-scroll-x::-webkit-scrollbar-thumb {
-          background: #bbb;
-          border-radius: 4px;
-        }
-        .calendar-scroll-x::-webkit-scrollbar-track {
-          background: #eee;
-        }
-        /* Compacto en pantallas pequeñas: 1 renglón por alumno */
-        @media (max-width: 576px) {
-          .calendar-table {
-            min-width: 480px !important; /* Reduce min-width for mobile */
-          }
-          .calendar-table thead th {
-            font-size: 11px;
-            padding: 4px 6px;
-            white-space: nowrap;
-          }
-          .calendar-table td {
-            height: 26px;
-            line-height: 26px;
-            padding: 0;
-            font-size: 11px;
-            white-space: nowrap;
-          }
-          .calendar-table th:first-child,
-          .calendar-table td:first-child {
-            min-width: 120px !important;
-            max-width: 140px !important;
-            width: 120px !important;
-          }
-        }
-      `}</style>
     </>
   );
 };
