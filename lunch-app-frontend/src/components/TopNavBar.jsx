@@ -62,10 +62,6 @@ const TopNavBar = ({ children, setUser, onImportClick, showImport }) => {
           {/* ======== MÓVIL (≤ md): botones a ancho completo, espaciados uniformes ======== */}
           <div className="d-md-none w-100">
             <div className="d-grid gap-2">
-              <button className="btn btn-outline-primary w-100" onClick={handleHome}>
-                Inicio
-              </button>
-
               {user?.role === 'admin' && (
                 <>
                   <button className="btn btn-outline-secondary w-100" onClick={goPayments}>

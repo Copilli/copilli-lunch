@@ -20,7 +20,6 @@ const GroupCard = ({ group, onClick, studentsCount }) => {
         transition: 'box-shadow .15s ease, transform .05s ease',
         transform: hover ? 'translateY(-1px)' : 'none',
         cursor: 'pointer',
-        marginBottom: '1rem'
       }}
       aria-label={`Grupo ${group}`}
     >
@@ -34,7 +33,7 @@ const GroupCard = ({ group, onClick, studentsCount }) => {
             background: softBg,
             color: accent,
             fontSize: 20,
-            flex: '0 0 44px'
+            flex: '0 0 44px',
           }}
           aria-hidden
         >
@@ -44,15 +43,15 @@ const GroupCard = ({ group, onClick, studentsCount }) => {
         {/* Texto */}
         <div className="min-w-0 flex-grow-1">
           <div className="fw-semibold text-truncate mb-1">Grupo {group}</div>
-          {typeof studentsCount === 'number' && (
-            <div className="text-muted small">
-              {studentsCount} alumno{studentsCount !== 1 ? 's' : ''}
-            </div>
-          )}
+          <div className="text-muted small text-truncate">
+            Ver estudiantes{typeof studentsCount === 'number' ? ` · ${studentsCount}` : ''}
+          </div>
         </div>
 
         {/* Chevron */}
-        <div className="text-muted" aria-hidden style={{ fontSize: 18 }}>›</div>
+        <div className="text-muted" aria-hidden style={{ fontSize: 18 }}>
+          ›
+        </div>
       </div>
     </div>
   );
