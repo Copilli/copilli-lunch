@@ -213,7 +213,7 @@ const OficinaPanel = ({ setUser }) => {
             </div>
           </div>
 
-          <button onClick={() => setSelectedGroup(null)} style={{ marginTop: '1rem' }}>
+          <button className="btn btn-secondary mt-3" onClick={() => setSelectedGroup(null)}>
             ← Volver a grupos
           </button>
         </div>
