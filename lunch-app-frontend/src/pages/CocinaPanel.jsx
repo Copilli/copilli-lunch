@@ -1,3 +1,4 @@
+// src/pages/CocinaPanel.jsx
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
@@ -11,12 +12,21 @@ const CocinaPanel = ({ setUser }) => {
   const [search, setSearch] = useState('');
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
+
+  // Vista por búsqueda directa (solo para ese caso)
   const [selectedStudent, setSelectedStudent] = useState(null);
+
+  // Estado para mensajes
   const [formError, setFormError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Estados del modal de confirmación
   const [confirming, setConfirming] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Alumno sobre el que se hará la confirmación (separado de la vista)
+  const [pendingStudent, setPendingStudent] = useState(null);
 
   const showError = (msg) => {
     setFormError(msg);
@@ -72,6 +82,7 @@ const CocinaPanel = ({ setUser }) => {
     return 'sin-fondos';
   };
 
+  // Click en tarjeta (NO altera la vista principal; solo prepara el modal)
   const handleClick = (student) => {
     const status = getStatus(student);
     const hasTokens = student.tokens > 0;
@@ -86,7 +97,7 @@ const CocinaPanel = ({ setUser }) => {
       return;
     }
 
-    setSelectedStudent(student);
+    setPendingStudent(student);
     setConfirmMessage(
       hasTokens
         ? `¿Deseas descontar un token? Total final: ${student.tokens - 1}`
@@ -95,40 +106,52 @@ const CocinaPanel = ({ setUser }) => {
     setConfirming(true);
   };
 
+  const closeModal = () => {
+    setConfirming(false);
+    setSubmitting(false);
+    setConfirmMessage('');
+    setPendingStudent(null);     // ⚠️ importante: no tocar selectedStudent
+  };
+
   const handleConfirm = async () => {
-    if (!selectedStudent?._id) {
+    if (!pendingStudent?._id) {
       showError('Estudiante no seleccionado');
+      closeModal();
       return;
     }
 
     setSubmitting(true);
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${import.meta.env.VITE_API_URL}/students/${selectedStudent._id}/use`, {
-        performedBy: localStorage.getItem('username') || 'cocina'
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/students/${pendingStudent._id}/use`,
+        { performedBy: localStorage.getItem('username') || 'cocina' },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
       showSuccess('Registro guardado');
       await fetchStudents();
+
+      // Si quieres “limpiar” la vista de búsqueda directa al éxito, puedes hacerlo;
+      // si prefieres no tocarla, comenta las dos líneas de abajo.
       setSelectedStudent(null);
       setSearch('');
     } catch (err) {
       console.error(err);
       const backendError = err?.response?.data?.error;
       showError(backendError || 'Error al registrar consumo');
+      // En error solo cerramos el modal y NO alteramos la vista bajo él.
     } finally {
-      setSubmitting(false);
-      setConfirming(false);
+      closeModal();
     }
   };
 
+  // Colores por estado (cocina)
   const statusColor = {
-    'periodo-activo': '#c6f6c6',
-    'con-fondos': '#cce5ff',
-    'sin-fondos': '#f8d7da',
-    'bloqueado': '#c2c2c2'
+    'periodo-activo': '#c6f6c6', // verde
+    'con-fondos': '#cce5ff',     // azul
+    'sin-fondos': '#f8d7da',     // rojo
+    'bloqueado': '#c2c2c2'       // gris
   };
 
   const statusLabels = {
@@ -140,51 +163,67 @@ const CocinaPanel = ({ setUser }) => {
 
   return (
     <div className="app-container container py-4">
-      <h2 className='text-center'>Panel de Cocina</h2>
+      <h2 className="section-title">Panel de Cocina</h2>
+
       <TopNavBar setUser={setUser}>
         <SearchBar
           search={search}
           setSearch={setSearch}
           students={students}
           onSelect={(student) => {
+            // La vista de un solo alumno solo se activa por búsqueda directa
             setSelectedLevel(student.group.level);
             setSelectedGroup(student.group.name);
-              setSelectedStudent(student);
+            setSelectedStudent(student);
           }}
         />
       </TopNavBar>
 
+      {/* Alerts */}
       {formError && (
-        <div className="alert alert-danger position-fixed top-0 start-50 translate-middle-x mt-3 z-3 text-center" role="alert" style={{ zIndex: 9999 }}>
+        <div
+          className="alert alert-danger position-fixed top-0 start-50 translate-middle-x mt-3 z-3 text-center"
+          role="alert"
+          style={{ zIndex: 9999 }}
+        >
           {formError}
         </div>
       )}
 
       {successMsg && (
-        <div className="alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3 z-3 text-center" role="alert" style={{ zIndex: 9999 }}>
+        <div
+          className="alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3 z-3 text-center"
+          role="alert"
+          style={{ zIndex: 9999 }}
+        >
           {successMsg}
         </div>
       )}
 
+      {/* Confirm modal */}
       {confirming && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div
+          className="modal show d-block"
+          tabIndex="-1"
+          role="dialog"
+          aria-modal="true"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+        >
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">¿Confirmas esta acción?</h5>
-                <button type="button" className="btn-close" onClick={() => {
-                  setConfirming(false);
-                  setSelectedStudent(null);
-                }}></button>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={closeModal}
+                />
               </div>
               <div className="modal-body">
                 <p>{confirmMessage}</p>
               </div>
               <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={() => {
-                  setConfirming(false);
-                  setSelectedStudent(null);
-                }}>
+                <button className="btn btn-secondary" onClick={closeModal}>
                   Cancelar
                 </button>
                 <button className="btn btn-primary" onClick={handleConfirm} disabled={submitting}>
@@ -196,44 +235,31 @@ const CocinaPanel = ({ setUser }) => {
         </div>
       )}
 
+      {/* Vista seleccionada por búsqueda directa */}
       {selectedStudent ? (
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>
+        <div className="d-flex justify-content-center mt-4">
           <div
             onClick={() => handleClick(selectedStudent)}
-            style={{
-              backgroundColor: statusColor[getStatus(selectedStudent)],
-              padding: '1rem',
-              borderRadius: 8,
-              cursor: 'pointer',
-              width: '200px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              textAlign: 'center'
-            }}
+            className="student-tile"
+            style={{ backgroundColor: statusColor[getStatus(selectedStudent)] }}
           >
             <img
-              src={selectedStudent.photoUrl}
+              className="student-photo"
+              src={selectedStudent.photoUrl || 'https://via.placeholder.com/88'}
               alt={selectedStudent.name}
-              style={{
-                width: '80px',
-                height: '80px',
-                borderRadius: '50%',
-                objectFit: 'cover',
-                marginBottom: '0.5rem'
-              }}
             />
             <strong>{selectedStudent.name}</strong>
-            <p>ID: {selectedStudent.studentId}</p>
-            <p>Tokens: {selectedStudent.tokens}</p>
-            <p>Status: {statusLabels[getStatus(selectedStudent)]}</p>
+            <p className="mb-1">ID: {selectedStudent.studentId}</p>
+            <p className="mb-1">Tokens: {selectedStudent.tokens}</p>
+            <p className="mb-0">Status: {statusLabels[getStatus(selectedStudent)]}</p>
           </div>
         </div>
       ) : (
         <>
+          {/* Niveles */}
           {!search && !selectedLevel && (
-            <div className="row gx-3 gy-3 justify-content-center">
-              {levels.map(level => (
+            <div className="row gx-3 gy-3 card-grid">
+              {levels.map((level) => (
                 <div key={level} className="col-12 col-sm-6 col-md-4">
                   <LevelCard level={level} onClick={setSelectedLevel} />
                 </div>
@@ -241,9 +267,10 @@ const CocinaPanel = ({ setUser }) => {
             </div>
           )}
 
+          {/* Grupos */}
           {selectedLevel && !selectedGroup && (
             <div className="mt-3">
-              <div className="pb-2">
+              <div className="pb-2 section-title">
                 <h3 className="mb-0">Grupos en {selectedLevel}</h3>
                 <div className="text-muted small">
                   {groupsInLevel.length} grupo{groupsInLevel.length !== 1 ? 's' : ''}
@@ -255,14 +282,19 @@ const CocinaPanel = ({ setUser }) => {
                   No hay grupos en este nivel.
                 </div>
               ) : (
-                <div className="row gx-3 gy-3 justify-content-center">{/* ← antes: g-3 */}
+                <div className="row gx-3 gy-3 card-grid">
                   {groupsInLevel.map((group) => {
                     const count = students.filter(
-                      s => s.group.level === selectedLevel && s.group.name === group
+                      (s) => s.group.level === selectedLevel && s.group.name === group
                     ).length;
+
                     return (
                       <div key={group} className="col-12 col-sm-6 col-md-4">
-                        <GroupCard group={group} studentsCount={count} onClick={setSelectedGroup} />
+                        <GroupCard
+                          group={group}
+                          studentsCount={count}
+                          onClick={setSelectedGroup}
+                        />
                       </div>
                     );
                   })}
@@ -277,51 +309,50 @@ const CocinaPanel = ({ setUser }) => {
             </div>
           )}
 
+          {/* Estudiantes */}
           {selectedGroup && (
-            <div>
-              <h3>Estudiantes en {selectedLevel} - Grupo {selectedGroup}</h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-                {studentsInGroup.map(student => {
+            <div className="mt-3">
+              <div className="pb-2 section-title">
+                <h3 className="mb-0">
+                  Estudiantes en {selectedLevel} — Grupo {selectedGroup}
+                </h3>
+              </div>
+
+              <div className="row gx-3 gy-3 card-grid">
+                {studentsInGroup.map((student) => {
                   const status = getStatus(student);
+                  const disabled = status === 'periodo-activo';
+
                   return (
                     <div
                       key={student.studentId}
-                      onClick={() => handleClick(student)}
-                      style={{
-                        backgroundColor: statusColor[status],
-                        padding: '1rem',
-                        borderRadius: 8,
-                        cursor: status === 'periodo-activo' ? 'default' : 'pointer',
-                        width: '200px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        textAlign: 'center'
-                      }}
+                      className="col-12 col-sm-6 col-md-4 col-lg-3 d-flex justify-content-center"
                     >
-                      <img
-                        src={student.photoUrl}
-                        alt={student.name}
-                        style={{
-                          width: '80px',
-                          height: '80px',
-                          borderRadius: '50%',
-                          objectFit: 'cover',
-                          marginBottom: '0.5rem'
-                        }}
-                      />
-                      <strong>{student.name}</strong>
-                      <p>ID: {student.studentId}</p>
-                      <p>Tokens: {student.tokens}</p>
-                      <p>Status: {statusLabels[status]}</p>
+                      <div
+                        className="student-tile"
+                        style={{ backgroundColor: statusColor[status], cursor: disabled ? 'default' : 'pointer' }}
+                        onClick={() => !disabled && handleClick(student)}
+                      >
+                        <img
+                          className="student-photo"
+                          src={student.photoUrl || 'https://via.placeholder.com/88'}
+                          alt={student.name}
+                        />
+                        <strong>{student.name}</strong>
+                        <p className="mb-1">ID: {student.studentId}</p>
+                        <p className="mb-1">Tokens: {student.tokens}</p>
+                        <p className="mb-0">Status: {statusLabels[status]}</p>
+                      </div>
                     </div>
                   );
                 })}
               </div>
 
-              <button onClick={() => setSelectedGroup(null)} style={{ marginTop: '1rem' }}>
-                ← Volver a grupos
-              </button>
+              <div className="d-flex justify-content-start">
+                <button onClick={() => setSelectedGroup(null)} className="btn btn-secondary mt-3">
+                  ← Volver a grupos
+                </button>
+              </div>
             </div>
           )}
         </>
