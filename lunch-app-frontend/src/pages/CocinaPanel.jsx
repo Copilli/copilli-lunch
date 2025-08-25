@@ -316,7 +316,7 @@ const CocinaPanel = ({ setUser }) => {
                 </h3>
               </div>
 
-              <div className="row gx-3 gy-3 card-grid">
+              <div className="row gx-3 gy-3 justify-content-center">
                 {studentsInGroup.map((student) => {
                   const status = getStatus(student);
                   const disabled = status === 'periodo-activo';
