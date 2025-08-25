@@ -13,8 +13,10 @@ const PRICE_PER_DAY = 35;   // solo display
 const StudentLunchActions = ({ student, onUpdate }) => {
   const [actionType, setActionType] = useState('tokens');
 
-  const [tokenAmountStr, setTokenAmountStr] = useState('1');
+  // Input numérico como string (permite borrar/editar libremente)
+  const [tokenAmountStr, setTokenAmountStr] = useState('1'); // por defecto 1
   const tokenAmountNum = Number.parseInt(tokenAmountStr, 10) || 0;
+  const [tokenInputError, setTokenInputError] = useState('');
 
   const [reason, setReason] = useState('pago');
   const [note, setNote] = useState('');
@@ -27,7 +29,6 @@ const StudentLunchActions = ({ student, onUpdate }) => {
   const [consumptionDate, setConsumptionDate] = useState(null);
   const [consumptionReason, setConsumptionReason] = useState('');
   const [invalidDates, setInvalidDates] = useState([]);
-  const [tokenInputError, setTokenInputError] = useState('');
 
   const user = JSON.parse(localStorage.getItem('user'));
   const isAdmin = user?.role === 'admin';
@@ -35,7 +36,8 @@ const StudentLunchActions = ({ student, onUpdate }) => {
 
   const resetFields = () => {
     setActionType('tokens');
-    setTokenAmountStr('1');
+    setTokenAmountStr('1'); // volver a 1
+    setTokenInputError('');
     setReason('pago');
     setNote('');
     setStartDate(null);
@@ -54,14 +56,18 @@ const StudentLunchActions = ({ student, onUpdate }) => {
     }
   }, [student, isAdmin]);
 
+  // Cargar días inválidos y normalizarlos a medianoche
   useEffect(() => {
     const fetchInvalidDates = async () => {
       const token = localStorage.getItem('token');
       const res = await axios.get(`${API}/invalid-dates`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // si tu API ya regresa strings YYYY-MM-DD, puedes mapear directo: new Date(d)
-      setInvalidDates(res.data.map(d => new Date(d)));
+      const toMidnight = (d) => {
+        const raw = typeof d === 'string' ? d : d?.date;
+        return dayjs(raw).startOf('day').toDate();
+      };
+      setInvalidDates(res.data.map(toMidnight));
     };
     fetchInvalidDates();
   }, [API]);
@@ -76,10 +82,11 @@ const StudentLunchActions = ({ student, onUpdate }) => {
     setTimeout(() => setSuccessMsg(''), 3500);
   };
 
-  const isDateInvalid = (date) => {
-    if (!date) return false;
-    return invalidDates.some(d => dayjs(d).isSame(dayjs(date), 'day'));
-  };
+  // Helpers para invalid dates
+  const isInvalidDay = (date) =>
+    invalidDates.some(d => dayjs(d).isSame(dayjs(date), 'day'));
+  const filterValidDate = (date) => !isInvalidDay(date);
+  const dayClassName = (date) => (isInvalidDay(date) ? 'rdp-invalid-day' : undefined);
 
   const getValidDaysCount = (start, end) => {
     if (!start || !end) return 0;
@@ -87,13 +94,13 @@ const StudentLunchActions = ({ student, onUpdate }) => {
     let c = dayjs(start);
     const e = dayjs(end);
     while (c.isSameOrBefore(e, 'day')) {
-      if (!invalidDates.some(d => dayjs(d).isSame(c, 'day'))) valid++;
+      if (!isInvalidDay(c)) valid++;
       c = c.add(1, 'day');
     }
     return valid;
   };
 
-  // Totales para mostrar en confirmación
+  // Totales para confirmación
   const validDaysForPeriod = useMemo(
     () => getValidDaysCount(startDate, endDate),
     [startDate, endDate, invalidDates]
@@ -107,7 +114,6 @@ const StudentLunchActions = ({ student, onUpdate }) => {
     [validDaysForPeriod, reason]
   );
 
-  // ⬇️  Helper para cerrar modal SIEMPRE
   const closeModal = () => {
     setConfirming(false);
     setSubmitting(false);
@@ -121,7 +127,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
       if (actionType === 'tokens') {
         if (!isAdmin && reason !== 'pago') {
           showError('Solo los administradores pueden usar ese motivo.');
-          closeModal(); // cerrar modal en validación
+          closeModal();
           return;
         }
         if (tokenAmountNum <= 0) {
@@ -151,8 +157,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
         const amount = resp?.data?.paymentAmount;
         showSuccess(ticket ? `Pago registrado. Ticket: ${ticket} ($${amount})` : 'Tokens actualizados correctamente.');
 
-        // reset de campos relacionados
-        setTokenAmountStr('1');
+        setTokenAmountStr('1'); // vuelve a 1 tras éxito
         setNote('');
         onUpdate && onUpdate();
 
@@ -167,7 +172,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
           closeModal();
           return;
         }
-        if (isDateInvalid(startDate) || isDateInvalid(endDate)) {
+        if (isInvalidDay(startDate) || isInvalidDay(endDate)) {
           showError('La fecha de inicio o fin no puede ser un día inválido.');
           closeModal();
           return;
@@ -231,16 +236,12 @@ const StudentLunchActions = ({ student, onUpdate }) => {
         onUpdate && onUpdate();
       }
 
-      // Cerrar modal SIEMPRE tras procesar
       closeModal();
-
     } catch (err) {
       console.error(err);
       const backendError = err?.response?.data?.error || err?.response?.data?.message;
       showError(backendError || 'Error al registrar el cambio.');
-      // Cerrar modal también en error del backend
       closeModal();
-
     } finally {
       setSubmitting(false);
     }
@@ -248,7 +249,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
 
   const showConfirmation = () => {
     if (actionType === 'tokens') {
-      if (tokenAmountStr === '' || tokenInputError) {
+      if (!tokenAmountStr || tokenInputError || tokenAmountNum <= 0) {
         showError(tokenInputError || 'Especifica una cantidad válida de tokens.');
         return;
       }
@@ -312,16 +313,18 @@ const StudentLunchActions = ({ student, onUpdate }) => {
                 type="text"
                 className={`form-control ${tokenInputError ? 'is-invalid' : ''}`}
                 value={tokenAmountStr}
+                inputMode="numeric"
                 onChange={(e) => {
                   const v = e.target.value;
 
+                  // permitir vacío temporal para que el usuario pueda borrar y teclear
                   if (v === '') {
-                    // si el usuario borra todo, lo regresamos a "1"
-                    setTokenAmountStr('1');
-                    setTokenInputError('');
+                    setTokenAmountStr('');
+                    setTokenInputError('Especifica una cantidad de tokens.');
                     return;
                   }
 
+                  // solo dígitos
                   if (/^\d+$/.test(v)) {
                     setTokenAmountStr(v);
                     if (parseInt(v, 10) <= 0) {
@@ -330,7 +333,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
                       setTokenInputError('');
                     }
                   } else {
-                    setTokenAmountStr(v);
+                    setTokenAmountStr(v); // mantener lo escrito para feedback
                     setTokenInputError('Solo se permiten números.');
                   }
                 }}
@@ -380,6 +383,8 @@ const StudentLunchActions = ({ student, onUpdate }) => {
               <DatePicker
                 selected={startDate}
                 onChange={(date) => setStartDate(date)}
+                filterDate={filterValidDate}
+                dayClassName={dayClassName}
                 excludeDates={invalidDates}
                 dateFormat="yyyy-MM-dd"
                 className="form-control"
@@ -392,6 +397,8 @@ const StudentLunchActions = ({ student, onUpdate }) => {
               <DatePicker
                 selected={endDate}
                 onChange={(date) => setEndDate(date)}
+                filterDate={filterValidDate}
+                dayClassName={dayClassName}
                 excludeDates={invalidDates}
                 dateFormat="yyyy-MM-dd"
                 className="form-control"
@@ -437,6 +444,8 @@ const StudentLunchActions = ({ student, onUpdate }) => {
               <DatePicker
                 selected={consumptionDate}
                 onChange={(date) => setConsumptionDate(date)}
+                filterDate={filterValidDate}
+                dayClassName={dayClassName}
                 excludeDates={invalidDates}
                 dateFormat="yyyy-MM-dd"
                 className="form-control"
@@ -458,7 +467,13 @@ const StudentLunchActions = ({ student, onUpdate }) => {
           </>
         )}
 
-        <button className="btn btn-primary" onClick={showConfirmation}>
+        <button
+          className="btn btn-primary"
+          onClick={showConfirmation}
+          disabled={
+            (actionType === 'tokens' && (!!tokenInputError || tokenAmountNum <= 0))
+          }
+        >
           Confirmar acción
         </button>
       </div>
@@ -486,7 +501,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
                     {reason === 'pago' ? (
                       <p className="mb-0"><strong>Total a pagar:</strong> ${totalForTokens}</p>
                     ) : (
-                      <p><strong>Nota:</strong> {note || '(sin nota)'} </p>
+                      <p><strong>Nota:</strong> {note || '(sin nota)'}</p>
                     )}
                   </>
                 )}
@@ -499,7 +514,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
                     {reason === 'pago' ? (
                       <p className="mb-0"><strong>Total a pagar:</strong> ${totalForPeriod}</p>
                     ) : (
-                      <p><strong>Nota:</strong> {note || '(sin nota)'} </p>
+                      <p><strong>Nota:</strong> {note || '(sin nota)'}</p>
                     )}
                   </>
                 )}

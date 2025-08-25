@@ -261,3 +261,13 @@ img { max-width: 100%; display: block; }
   margin: 0 auto;
   padding: 1.25rem;
 }
+
+/* =========================
+   Estilos calendario (react-datepicker)
+   ========================= */
+.rdp-invalid-day,
+.react-datepicker__day--disabled {
+  color: #b0b0b0 !important;
+  pointer-events: none;
+  opacity: 0.6;
+}

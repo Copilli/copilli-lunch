@@ -1,3 +1,4 @@
+// src/pages/AdminCutoffs.jsx
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
@@ -33,6 +34,20 @@ export default function AdminCutoffs() {
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // 🔔 Alertas como en otros paneles
+  const [formError, setFormError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+
+  const showError = (msg) => {
+    setFormError(msg);
+    setTimeout(() => setFormError(''), 3000);
+  };
+
+  const showSuccess = (msg) => {
+    setSuccessMsg(msg);
+    setTimeout(() => setSuccessMsg(''), 3500);
+  };
+
   const load = async () => {
     setLoading(true);
     try {
@@ -44,7 +59,7 @@ export default function AdminCutoffs() {
       setHistory(normalizeHistoryPayload(hist));
     } catch (e) {
       console.error(e);
-      alert(e?.response?.data?.error || 'Error al cargar información de cortes');
+      showError(e?.response?.data?.error || 'Error al cargar información de cortes');
     } finally {
       setLoading(false);
     }
@@ -52,18 +67,18 @@ export default function AdminCutoffs() {
 
   const makeCutoff = async () => {
     if (!pending?.total || pending.total <= 0) {
-      alert('No hay pagos pendientes para corte.');
+      showError('No hay pagos pendientes para corte.');
       return;
     }
     setBusy(true);
     try {
       const { data } = await axios.post(`${API}/cutoffs`, {}, { headers });
       const amount = data.amount ?? data.total ?? 0;
-      alert(`Corte registrado por ${currency(amount)}`);
+      showSuccess(`Corte registrado por ${currency(amount)}`);
       await load();
     } catch (e) {
       console.error(e);
-      alert(e?.response?.data?.error || 'Error al realizar corte');
+      showError(e?.response?.data?.error || 'Error al realizar corte');
     } finally {
       setBusy(false);
     }
@@ -93,6 +108,26 @@ export default function AdminCutoffs() {
   return (
     <>
       <TopNavBar />
+
+      {/* Alerts (mismo estilo que otros paneles) */}
+      {formError && (
+        <div
+          className="alert alert-danger position-fixed top-0 start-50 translate-middle-x mt-3 z-3 text-center"
+          role="alert"
+          style={{ zIndex: 9999 }}
+        >
+          {formError}
+        </div>
+      )}
+      {successMsg && (
+        <div
+          className="alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3 z-3 text-center"
+          role="alert"
+          style={{ zIndex: 9999 }}
+        >
+          {successMsg}
+        </div>
+      )}
 
       <div className="container py-3">
         <div className="d-flex align-items-center mb-3 flex-wrap" style={{ gap: 8 }}>
