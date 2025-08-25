@@ -174,7 +174,7 @@ const AdminPanel = ({ setUser }) => {
         </div>
       )}
 
-      {!search && !selectedLevel && (
+            {!search && !selectedLevel && (
         <div className="row gx-3 gy-3 justify-content-center">
           {levels.map(level => (
             <div key={level} className="col-12 col-sm-6 col-md-4">
@@ -185,16 +185,16 @@ const AdminPanel = ({ setUser }) => {
       )}
 
       {selectedLevel && !selectedGroup && (
-        <div className="mt-3">
+        <div className="mt-3 text-center">
           <div className="pb-2">
             <h3 className="mb-0">Grupos en {selectedLevel}</h3>
-            <div className="text-muted small">
+            <div className="text-muted">
               {groupsInLevel.length} grupo{groupsInLevel.length !== 1 ? 's' : ''}
             </div>
           </div>
 
           {groupsInLevel.length === 0 ? (
-            <div className="text-center text-muted py-5 border rounded-4">
+            <div className="text-muted py-5 border rounded-4">
               No hay grupos en este nivel.
             </div>
           ) : (
@@ -222,11 +222,11 @@ const AdminPanel = ({ setUser }) => {
 
       {selectedGroup && (
         <div>
-          <h3>Estudiantes en {selectedLevel} - Grupo {selectedGroup}</h3>
-          <p>{studentsInGroup.length} estudiante(s)</p>
+          <h3 className='text-center'>Estudiantes en {selectedLevel} - Grupo {selectedGroup}</h3>
+          <p className='text-center'>{studentsInGroup.length} estudiante(s)</p>
 
           <div style={{ marginBottom: '1rem' }}>
-            <label>Mes: </label>
+            <label>Mes:  </label> 
             <select value={calendarMonth} onChange={e => setCalendarMonth(Number(e.target.value))}>
               {Array.from({ length: 12 }, (_, i) => (
                 <option key={i + 1} value={i + 1}>
@@ -235,7 +235,7 @@ const AdminPanel = ({ setUser }) => {
               ))}
             </select>
 
-            <label style={{ marginLeft: '1rem' }}>Año: </label>
+            <label style={{ marginLeft: '1rem' }}>Año:  </label> 
             <select value={calendarYear} onChange={e => setCalendarYear(Number(e.target.value))}>
               {Array.from({ length: 5 }, (_, i) => calendarYear - 2 + i).map(y => (
                 <option key={y} value={y}>{y}</option>
@@ -252,7 +252,7 @@ const AdminPanel = ({ setUser }) => {
           />
 
           <div style={{ marginTop: '2rem' }}>
-            <h4>Resumen por alumno</h4>
+            <h4 className='text-center'>Resumen por alumno</h4>
             {studentsInGroup.map(student => (
               <div key={student.studentId}>
                 <StudentSummaryCard

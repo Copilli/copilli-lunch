@@ -53,7 +53,7 @@ const StudentSummaryCard = ({ student, onSelect }) => {
         <p>Tokens: {student.tokens}</p>
         <p>Estado: {label}</p>
       </div>
-      <button onClick={() => onSelect(student)}>Ver detalles</button>
+       <button type="button" className="btn btn-outline-secondary" onClick={() => onSelect(student)}>Ver detalles</button>
     </div>
   );
 };

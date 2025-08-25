@@ -13,20 +13,18 @@ const CocinaPanel = ({ setUser }) => {
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
 
-  // Vista por búsqueda directa (solo para ese caso)
+  // Vista por búsqueda directa
   const [selectedStudent, setSelectedStudent] = useState(null);
 
-  // Estado para mensajes
+  // Mensajes
   const [formError, setFormError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Estados del modal de confirmación
+  // Modal de confirmación
   const [confirming, setConfirming] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
-  // Alumno sobre el que se hará la confirmación (separado de la vista)
-  const [pendingStudent, setPendingStudent] = useState(null);
+  const [pendingStudent, setPendingStudent] = useState(null); // <- alumno del modal
 
   const showError = (msg) => {
     setFormError(msg);
@@ -82,7 +80,7 @@ const CocinaPanel = ({ setUser }) => {
     return 'sin-fondos';
   };
 
-  // Click en tarjeta (NO altera la vista principal; solo prepara el modal)
+  // Click en tarjeta: prepara modal sin alterar la vista de fondo
   const handleClick = (student) => {
     const status = getStatus(student);
     const hasTokens = student.tokens > 0;
@@ -110,7 +108,7 @@ const CocinaPanel = ({ setUser }) => {
     setConfirming(false);
     setSubmitting(false);
     setConfirmMessage('');
-    setPendingStudent(null);     // ⚠️ importante: no tocar selectedStudent
+    setPendingStudent(null); // <- no tocar selectedStudent
   };
 
   const handleConfirm = async () => {
@@ -119,7 +117,6 @@ const CocinaPanel = ({ setUser }) => {
       closeModal();
       return;
     }
-
     setSubmitting(true);
     try {
       const token = localStorage.getItem('token');
@@ -132,15 +129,13 @@ const CocinaPanel = ({ setUser }) => {
       showSuccess('Registro guardado');
       await fetchStudents();
 
-      // Si quieres “limpiar” la vista de búsqueda directa al éxito, puedes hacerlo;
-      // si prefieres no tocarla, comenta las dos líneas de abajo.
+      // Opcional: limpiar la vista de búsqueda directa
       setSelectedStudent(null);
       setSearch('');
     } catch (err) {
       console.error(err);
       const backendError = err?.response?.data?.error;
       showError(backendError || 'Error al registrar consumo');
-      // En error solo cerramos el modal y NO alteramos la vista bajo él.
     } finally {
       closeModal();
     }
@@ -163,7 +158,8 @@ const CocinaPanel = ({ setUser }) => {
 
   return (
     <div className="app-container container py-4">
-      <h2 className="section-title">Panel de Cocina</h2>
+      {/* Título centrado */}
+      <h2 className="section-title text-center">Panel de Cocina</h2>
 
       <TopNavBar setUser={setUser}>
         <SearchBar
@@ -171,10 +167,9 @@ const CocinaPanel = ({ setUser }) => {
           setSearch={setSearch}
           students={students}
           onSelect={(student) => {
-            // La vista de un solo alumno solo se activa por búsqueda directa
             setSelectedLevel(student.group.level);
             setSelectedGroup(student.group.name);
-            setSelectedStudent(student);
+            setSelectedStudent(student); // vista de un solo alumno por búsqueda directa
           }}
         />
       </TopNavBar>
@@ -200,7 +195,7 @@ const CocinaPanel = ({ setUser }) => {
         </div>
       )}
 
-      {/* Confirm modal */}
+      {/* Modal de confirmación (no altera la vista de fondo) */}
       {confirming && (
         <div
           className="modal show d-block"
@@ -210,17 +205,13 @@ const CocinaPanel = ({ setUser }) => {
           style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
         >
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
+            <div className="modal-content rounded-4">
               <div className="modal-header">
                 <h5 className="modal-title">¿Confirmas esta acción?</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={closeModal}
-                />
+                <button type="button" className="btn-close" onClick={closeModal} />
               </div>
               <div className="modal-body">
-                <p>{confirmMessage}</p>
+                <p className="mb-0">{confirmMessage}</p>
               </div>
               <div className="modal-footer">
                 <button className="btn btn-secondary" onClick={closeModal}>
@@ -235,20 +226,27 @@ const CocinaPanel = ({ setUser }) => {
         </div>
       )}
 
-      {/* Vista seleccionada por búsqueda directa */}
+      {/* Vista seleccionada por búsqueda directa — CARD CENTRADO */}
       {selectedStudent ? (
         <div className="d-flex justify-content-center mt-4">
           <div
             onClick={() => handleClick(selectedStudent)}
-            className="student-tile"
-            style={{ backgroundColor: statusColor[getStatus(selectedStudent)] }}
+            className="student-tile card p-3 rounded-4 text-center"
+            style={{
+              backgroundColor: statusColor[getStatus(selectedStudent)],
+              width: 320,
+              cursor: 'pointer'
+            }}
           >
             <img
-              className="student-photo"
+              className="student-photo rounded-circle mx-auto d-block mb-2"
               src={selectedStudent.photoUrl || 'https://via.placeholder.com/88'}
               alt={selectedStudent.name}
+              width={88}
+              height={88}
+              style={{ objectFit: 'cover' }}
             />
-            <strong>{selectedStudent.name}</strong>
+            <strong className="d-block">{selectedStudent.name}</strong>
             <p className="mb-1">ID: {selectedStudent.studentId}</p>
             <p className="mb-1">Tokens: {selectedStudent.tokens}</p>
             <p className="mb-0">Status: {statusLabels[getStatus(selectedStudent)]}</p>
@@ -258,7 +256,7 @@ const CocinaPanel = ({ setUser }) => {
         <>
           {/* Niveles */}
           {!search && !selectedLevel && (
-            <div className="row gx-3 gy-3 card-grid">
+            <div className="row gx-3 gy-3 justify-content-center">
               {levels.map((level) => (
                 <div key={level} className="col-12 col-sm-6 col-md-4">
                   <LevelCard level={level} onClick={setSelectedLevel} />
@@ -270,9 +268,9 @@ const CocinaPanel = ({ setUser }) => {
           {/* Grupos */}
           {selectedLevel && !selectedGroup && (
             <div className="mt-3">
-              <div className="pb-2 section-title">
+              <div className="pb-2 section-title text-center">
                 <h3 className="mb-0">Grupos en {selectedLevel}</h3>
-                <div className="text-muted small">
+                <div className="text-muted">
                   {groupsInLevel.length} grupo{groupsInLevel.length !== 1 ? 's' : ''}
                 </div>
               </div>
@@ -282,7 +280,7 @@ const CocinaPanel = ({ setUser }) => {
                   No hay grupos en este nivel.
                 </div>
               ) : (
-                <div className="row gx-3 gy-3 card-grid">
+                <div className="row gx-3 gy-3 justify-content-center">
                   {groupsInLevel.map((group) => {
                     const count = students.filter(
                       (s) => s.group.level === selectedLevel && s.group.name === group
@@ -312,7 +310,7 @@ const CocinaPanel = ({ setUser }) => {
           {/* Estudiantes */}
           {selectedGroup && (
             <div className="mt-3">
-              <div className="pb-2 section-title">
+              <div className="pb-2 section-title text-center">
                 <h3 className="mb-0">
                   Estudiantes en {selectedLevel} — Grupo {selectedGroup}
                 </h3>
@@ -329,16 +327,23 @@ const CocinaPanel = ({ setUser }) => {
                       className="col-12 col-sm-6 col-md-4 col-lg-3 d-flex justify-content-center"
                     >
                       <div
-                        className="student-tile"
-                        style={{ backgroundColor: statusColor[status], cursor: disabled ? 'default' : 'pointer' }}
+                        className="student-tile card p-3 rounded-4 text-center"
+                        style={{
+                          backgroundColor: statusColor[status],
+                          width: 320,
+                          cursor: disabled ? 'default' : 'pointer'
+                        }}
                         onClick={() => !disabled && handleClick(student)}
                       >
                         <img
-                          className="student-photo"
+                          className="student-photo rounded-circle mx-auto d-block mb-2"
                           src={student.photoUrl || 'https://via.placeholder.com/88'}
                           alt={student.name}
+                          width={88}
+                          height={88}
+                          style={{ objectFit: 'cover' }}
                         />
-                        <strong>{student.name}</strong>
+                        <strong className="d-block">{student.name}</strong>
                         <p className="mb-1">ID: {student.studentId}</p>
                         <p className="mb-1">Tokens: {student.tokens}</p>
                         <p className="mb-0">Status: {statusLabels[status]}</p>
