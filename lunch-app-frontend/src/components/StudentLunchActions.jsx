@@ -13,8 +13,7 @@ const PRICE_PER_DAY = 35;   // solo display
 const StudentLunchActions = ({ student, onUpdate }) => {
   const [actionType, setActionType] = useState('tokens');
 
-  // ⬇️  CAMBIO: usar string para permitir borrar/editar libremente
-  const [tokenAmountStr, setTokenAmountStr] = useState('');
+  const [tokenAmountStr, setTokenAmountStr] = useState('1');
   const tokenAmountNum = Number.parseInt(tokenAmountStr, 10) || 0;
 
   const [reason, setReason] = useState('pago');
@@ -36,7 +35,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
 
   const resetFields = () => {
     setActionType('tokens');
-    setTokenAmountStr('');
+    setTokenAmountStr('1');
     setReason('pago');
     setNote('');
     setStartDate(null);
@@ -153,7 +152,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
         showSuccess(ticket ? `Pago registrado. Ticket: ${ticket} ($${amount})` : 'Tokens actualizados correctamente.');
 
         // reset de campos relacionados
-        setTokenAmountStr('');
+        setTokenAmountStr('1');
         setNote('');
         onUpdate && onUpdate();
 
@@ -316,14 +315,13 @@ const StudentLunchActions = ({ student, onUpdate }) => {
                 onChange={(e) => {
                   const v = e.target.value;
 
-                  // permitir vacío
                   if (v === '') {
-                    setTokenAmountStr('');
-                    setTokenInputError('Especifica una cantidad de tokens.');
+                    // si el usuario borra todo, lo regresamos a "1"
+                    setTokenAmountStr('1');
+                    setTokenInputError('');
                     return;
                   }
 
-                  // validar solo dígitos
                   if (/^\d+$/.test(v)) {
                     setTokenAmountStr(v);
                     if (parseInt(v, 10) <= 0) {
@@ -332,7 +330,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
                       setTokenInputError('');
                     }
                   } else {
-                    setTokenAmountStr(v); // mantenemos lo que escribió
+                    setTokenAmountStr(v);
                     setTokenInputError('Solo se permiten números.');
                   }
                 }}
