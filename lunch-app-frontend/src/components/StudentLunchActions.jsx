@@ -12,7 +12,11 @@ const PRICE_PER_DAY = 35;   // solo display
 
 const StudentLunchActions = ({ student, onUpdate }) => {
   const [actionType, setActionType] = useState('tokens');
-  const [tokenAmount, setTokenAmount] = useState(0);
+
+  // ⬇️  CAMBIO: usar string para permitir borrar/editar libremente
+  const [tokenAmountStr, setTokenAmountStr] = useState('');
+  const tokenAmountNum = Number.parseInt(tokenAmountStr, 10) || 0;
+
   const [reason, setReason] = useState('pago');
   const [note, setNote] = useState('');
   const [startDate, setStartDate] = useState(null);
@@ -24,24 +28,28 @@ const StudentLunchActions = ({ student, onUpdate }) => {
   const [consumptionDate, setConsumptionDate] = useState(null);
   const [consumptionReason, setConsumptionReason] = useState('');
   const [invalidDates, setInvalidDates] = useState([]);
+  const [tokenInputError, setTokenInputError] = useState('');
 
   const user = JSON.parse(localStorage.getItem('user'));
   const isAdmin = user?.role === 'admin';
   const API = import.meta.env.VITE_API_URL;
 
+  const resetFields = () => {
+    setActionType('tokens');
+    setTokenAmountStr('');
+    setReason('pago');
+    setNote('');
+    setStartDate(null);
+    setEndDate(null);
+    setConsumptionDate(null);
+    setConsumptionReason('');
+    setSubmitting(false);
+    setFormError('');
+  };
+
   useEffect(() => {
     if (!student) {
-      setActionType('tokens');
-      setTokenAmount(0);
-      setReason('pago');
-      setNote('');
-      setStartDate(null);
-      setEndDate(null);
-      setConsumptionDate(null);
-      setConsumptionReason('');
-      setConfirming(false);
-      setSubmitting(false);
-      setFormError('');
+      resetFields();
     } else {
       if (!isAdmin) setReason('pago');
     }
@@ -53,7 +61,8 @@ const StudentLunchActions = ({ student, onUpdate }) => {
       const res = await axios.get(`${API}/invalid-dates`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setInvalidDates(res.data.map(d => dayjs(d.date).toDate()));
+      // si tu API ya regresa strings YYYY-MM-DD, puedes mapear directo: new Date(d)
+      setInvalidDates(res.data.map(d => new Date(d)));
     };
     fetchInvalidDates();
   }, [API]);
@@ -86,9 +95,24 @@ const StudentLunchActions = ({ student, onUpdate }) => {
   };
 
   // Totales para mostrar en confirmación
-  const validDaysForPeriod = useMemo(() => getValidDaysCount(startDate, endDate), [startDate, endDate, invalidDates]);
-  const totalForTokens = useMemo(() => (reason === 'pago' ? tokenAmount * PRICE_PER_TOKEN : 0), [tokenAmount, reason]);
-  const totalForPeriod = useMemo(() => (reason === 'pago' ? validDaysForPeriod * PRICE_PER_DAY : 0), [validDaysForPeriod, reason]);
+  const validDaysForPeriod = useMemo(
+    () => getValidDaysCount(startDate, endDate),
+    [startDate, endDate, invalidDates]
+  );
+  const totalForTokens = useMemo(
+    () => (reason === 'pago' ? tokenAmountNum * PRICE_PER_TOKEN : 0),
+    [tokenAmountNum, reason]
+  );
+  const totalForPeriod = useMemo(
+    () => (reason === 'pago' ? validDaysForPeriod * PRICE_PER_DAY : 0),
+    [validDaysForPeriod, reason]
+  );
+
+  // ⬇️  Helper para cerrar modal SIEMPRE
+  const closeModal = () => {
+    setConfirming(false);
+    setSubmitting(false);
+  };
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -98,120 +122,137 @@ const StudentLunchActions = ({ student, onUpdate }) => {
       if (actionType === 'tokens') {
         if (!isAdmin && reason !== 'pago') {
           showError('Solo los administradores pueden usar ese motivo.');
-          setSubmitting(false);
+          closeModal(); // cerrar modal en validación
           return;
         }
-        if (tokenAmount <= 0) {
+        if (tokenAmountNum <= 0) {
           showError('Especifica una cantidad de tokens mayor a 0.');
-          setSubmitting(false);
+          closeModal();
           return;
         }
-        // Para no-pago exigimos nota
         if (reason !== 'pago' && !note.trim()) {
           showError('La nota es obligatoria para este motivo.');
-          setSubmitting(false);
+          closeModal();
           return;
         }
 
-        const resp = await axios.patch(`${API}/students/${student._id}/tokens`, {
-          delta: tokenAmount,
-          reason,
-          note, // opcional para pago
-          performedBy: user?.username || 'desconocido',
-          userRole: user?.role || 'oficina'
-        }, { headers: { Authorization: `Bearer ${token}` } });
+        const resp = await axios.patch(
+          `${API}/students/${student._id}/tokens`,
+          {
+            delta: tokenAmountNum,
+            reason,
+            note, // opcional para pago
+            performedBy: user?.username || 'desconocido',
+            userRole: user?.role || 'oficina'
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
         const ticket = resp?.data?.paymentTicket;
         const amount = resp?.data?.paymentAmount;
         showSuccess(ticket ? `Pago registrado. Ticket: ${ticket} ($${amount})` : 'Tokens actualizados correctamente.');
-        setConfirming(false);
+
+        // reset de campos relacionados
+        setTokenAmountStr('');
+        setNote('');
+        onUpdate && onUpdate();
 
       } else if (actionType === 'period') {
         if (!isAdmin && reason !== 'pago') {
           showError('Solo los administradores pueden usar ese motivo.');
-          setSubmitting(false);
+          closeModal();
           return;
         }
         if (!startDate || !endDate) {
           showError('Especifica las fechas de inicio y fin.');
-          setSubmitting(false);
+          closeModal();
           return;
         }
         if (isDateInvalid(startDate) || isDateInvalid(endDate)) {
           showError('La fecha de inicio o fin no puede ser un día inválido.');
-          setSubmitting(false);
+          closeModal();
           return;
         }
         if (validDaysForPeriod < 5) {
           showError('El periodo debe tener al menos 5 días válidos.');
-          setSubmitting(false);
+          closeModal();
           return;
         }
-        // Para no-pago exigimos nota
         if (reason !== 'pago' && !note.trim()) {
           showError('La nota es obligatoria para este motivo.');
-          setSubmitting(false);
+          closeModal();
           return;
         }
 
-        const resp = await axios.patch(`${API}/students/${student._id}/period`, {
-          startDate,
-          endDate,
-          reason,
-          note,
-          performedBy: user?.username || 'desconocido',
-          userRole: user?.role || 'oficina'
-        }, { headers: { Authorization: `Bearer ${token}` } });
+        const resp = await axios.patch(
+          `${API}/students/${student._id}/period`,
+          {
+            startDate,
+            endDate,
+            reason,
+            note,
+            performedBy: user?.username || 'desconocido',
+            userRole: user?.role || 'oficina'
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
         const ticket = resp?.data?.paymentTicket;
         const amount = resp?.data?.paymentAmount;
         showSuccess(ticket ? `Periodo registrado. Ticket: ${ticket} ($${amount})` : 'Periodo especial registrado correctamente.');
-        setConfirming(false);
+
+        setNote('');
+        setStartDate(null);
+        setEndDate(null);
+        onUpdate && onUpdate();
 
       } else if (actionType === 'manual-consumption') {
         if (!consumptionDate || !consumptionReason) {
           showError('Debes seleccionar motivo y fecha para registrar el consumo.');
-          setSubmitting(false);
+          closeModal();
           return;
         }
 
-        await axios.patch(`${API}/students/${student._id}/tokens`, {
-          delta: -1,
-          reason: consumptionReason,
-          note: `Consumo manual (${dayjs(consumptionDate).format('YYYY-MM-DD')})`,
-          performedBy: user?.username || 'admin',
-          userRole: user?.role || 'admin',
-          customDate: dayjs(consumptionDate).startOf('day').toISOString()
-        }, { headers: { Authorization: `Bearer ${token}` } });
+        await axios.patch(
+          `${API}/students/${student._id}/tokens`,
+          {
+            delta: -1,
+            reason: consumptionReason,
+            note: `Consumo manual (${dayjs(consumptionDate).format('YYYY-MM-DD')})`,
+            performedBy: user?.username || 'admin',
+            userRole: user?.role || 'admin',
+            customDate: dayjs(consumptionDate).startOf('day').toISOString()
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
         showSuccess('Consumo manual registrado correctamente.');
-        setConfirming(false);
+        setConsumptionDate(null);
+        setConsumptionReason('');
+        onUpdate && onUpdate();
       }
 
-      // reset
-      setFormError('');
-      setTokenAmount(0);
-      setNote('');
-      setStartDate(null);
-      setEndDate(null);
-      setConsumptionDate(null);
-      setConsumptionReason('');
-      onUpdate && onUpdate();
+      // Cerrar modal SIEMPRE tras procesar
+      closeModal();
 
     } catch (err) {
       console.error(err);
       const backendError = err?.response?.data?.error || err?.response?.data?.message;
       showError(backendError || 'Error al registrar el cambio.');
-      setConfirming(false);
+      // Cerrar modal también en error del backend
+      closeModal();
+
     } finally {
       setSubmitting(false);
     }
   };
 
   const showConfirmation = () => {
-    if (actionType === 'tokens' && tokenAmount === 0) {
-      showError('Especifica una cantidad de tokens.');
-      return;
+    if (actionType === 'tokens') {
+      if (tokenAmountStr === '' || tokenInputError) {
+        showError(tokenInputError || 'Especifica una cantidad válida de tokens.');
+        return;
+      }
     }
     if (actionType === 'period' && (!startDate || !endDate)) {
       showError('Especifica las fechas de inicio y fin.');
@@ -230,12 +271,20 @@ const StudentLunchActions = ({ student, onUpdate }) => {
   return (
     <>
       {formError && (
-        <div className="alert alert-danger position-fixed top-0 start-50 translate-middle-x mt-3 z-3" role="alert" style={{ zIndex: 9999 }}>
+        <div
+          className="alert alert-danger position-fixed top-0 start-50 translate-middle-x mt-3 z-3"
+          role="alert"
+          style={{ zIndex: 9999 }}
+        >
           {formError}
         </div>
       )}
       {successMsg && (
-        <div className="alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3 z-3" role="alert" style={{ zIndex: 9999 }}>
+        <div
+          className="alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3 z-3"
+          role="alert"
+          style={{ zIndex: 9999 }}
+        >
           {successMsg}
         </div>
       )}
@@ -245,7 +294,11 @@ const StudentLunchActions = ({ student, onUpdate }) => {
 
         <div className="mb-3">
           <label className="form-label">Tipo de acción:</label>
-          <select className="form-select" value={actionType} onChange={(e) => setActionType(e.target.value)}>
+          <select
+            className="form-select"
+            value={actionType}
+            onChange={(e) => setActionType(e.target.value)}
+          >
             <option value="tokens">Agregar tokens</option>
             <option value="period">Agregar periodo</option>
             {isAdmin && <option value="manual-consumption">Registrar consumo faltante</option>}
@@ -257,19 +310,47 @@ const StudentLunchActions = ({ student, onUpdate }) => {
             <div className="mb-3">
               <label className="form-label">Cantidad de tokens:</label>
               <input
-                type="number"
-                className="form-control"
-                min="0"
-                value={tokenAmount}
-                onChange={(e) => setTokenAmount(Math.max(0, Number(e.target.value)))}
+                type="text"
+                className={`form-control ${tokenInputError ? 'is-invalid' : ''}`}
+                value={tokenAmountStr}
+                onChange={(e) => {
+                  const v = e.target.value;
+
+                  // permitir vacío
+                  if (v === '') {
+                    setTokenAmountStr('');
+                    setTokenInputError('Especifica una cantidad de tokens.');
+                    return;
+                  }
+
+                  // validar solo dígitos
+                  if (/^\d+$/.test(v)) {
+                    setTokenAmountStr(v);
+                    if (parseInt(v, 10) <= 0) {
+                      setTokenInputError('Debe ser un número mayor a 0.');
+                    } else {
+                      setTokenInputError('');
+                    }
+                  } else {
+                    setTokenAmountStr(v); // mantenemos lo que escribió
+                    setTokenInputError('Solo se permiten números.');
+                  }
+                }}
               />
+              {tokenInputError && (
+                <div className="invalid-feedback">{tokenInputError}</div>
+              )}
             </div>
 
             <div className="mb-3">
               <div className="mb-3 d-flex align-items-center gap-2">
                 <label className="form-label mb-0">Motivo:</label>
                 {isAdmin ? (
-                  <select className="form-select" value={reason} onChange={(e) => setReason(e.target.value)}>
+                  <select
+                    className="form-select"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                  >
                     <option value="pago">Pago</option>
                     <option value="justificado">Justificado</option>
                     <option value="ajuste manual">Ajuste manual</option>
@@ -366,7 +447,11 @@ const StudentLunchActions = ({ student, onUpdate }) => {
             </div>
             <div className="mb-3">
               <label className="form-label">Motivo:</label>
-              <select className="form-select" value={consumptionReason} onChange={(e) => setConsumptionReason(e.target.value)}>
+              <select
+                className="form-select"
+                value={consumptionReason}
+                onChange={(e) => setConsumptionReason(e.target.value)}
+              >
                 <option value="">Selecciona</option>
                 <option value="uso">Uso</option>
                 <option value="uso-con-deuda">Uso con deuda</option>
@@ -382,22 +467,28 @@ const StudentLunchActions = ({ student, onUpdate }) => {
 
       {/* MODAL DE CONFIRMACIÓN */}
       {confirming && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div
+          className="modal show d-block"
+          tabIndex="-1"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          role="dialog"
+          aria-modal="true"
+        >
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
+            <div className="modal-content rounded-4">
               <div className="modal-header">
                 <h5 className="modal-title">¿Confirmas esta acción?</h5>
-                <button type="button" className="btn-close" onClick={() => setConfirming(false)}></button>
+                <button type="button" className="btn-close" onClick={closeModal} />
               </div>
               <div className="modal-body">
                 {actionType === 'tokens' && (
                   <>
-                    <p>Tokens actuales: {student.tokens} → Total: {student.tokens + tokenAmount}</p>
+                    <p>Tokens actuales: {student.tokens} → Total: {student.tokens + tokenAmountNum}</p>
                     <p><strong>Motivo:</strong> {reason}</p>
                     {reason === 'pago' ? (
                       <p className="mb-0"><strong>Total a pagar:</strong> ${totalForTokens}</p>
                     ) : (
-                      <p><strong>Nota:</strong> {note || '(sin nota)'}</p>
+                      <p><strong>Nota:</strong> {note || '(sin nota)'} </p>
                     )}
                   </>
                 )}
@@ -410,7 +501,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
                     {reason === 'pago' ? (
                       <p className="mb-0"><strong>Total a pagar:</strong> ${totalForPeriod}</p>
                     ) : (
-                      <p><strong>Nota:</strong> {note || '(sin nota)'}</p>
+                      <p><strong>Nota:</strong> {note || '(sin nota)'} </p>
                     )}
                   </>
                 )}
@@ -419,12 +510,12 @@ const StudentLunchActions = ({ student, onUpdate }) => {
                   <>
                     <p>Registrar -1 token por consumo no anotado.</p>
                     <p><strong>Fecha:</strong> {consumptionDate ? dayjs(consumptionDate).format('YYYY-MM-DD') : '—'}</p>
-                    <p><strong>Motivo:</strong> {consumptionReason}</p>
+                    <p><strong>Motivo:</strong> {consumptionReason || '—'}</p>
                   </>
                 )}
               </div>
               <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={() => setConfirming(false)}>
+                <button className="btn btn-secondary" onClick={closeModal}>
                   Cancelar
                 </button>
                 <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>
