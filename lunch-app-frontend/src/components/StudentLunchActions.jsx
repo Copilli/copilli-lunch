@@ -9,7 +9,13 @@ dayjs.extend(isSameOrBefore);
 
 function getPricesForStudent(student) {
   const level = (student?.level || '').toLowerCase();
-  const groupName = (student?.groupName || '').toUpperCase();
+  // Cambia groupName por group?.name
+  const groupName =
+    student?.groupName ||
+    student?.group?.name ||
+    '';
+
+  const groupNameUpper = groupName.toUpperCase();
 
   if (level === 'preescolar') {
     return { token: 44, period: 37 };
@@ -18,10 +24,10 @@ function getPricesForStudent(student) {
     return { token: 62, period: 52 };
   }
   if (level === 'primaria') {
-    if (/^[1-3]/.test(groupName)) {
+    if (/^[1-3]/.test(groupNameUpper)) {
       return { token: 50, period: 42 };
     }
-    if (/^[4-6]/.test(groupName)) {
+    if (/^[4-6]/.test(groupNameUpper)) {
       return { token: 57, period: 47 };
     }
     // Grupo no válido: usar el precio más alto de primaria
