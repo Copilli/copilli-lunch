@@ -8,30 +8,30 @@ import 'react-datepicker/dist/react-datepicker.css';
 dayjs.extend(isSameOrBefore);
 
 function getPricesForStudent(student) {
-  const level = (student?.level || '').toLowerCase();
-  // Cambia groupName por group?.name
+  if (!student) return { priceToken: 0, pricePeriod: 0 };
+  const level = (student.level || student.group?.level || '').toLowerCase();
   const groupName =
-    student?.groupName ||
-    student?.group?.name ||
+    student.groupName ||
+    student.group?.name ||
     '';
 
   const groupNameUpper = groupName.toUpperCase();
 
   if (level === 'preescolar') {
-    return { token: 44, period: 37 };
+    return { priceToken: 44, pricePeriod: 37 };
   }
   if (level === 'secundaria') {
-    return { token: 62, period: 52 };
+    return { priceToken: 62, pricePeriod: 52 };
   }
   if (level === 'primaria') {
     if (/^[1-3]/.test(groupNameUpper)) {
-      return { token: 50, period: 42 };
+      return { priceToken: 50, pricePeriod: 42 };
     }
     if (/^[4-6]/.test(groupNameUpper)) {
-      return { token: 57, period: 47 };
+      return { priceToken: 57, pricePeriod: 47 };
     }
     // Grupo no válido: usar el precio más alto de primaria
-    return { token: 57, period: 47 };
+    return { priceToken: 57, pricePeriod: 47 };
   }
 }
 
@@ -131,15 +131,15 @@ const StudentLunchActions = ({ student, onUpdate }) => {
     [startDate, endDate, invalidDates]
   );
   const prices = useMemo(() => getPricesForStudent(student), [student]);
-  const PRICE_PER_TOKEN = prices.token;
-  const PRICE_PER_DAY = prices.period;
+  const priceToken = prices.priceToken;
+  const pricePeriod = prices.pricePeriod;
   const totalForTokens = useMemo(
-    () => (reason === 'pago' ? tokenAmountNum * PRICE_PER_TOKEN : 0),
-    [tokenAmountNum, reason, PRICE_PER_TOKEN]
+    () => (reason === 'pago' ? tokenAmountNum * priceToken : 0),
+    [tokenAmountNum, reason, priceToken]
   );
   const totalForPeriod = useMemo(
-    () => (reason === 'pago' ? validDaysForPeriod * PRICE_PER_DAY : 0),
-    [validDaysForPeriod, reason, PRICE_PER_DAY]
+    () => (reason === 'pago' ? validDaysForPeriod * pricePeriod : 0),
+    [validDaysForPeriod, reason, pricePeriod]
   );
 
   const closeModal = () => {
