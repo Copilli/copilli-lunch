@@ -184,7 +184,12 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
     const student = await Student.findById(req.params.id);
     if (!student) return res.status(404).json({ error: 'Estudiante no encontrado' });
 
-    if (student.status === 'bloqueado' && delta < 0) {
+    // Permitir admins registrar consumo aunque esté bloqueado
+    if (
+      student.status === 'bloqueado' &&
+      delta < 0 &&
+      (!req.user || req.user.role !== 'admin')
+    ) {
       return res.status(403).json({ error: 'Este estudiante está bloqueado y no puede registrar consumo en negativo.' });
     }
 
