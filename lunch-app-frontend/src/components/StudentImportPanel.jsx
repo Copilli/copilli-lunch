@@ -50,10 +50,16 @@ const StudentImportPanel = ({ onSuccess, onCancel }) => {
     try {
       const list = await fetchAllStudentsFlat();
       const rows = list.map(s => toCsvRow([
-        s.studentId || '', s.name || '', s.email || '',
-        s.level || '', s.group || '', s.photoUrl || '',
-        s.tokens ?? '', s.hasSpecialPeriod ? 'TRUE' : 'FALSE',
-        s['specialPeriod.startDate'] || '', s['specialPeriod.endDate'] || '',
+        s.studentId || '',
+        s.name || '',
+        s.email || '',
+        s.level || '',
+        s.groupName || '',
+        s.photoUrl || '',
+        s.tokens ?? '',
+        s.hasSpecialPeriod ? 'TRUE' : 'FALSE',
+        s.specialStartDate || '',
+        s.specialEndDate || '',
         s.status || ''
       ]));
       downloadCsv(`students_full_${dayjs().format('YYYYMMDD_HHmm')}.csv`, CSV_HEADERS_FULL, rows);
