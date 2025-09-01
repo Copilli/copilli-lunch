@@ -7,8 +7,27 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 dayjs.extend(isSameOrBefore);
 
-const PRICE_PER_TOKEN = 40; // solo display (BE es la fuente real)
-const PRICE_PER_DAY = 35;   // solo display
+function getPricesForStudent(student) {
+  const level = (student?.level || '').toLowerCase();
+  const groupName = (student?.groupName || '').toUpperCase();
+
+  if (level === 'preescolar') {
+    return { token: 44, period: 37 };
+  }
+  if (level === 'secundaria') {
+    return { token: 62, period: 52 };
+  }
+  if (level === 'primaria') {
+    if (/^[1-3]/.test(groupName)) {
+      return { token: 50, period: 42 };
+    }
+    if (/^[4-6]/.test(groupName)) {
+      return { token: 57, period: 47 };
+    }
+    // Grupo no válido: usar el precio más alto de primaria
+    return { token: 57, period: 47 };
+  }
+}
 
 const StudentLunchActions = ({ student, onUpdate }) => {
   const [actionType, setActionType] = useState('tokens');
@@ -105,13 +124,16 @@ const StudentLunchActions = ({ student, onUpdate }) => {
     () => getValidDaysCount(startDate, endDate),
     [startDate, endDate, invalidDates]
   );
+  const prices = useMemo(() => getPricesForStudent(student), [student]);
+  const PRICE_PER_TOKEN = prices.token;
+  const PRICE_PER_DAY = prices.period;
   const totalForTokens = useMemo(
     () => (reason === 'pago' ? tokenAmountNum * PRICE_PER_TOKEN : 0),
-    [tokenAmountNum, reason]
+    [tokenAmountNum, reason, PRICE_PER_TOKEN]
   );
   const totalForPeriod = useMemo(
     () => (reason === 'pago' ? validDaysForPeriod * PRICE_PER_DAY : 0),
-    [validDaysForPeriod, reason]
+    [validDaysForPeriod, reason, PRICE_PER_DAY]
   );
 
   const closeModal = () => {

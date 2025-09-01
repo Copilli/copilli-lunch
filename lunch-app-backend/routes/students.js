@@ -17,13 +17,28 @@ dayjs.extend(isSameOrAfter);
 const { verifyToken, allowRoles } = require('../middleware/auth');
 const { sendPaymentEmail } = require('../utils/sendPaymentEmail');
 
-// 💵 Precios locales
-const PRICE_PER_TOKEN = 40; // MXN por token
-const PRICE_PER_DAY   = 35; // MXN por día válido de periodo
-const CURRENCY        = 'MXN';
+// 💵 Precios por grupo/nivel
+function getPricesForStudent(student) {
+  const level = (student.group?.level || '').toLowerCase();
+  const groupName = (student.group?.name || '').toUpperCase();
 
-const VALID_STATUSES = ['periodo-activo', 'con-fondos', 'sin-fondos', 'bloqueado'];
-const VALID_LEVELS = ['preescolar', 'primaria', 'secundaria'];
+  if (level === 'preescolar') {
+    return { token: 44, period: 37 };
+  }
+  if (level === 'secundaria') {
+    return { token: 62, period: 52 };
+  }
+  if (level === 'primaria') {
+    if (/^[1-3]/.test(groupName)) {
+      return { token: 50, period: 42 };
+    }
+    if (/^[4-6]/.test(groupName)) {
+      return { token: 57, period: 47 };
+    }
+    // Grupo no válido: usar el precio más alto de primaria
+    return { token: 57, period: 47 };
+  }
+}
 
 /* ------------------------- Helpers ------------------------- */
 async function getInvalidSet() {
@@ -197,7 +212,8 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
 
     // 💸 AUTO-PAGO si es "pago" y delta > 0
     if ((reason || '').toLowerCase() === 'pago' && delta > 0) {
-      const amount = Number((delta * PRICE_PER_TOKEN).toFixed(2));
+      const prices = getPricesForStudent(student);
+      const amount = Number((delta * prices.token).toFixed(2));
       const ticketNumber = await Payment.generateTicketNumber();
 
       const payment = await Payment.create({
@@ -211,10 +227,10 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
 
       // Uniformar nota con ticket
       await TokenMovement.findByIdAndUpdate(movement._id, {
-        note: `Pago de tokens • Total: $${amount.toFixed(2)} ${CURRENCY} • Ticket ${ticketNumber}`
+        note: `Pago de tokens • Total: $${amount.toFixed(2)} MXN • Ticket ${ticketNumber}`
       });
 
-      await sendPaymentEmail(student, payment, CURRENCY);
+      await sendPaymentEmail(student, payment, 'MXN');
       paymentInfo = { ticketNumber, amount };
     }
 
@@ -429,7 +445,8 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
 
     // 💸 AUTO-PAGO si reason === 'pago'
     if ((reason || '').toLowerCase() === 'pago') {
-      const amount = Number((validDayCount * PRICE_PER_DAY).toFixed(2));
+      const prices = getPricesForStudent(student);
+      const amount = Number((validDayCount * prices.period).toFixed(2));
       const ticketNumber = await Payment.generateTicketNumber();
 
       const payment = await Payment.create({
@@ -443,10 +460,10 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
 
       // Dejar nota con ticket
       await TokenMovement.findByIdAndUpdate(move._id, {
-        note: `Pago de periodo (${start.format('YYYY-MM-DD')} → ${end.format('YYYY-MM-DD')}) • Total: $${amount.toFixed(2)} ${CURRENCY} • Ticket ${ticketNumber}`
+        note: `Pago de periodo (${start.format('YYYY-MM-DD')} → ${end.format('YYYY-MM-DD')}) • Total: $${amount.toFixed(2)} MXN • Ticket ${ticketNumber}`
       });
       
-      await sendPaymentEmail(student, payment, CURRENCY);
+      await sendPaymentEmail(student, payment, 'MXN');
       paymentInfo = { ticketNumber, amount };
     }
 
