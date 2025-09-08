@@ -24,10 +24,10 @@ function getPricesForStudent(student) {
     return { priceToken: 62, pricePeriod: 52 };
   }
   if (level === 'primaria') {
-    if (/^[1-3]/.test(groupName)) {
+    if (/^[1-3]/.test(groupNameUpper)) {
       return { priceToken: 50, pricePeriod: 44 };
     }
-    if (/^[4-6]/.test(groupName)) {
+    if (/^[4-6]/.test(groupNameUpper)) {
       return { priceToken: 57, pricePeriod: 47 };
     }
     // Grupo no válido: usar el precio más alto de primaria
