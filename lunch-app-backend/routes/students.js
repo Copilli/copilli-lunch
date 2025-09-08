@@ -23,20 +23,20 @@ function getPricesForStudent(student) {
   const groupName = (student.group?.name || '').toUpperCase();
 
   if (level === 'preescolar') {
-    return { token: 44, period: 37 };
+    return { priceToken: 44, pricePeriod: 40 };
   }
   if (level === 'secundaria') {
-    return { token: 62, period: 52 };
+    return { priceToken: 62, pricePeriod: 52 };
   }
   if (level === 'primaria') {
     if (/^[1-3]/.test(groupName)) {
-      return { token: 50, period: 42 };
+      return { priceToken: 50, pricePeriod: 44 };
     }
     if (/^[4-6]/.test(groupName)) {
-      return { token: 57, period: 47 };
+      return { priceToken: 57, pricePeriod: 47 };
     }
     // Grupo no válido: usar el precio más alto de primaria
-    return { token: 57, period: 47 };
+    return { priceToken: 57, pricePeriod: 47 };
   }
 }
 
@@ -218,7 +218,7 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
     // 💸 AUTO-PAGO si es "pago" y delta > 0
     if ((reason || '').toLowerCase() === 'pago' && delta > 0) {
       const prices = getPricesForStudent(student);
-      const amount = Number((delta * prices.token).toFixed(2));
+      const amount = Number((delta * prices.priceToken).toFixed(2));
       const ticketNumber = await Payment.generateTicketNumber();
 
       const payment = await Payment.create({
@@ -451,7 +451,7 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
     // 💸 AUTO-PAGO si reason === 'pago'
     if ((reason || '').toLowerCase() === 'pago') {
       const prices = getPricesForStudent(student);
-      const amount = Number((validDayCount * prices.period).toFixed(2));
+      const amount = Number((validDayCount * prices.pricePeriod).toFixed(2));
       const ticketNumber = await Payment.generateTicketNumber();
 
       const payment = await Payment.create({

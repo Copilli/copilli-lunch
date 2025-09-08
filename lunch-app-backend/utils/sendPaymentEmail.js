@@ -3,8 +3,6 @@ const nodemailer = require('nodemailer');
 const TokenMovement = require('../models/TokenMovement');
 const Student = require('../models/Student');
 
-const PRICE_PER_TOKEN = 40;
-const PRICE_PER_DAY = 35;
 const DEFAULT_CURRENCY = 'MXN';
 const MX_TZ = 'America/Mexico_City';
 
@@ -31,20 +29,20 @@ function getPricesForStudent(student) {
   const groupName = (student.group?.name || '').toUpperCase();
 
   if (level === 'preescolar') {
-    return { token: 44, period: 37 };
+    return { priceToken: 44, pricePeriod: 40 };
   }
   if (level === 'secundaria') {
-    return { token: 62, period: 52 };
+    return { priceToken: 62, pricePeriod: 52 };
   }
   if (level === 'primaria') {
     if (/^[1-3]/.test(groupName)) {
-      return { token: 50, period: 42 };
+      return { priceToken: 50, pricePeriod: 44 };
     }
     if (/^[4-6]/.test(groupName)) {
-      return { token: 57, period: 47 };
+      return { priceToken: 57, pricePeriod: 47 };
     }
     // Grupo no válido: usar el precio más alto de primaria
-    return { token: 57, period: 47 };
+    return { priceToken: 57, pricePeriod: 47 };
   }
 }
 
@@ -65,7 +63,7 @@ async function getConceptAndQty(payment) {
 
     // ¿Periodo? (nuestro flujo guarda change=0 para periodo)
     if (!mov.change || mov.change === 0) {
-      const qty = Math.round((payment.amount || 0) / prices.period) || 0;
+      const qty = Math.round((payment.amount || 0) / prices.pricePeriod) || 0;
       let rangeLabel = '';
       // intentar extraer fechas del note: "... (YYYY-MM-DD → YYYY-MM-DD) ..."
       const m = mov.note && mov.note.match(/(\d{4}-\d{2}-\d{2}).*?(\d{4}-\d{2}-\d{2})/);
@@ -74,7 +72,7 @@ async function getConceptAndQty(payment) {
     }
 
     // Si no, lo tratamos como compra de tokens
-    const qty = Number(mov.change) || Math.round((payment.amount || 0) / prices.token) || 0;
+    const qty = Number(mov.change) || Math.round((payment.amount || 0) / prices.priceToken) || 0;
     return { concept: 'Tokens', qty, units: `token${qty === 1 ? '' : 's'}`, rangeLabel: '' };
   } catch {
     return { concept: 'Pago', qty: null, units: '', rangeLabel: '' };
