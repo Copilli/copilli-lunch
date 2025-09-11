@@ -15,7 +15,9 @@ dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
 
 const { verifyToken, allowRoles } = require('../middleware/auth');
+
 const { sendPaymentEmail } = require('../utils/sendPaymentEmail');
+const { sendUseEmail } = require('../utils/sendUseEmail');
 
 // 💵 Precios por grupo/nivel
 function getPricesForStudent(student) {
@@ -312,6 +314,16 @@ router.post('/:id/use', async (req, res) => {
       note: isDebt ? 'Consumo con deuda' : 'Consumo registrado sin periodo activo',
       performedBy: performedBy || 'sistema',
       userRole: userRole || 'cocina'
+    });
+
+    // Send use email after successful use
+    await sendUseEmail(student, {
+      type: isDebt ? 'uso-con-deuda' : 'uso',
+      date: new Date(),
+      performedBy: performedBy || 'sistema',
+      userRole: userRole || 'cocina',
+      tokens: student.tokens,
+      note: isDebt ? 'Consumo con deuda' : 'Consumo registrado sin periodo activo'
     });
 
     res.json({

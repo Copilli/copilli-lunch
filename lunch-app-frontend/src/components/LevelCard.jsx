@@ -1,6 +1,6 @@
 // src/components/LevelCard.jsx
-const LABEL = { preescolar: 'Preescolar', primaria: 'Primaria', secundaria: 'Secundaria' };
-const ICON  = { preescolar: '🎨', primaria: '📘', secundaria: '🧪' };
+const LABEL = { preescolar: 'Preescolar', primaria: 'Primaria', secundaria: 'Secundaria', personal: 'Personal' };
+const ICON  = { preescolar: '🎨', primaria: '📘', secundaria: '🧪', personal: '🧑‍🏫' };
 
 const LevelCard = ({ level, onClick }) => {
   return (
