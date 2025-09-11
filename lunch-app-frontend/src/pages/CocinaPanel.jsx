@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
+import 'dayjs/locale/es';
 
 import TopNavBar from '../components/TopNavBar';
 import SearchBar from '../components/SearchBar';
