@@ -77,15 +77,21 @@ const CocinaPanel = ({ setUser }) => {
 
   useEffect(() => {
     if (students.length && validDates.length) {
-      // For each valid date, count students with tokens > 0 or valid period
+      // For each valid date, count students with valid period and with tokens
       const counts = validDates.map(date => {
-        return students.filter(s => {
-          const hasTokens = s.tokens > 0;
+        let periodCount = 0;
+        let tokenCount = 0;
+        students.forEach(s => {
           const inPeriod = s.hasSpecialPeriod &&
             dayjs(date).isSameOrAfter(dayjs(s.specialPeriod?.startDate)) &&
             dayjs(date).isSameOrBefore(dayjs(s.specialPeriod?.endDate));
-          return hasTokens || inPeriod;
-        }).length;
+          if (inPeriod) {
+            periodCount++;
+          } else if (s.tokens > 0) {
+            tokenCount++;
+          }
+        });
+        return { periodCount, tokenCount, total: periodCount + tokenCount };
       });
       setLunchCounts(counts);
     }
@@ -217,7 +223,7 @@ const CocinaPanel = ({ setUser }) => {
         />
       </TopNavBar>
 
-      {/* Alerta de conteo de desayunos en formato tabla y en español */}
+      {/* Alerta de conteo de desayunos en formato tabla y en español, con desglose */}
       {validDates.length > 0 && lunchCounts.length === validDates.length && (
         <div className="alert alert-info mt-3 text-center" style={{ fontSize: '1.1rem' }}>
           <strong>Desayunos programados próximos días:</strong>
@@ -227,7 +233,9 @@ const CocinaPanel = ({ setUser }) => {
                 <tr>
                   <th>Fecha</th>
                   <th>Día</th>
-                  <th>Total desayunos</th>
+                  <th>Periodos (100%)</th>
+                  <th>Tokens (?)</th>
+                  <th>Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -235,7 +243,9 @@ const CocinaPanel = ({ setUser }) => {
                   <tr key={date}>
                     <td>{dayjs(date).format('DD/MM/YYYY')}</td>
                     <td>{dayjs(date).locale('es').format('dddd')}</td>
-                    <td><strong>{lunchCounts[idx]}</strong></td>
+                    <td><strong>{lunchCounts[idx].periodCount}</strong></td>
+                    <td><strong>{lunchCounts[idx].tokenCount}</strong> <span title="Posible desayuno">?</span></td>
+                    <td><strong>{lunchCounts[idx].total}</strong></td>
                   </tr>
                 ))}
               </tbody>
