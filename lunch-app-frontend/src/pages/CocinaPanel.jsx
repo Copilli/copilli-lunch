@@ -2,13 +2,33 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
+
 import TopNavBar from '../components/TopNavBar';
 import SearchBar from '../components/SearchBar';
 import LevelCard from '../components/LevelCard';
 import GroupCard from '../components/GroupCard';
 
+// Helper to get next N valid dates
+const getNextValidDates = async (n = 5) => {
+  const token = localStorage.getItem('token');
+  const res = await axios.get(`${import.meta.env.VITE_API_URL}/invalid-dates`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const invalidDates = res.data.map(d => d.date);
+  let dates = [];
+  let day = dayjs();
+  while (dates.length < n) {
+    const dStr = day.format('YYYY-MM-DD');
+    if (!invalidDates.includes(dStr)) dates.push(dStr);
+    day = day.add(1, 'day');
+  }
+  return dates;
+};
+
 const CocinaPanel = ({ setUser }) => {
   const [students, setStudents] = useState([]);
+  const [validDates, setValidDates] = useState([]);
+  const [lunchCounts, setLunchCounts] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -44,9 +64,31 @@ const CocinaPanel = ({ setUser }) => {
     setStudents(res.data);
   };
 
+
   useEffect(() => {
     fetchStudents();
   }, []);
+
+  useEffect(() => {
+    // Fetch next 5 valid dates
+    getNextValidDates(5).then(setValidDates);
+  }, []);
+
+  useEffect(() => {
+    if (students.length && validDates.length) {
+      // For each valid date, count students with tokens > 0 or valid period
+      const counts = validDates.map(date => {
+        return students.filter(s => {
+          const hasTokens = s.tokens > 0;
+          const inPeriod = s.hasSpecialPeriod &&
+            dayjs(date).isSameOrAfter(dayjs(s.specialPeriod?.startDate)) &&
+            dayjs(date).isSameOrBefore(dayjs(s.specialPeriod?.endDate));
+          return hasTokens || inPeriod;
+        }).length;
+      });
+      setLunchCounts(counts);
+    }
+  }, [students, validDates]);
 
   const today = dayjs().format('YYYY-MM-DD');
   const levels = ['preescolar', 'primaria', 'secundaria'];
@@ -156,6 +198,7 @@ const CocinaPanel = ({ setUser }) => {
     'bloqueado': 'Bloqueado'
   };
 
+
   return (
     <div className="app-container container py-4">
       {/* Título centrado */}
@@ -173,6 +216,20 @@ const CocinaPanel = ({ setUser }) => {
           }}
         />
       </TopNavBar>
+
+      {/* Lunch count alert, similar to cutOff alert */}
+      {validDates.length > 0 && lunchCounts.length === validDates.length && (
+        <div className="alert alert-info mt-3 text-center" style={{ fontSize: '1.1rem' }}>
+          <strong>Comidas programadas:</strong>
+          <ul className="list-unstyled mb-0 mt-2">
+            {validDates.map((date, idx) => (
+              <li key={date}>
+                <span style={{ fontWeight: 'bold' }}>{dayjs(date).format('dddd, DD MMM YYYY')}</span>: {lunchCounts[idx]} desayunos
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Alerts */}
       {formError && (
