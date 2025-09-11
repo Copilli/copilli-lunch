@@ -198,7 +198,6 @@ const CocinaPanel = ({ setUser }) => {
     'bloqueado': 'Bloqueado'
   };
 
-
   return (
     <div className="app-container container py-4">
       {/* Título centrado */}
@@ -217,17 +216,30 @@ const CocinaPanel = ({ setUser }) => {
         />
       </TopNavBar>
 
-      {/* Lunch count alert, similar to cutOff alert */}
+      {/* Alerta de conteo de desayunos en formato tabla y en español */}
       {validDates.length > 0 && lunchCounts.length === validDates.length && (
         <div className="alert alert-info mt-3 text-center" style={{ fontSize: '1.1rem' }}>
-          <strong>Comidas programadas:</strong>
-          <ul className="list-unstyled mb-0 mt-2">
-            {validDates.map((date, idx) => (
-              <li key={date}>
-                <span style={{ fontWeight: 'bold' }}>{dayjs(date).format('dddd, DD MMM YYYY')}</span>: {lunchCounts[idx]} desayunos
-              </li>
-            ))}
-          </ul>
+          <strong>Desayunos programados próximos días:</strong>
+          <div className="table-responsive mt-2">
+            <table className="table table-bordered table-sm mb-0" style={{ background: '#f8f9fa', borderRadius: '8px', overflow: 'hidden' }}>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Día</th>
+                  <th>Total desayunos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {validDates.map((date, idx) => (
+                  <tr key={date}>
+                    <td>{dayjs(date).format('DD/MM/YYYY')}</td>
+                    <td>{dayjs(date).locale('es').format('dddd')}</td>
+                    <td><strong>{lunchCounts[idx]}</strong></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
