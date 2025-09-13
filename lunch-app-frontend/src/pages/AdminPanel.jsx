@@ -104,7 +104,7 @@ const AdminPanel = ({ setUser }) => {
     setSelectedStudent(null);
   }, [selectedGroup, selectedLevel]);
 
-  const levels = ['preescolar', 'primaria', 'secundaria'];
+  const levels = ['preescolar', 'primaria', 'secundaria', 'personal'];
 
   const filtered = search
     ? students.filter(

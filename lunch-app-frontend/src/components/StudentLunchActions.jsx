@@ -18,14 +18,14 @@ function getPricesForStudent(student) {
   const groupNameUpper = groupName.toUpperCase();
 
   if (level === 'preescolar') {
-    return { priceToken: 44, pricePeriod: 37 };
+    return { priceToken: 44, pricePeriod: 40 };
   }
   if (level === 'secundaria') {
     return { priceToken: 62, pricePeriod: 52 };
   }
   if (level === 'primaria') {
     if (/^[1-3]/.test(groupNameUpper)) {
-      return { priceToken: 50, pricePeriod: 42 };
+      return { priceToken: 50, pricePeriod: 44 };
     }
     if (/^[4-6]/.test(groupNameUpper)) {
       return { priceToken: 57, pricePeriod: 47 };

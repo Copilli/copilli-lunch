@@ -2,13 +2,34 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
+import 'dayjs/locale/es';
+
 import TopNavBar from '../components/TopNavBar';
 import SearchBar from '../components/SearchBar';
 import LevelCard from '../components/LevelCard';
 import GroupCard from '../components/GroupCard';
 
+// Helper to get next N valid dates
+const getNextValidDates = async (n = 5) => {
+  const token = localStorage.getItem('token');
+  const res = await axios.get(`${import.meta.env.VITE_API_URL}/invalid-dates`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const invalidDates = res.data.map(d => d.date);
+  let dates = [];
+  let day = dayjs();
+  while (dates.length < n) {
+    const dStr = day.format('YYYY-MM-DD');
+    if (!invalidDates.includes(dStr)) dates.push(dStr);
+    day = day.add(1, 'day');
+  }
+  return dates;
+};
+
 const CocinaPanel = ({ setUser }) => {
   const [students, setStudents] = useState([]);
+  const [validDates, setValidDates] = useState([]);
+  const [lunchCounts, setLunchCounts] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -44,12 +65,40 @@ const CocinaPanel = ({ setUser }) => {
     setStudents(res.data);
   };
 
+
   useEffect(() => {
     fetchStudents();
   }, []);
 
+  useEffect(() => {
+    // Fetch next 5 valid dates
+    getNextValidDates(5).then(setValidDates);
+  }, []);
+
+  useEffect(() => {
+    if (students.length && validDates.length) {
+      // For each valid date, count students with valid period and with tokens
+      const counts = validDates.map(date => {
+        let periodCount = 0;
+        let tokenCount = 0;
+        students.forEach(s => {
+          const inPeriod = s.hasSpecialPeriod &&
+            dayjs(date).isSameOrAfter(dayjs(s.specialPeriod?.startDate)) &&
+            dayjs(date).isSameOrBefore(dayjs(s.specialPeriod?.endDate));
+          if (inPeriod) {
+            periodCount++;
+          } else if (s.tokens > 0) {
+            tokenCount++;
+          }
+        });
+        return { periodCount, tokenCount, total: periodCount + tokenCount };
+      });
+      setLunchCounts(counts);
+    }
+  }, [students, validDates]);
+
   const today = dayjs().format('YYYY-MM-DD');
-  const levels = ['preescolar', 'primaria', 'secundaria'];
+  const levels = ['preescolar', 'primaria', 'secundaria', 'personal'];
 
   const filtered = search
     ? students.filter(
@@ -173,6 +222,37 @@ const CocinaPanel = ({ setUser }) => {
           }}
         />
       </TopNavBar>
+
+      {/* Alerta de conteo de desayunos en formato tabla y en español, con desglose */}
+      {validDates.length > 0 && lunchCounts.length === validDates.length && (
+        <div className="alert alert-info mt-3 text-center" style={{ fontSize: '1.1rem' }}>
+          <strong>Desayunos programados próximos días:</strong>
+          <div className="table-responsive mt-2">
+            <table className="table table-bordered table-sm mb-0" style={{ background: '#f8f9fa', borderRadius: '8px', overflow: 'hidden' }}>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Día</th>
+                  <th>Periodos (100%)</th>
+                  <th>Tokens (?)</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {validDates.map((date, idx) => (
+                  <tr key={date}>
+                    <td>{dayjs(date).format('DD/MM/YYYY')}</td>
+                    <td>{dayjs(date).locale('es').format('dddd')}</td>
+                    <td><strong>{lunchCounts[idx].periodCount}</strong></td>
+                    <td><strong>{lunchCounts[idx].tokenCount}</strong> <span title="Posible desayuno">?</span></td>
+                    <td><strong>{lunchCounts[idx].total}</strong></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Alerts */}
       {formError && (

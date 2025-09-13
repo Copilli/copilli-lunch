@@ -6,7 +6,7 @@ const studentSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   email: { type: String, required: true, trim: true, lowercase: true },
   group: {
-    level: { type: String, enum: ['preescolar', 'primaria', 'secundaria'], required: true },
+    level: { type: String, enum: ['preescolar', 'primaria', 'secundaria', 'personal'], required: true },
     name:  { type: String, required: true }
   },
   tokens: { type: Number, default: 0 },
