@@ -50,6 +50,17 @@ node scripts/createUser.js
 
 ---
 
+### 📅 Generar fechas inválidas
+
+```bash
+node scripts/generateInvalidDates.js
+```
+
+> Este script permite registrar en la base de datos las fechas en las que **no habrá desayuno** (por ejemplo, días festivos o vacaciones).  
+> Se te pedirá ingresar las fechas manualmente en consola.
+
+---
+
 ## 🌐 Frontend (React + Vite + GitHub Pages)
 
 ### 🔧 Requisitos

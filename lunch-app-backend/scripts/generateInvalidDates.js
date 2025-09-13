@@ -9,29 +9,38 @@ const InvalidDate = require('../models/InvalidDate');
 const year = 2025;
 
 const holidayBridgesMX = [
-  '2025-01-01', // Año nuevo
-  '2025-02-03', // Constitución
-  '2025-03-17', // Benito Juárez
-  '2025-05-01', // Día del trabajo
+  '2026-01-01', // Año nuevo
+  '2026-02-02', // Constitución
+  '2026-03-16', // Benito Juárez
+  '2026-05-01', // Día del trabajo
+  '2026-05-05', // 
+  '2026-05-15', // 
   '2025-09-16', // Independencia
   '2025-11-17', // Revolución
   '2025-12-25', // Navidad
 ];
 
 const customInvalidDates = [
-  '2025-12-24', // Noche Buena, ejemplo personalizado
+'2025-12-24', // Noche Buena, ejemplo personalizado
+'2025-09-26', // CTE
+'2025-10-31', // CTE
+'2026-01-30', // CTE
+'2026-02-27', // CTE
+'2026-03-27', // CTE
+'2026-05-29', // CTE
+'2026-06-26', // CTE
 ];
 
 const customInvalidPeriods = [
   {
-    start: '2025-07-15',
-    end: '2025-08-15',
-    reason: 'Vacaciones de verano'
+    start: '2025-12-22',
+    end: '2026-01-11',
+    reason: 'Cierre de año'
   },
   {
-    start: '2025-12-16',
-    end: '2025-12-31',
-    reason: 'Cierre de año'
+    start: '2026-03-27',
+    end: '2026-04-10',
+    reason: 'Vacaciones de verano'
   }
 ];
 
