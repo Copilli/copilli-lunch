@@ -44,6 +44,8 @@ function getPricesForStudent(student) {
     // Grupo no válido: usar el precio más alto de primaria
     return { priceToken: 57, pricePeriod: 47 };
   }
+    // Grupo no válido: usar el precio más alto de secundaria
+    return { priceToken: 62, pricePeriod: 52 };
 }
 
 /**

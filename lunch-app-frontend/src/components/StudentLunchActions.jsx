@@ -33,6 +33,8 @@ function getPricesForStudent(student) {
     // Grupo no válido: usar el precio más alto de primaria
     return { priceToken: 57, pricePeriod: 47 };
   }
+    // Grupo no válido: usar el precio más alto de secundaria
+    return { priceToken: 62, pricePeriod: 52 };
 }
 
 const StudentLunchActions = ({ student, onUpdate }) => {
@@ -130,7 +132,11 @@ const StudentLunchActions = ({ student, onUpdate }) => {
     () => getValidDaysCount(startDate, endDate),
     [startDate, endDate, invalidDates]
   );
-  const prices = useMemo(() => getPricesForStudent(student), [student]);
+  const prices = useMemo(() => {
+    const result = getPricesForStudent(student);
+    if (!result) return { priceToken: 62, pricePeriod: 52 };
+    return result;
+  }, [student]);
   const priceToken = prices.priceToken;
   const pricePeriod = prices.pricePeriod;
   const totalForTokens = useMemo(
