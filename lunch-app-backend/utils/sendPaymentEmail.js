@@ -1,7 +1,8 @@
 // utils/sendPaymentEmail.js
 const nodemailer = require('nodemailer');
-const TokenMovement = require('../models/TokenMovement');
-const Student = require('../models/Student');
+const Movement = require('../models/Movement');
+const Lunch = require('../models/Lunch');
+const Person = require('../models/Person');
 
 const DEFAULT_CURRENCY = 'MXN';
 const MX_TZ = 'America/Mexico_City';
@@ -56,23 +57,23 @@ function getPricesForStudent(student) {
  */
 async function getConceptAndQty(payment) {
   try {
-    const mov = await TokenMovement.findById(payment.tokenMovementId).lean();
+    const mov = await Movement.findById(payment.movementId).lean();
     if (!mov) return { concept: 'Pago', qty: null, units: '', rangeLabel: '' };
 
-    // Obtener el estudiante para precios
-    const student = await Student.findOne({ studentId: payment.studentId }).lean();
-    const prices = getPricesForStudent(student || {});
+    // Obtener lunch y persona para precios
+    const lunch = await Lunch.findById(mov.entityId).lean();
+    if (!lunch) return { concept: 'Pago', qty: null, units: '', rangeLabel: '' };
+    const person = await Person.findById(lunch.person).lean();
+    const prices = getPricesForStudent({ group: person?.group });
 
     // ¿Periodo? (nuestro flujo guarda change=0 para periodo)
     if (!mov.change || mov.change === 0) {
       const qty = Math.round((payment.amount || 0) / prices.pricePeriod) || 0;
       let rangeLabel = '';
-      // intentar extraer fechas del note: "... (YYYY-MM-DD → YYYY-MM-DD) ..."
       const m = mov.note && mov.note.match(/(\d{4}-\d{2}-\d{2}).*?(\d{4}-\d{2}-\d{2})/);
       if (m) rangeLabel = ` (${m[1]} → ${m[2]})`;
       return { concept: 'Periodo', qty, units: `día${qty === 1 ? '' : 's'}`, rangeLabel };
     }
-
     // Si no, lo tratamos como compra de tokens
     const qty = Number(mov.change) || Math.round((payment.amount || 0) / prices.priceToken) || 0;
     return { concept: 'Tokens', qty, units: `token${qty === 1 ? '' : 's'}`, rangeLabel: '' };

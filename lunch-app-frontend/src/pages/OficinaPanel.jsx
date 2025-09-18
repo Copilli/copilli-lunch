@@ -5,9 +5,9 @@ import TopNavBar from '../components/TopNavBar';
 import SearchBar from '../components/SearchBar';
 import LevelCard from '../components/LevelCard';
 import GroupCard from '../components/GroupCard';
-import { StudentCalendarContainer } from '../components/StudentCalendarTable';
-import StudentSummaryCard from '../components/StudentSummaryCard';
-import StudentDetailsPanel from '../components/StudentDetailsPanel';
+import { StudentCalendarContainer } from '../components/PersonCalendarTable';
+import PersonSummaryCard from '../components/PersonSummaryCard';
+import PersonDetailsPanel from '../components/PersonDetailsPanel';
 
 const OficinaPanel = ({ setUser }) => {
   const [students, setStudents] = useState([]);
@@ -24,15 +24,17 @@ const OficinaPanel = ({ setUser }) => {
   const token = localStorage.getItem('token');
   const API = import.meta.env.VITE_API_URL;
 
+  // Fetch persons of type student (flat)
   const fetchStudents = async () => {
-    const res = await axios.get(`${API}/students`, {
+    const res = await axios.get(`${API}/persons?flat=1`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     setStudents(res.data);
   };
 
+  // Fetch all movements (optionally filter by entityId later)
   const fetchMovements = async () => {
-    const res = await axios.get(`${API}/token-movements`, {
+    const res = await axios.get(`${API}/movements`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     setMovements(res.data);
@@ -65,17 +67,17 @@ const OficinaPanel = ({ setUser }) => {
     ? students.filter(
         s =>
           s.name.toLowerCase().includes(search.toLowerCase()) ||
-          s.studentId.toLowerCase().includes(search.toLowerCase())
+          (s.personId && s.personId.toLowerCase().includes(search.toLowerCase()))
       )
     : students;
 
   const groupsInLevel = selectedLevel
-    ? [...new Set(filtered.filter(s => s.group.level === selectedLevel).map(s => s.group.name))]
+    ? [...new Set(filtered.filter(s => s.group?.level === selectedLevel).map(s => s.group?.name))]
     : [];
 
   const studentsInGroup = selectedGroup
     ? filtered.filter(
-        s => s.group.level === selectedLevel && s.group.name === selectedGroup
+        s => s.group?.level === selectedLevel && s.group?.name === selectedGroup
       )
     : [];
 
@@ -181,11 +183,11 @@ const OficinaPanel = ({ setUser }) => {
             <h4 className='text-center'>Resumen por alumno</h4>
             <div>
               {studentsInGroup.map(student => (
-                <div key={student.studentId}>
-                  <StudentSummaryCard
+                <div key={student.personId}>
+                  <PersonSummaryCard
                     student={student}
                     onSelect={() => {
-                      if (selectedStudent && selectedStudent.studentId === student.studentId) {
+                      if (selectedStudent && selectedStudent.personId === student.personId) {
                         setSelectedStudent(null);
                         setShowDetails(false);
                       } else {
@@ -194,9 +196,9 @@ const OficinaPanel = ({ setUser }) => {
                       }
                     }}
                   />
-                  {showDetails && selectedStudent && selectedStudent.studentId === student.studentId && (
+                  {showDetails && selectedStudent && selectedStudent.personId === student.personId && (
                     <div className="accordion-panel card card-body bg-light mt-2 mb-3">
-                      <StudentDetailsPanel
+                      <PersonDetailsPanel
                         student={selectedStudent}
                         movements={movements}
                         onClose={() => {

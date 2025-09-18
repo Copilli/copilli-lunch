@@ -21,7 +21,7 @@ export default function AdminPayments() {
 
   const [from, setFrom] = useState(dayjs().tz(TZ).format('YYYY-MM-DD'));
   const [to, setTo] = useState(dayjs().tz(TZ).format('YYYY-MM-DD'));
-  const [studentId, setStudentId] = useState('');
+  const [personId, setPersonId] = useState('');
 
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
@@ -41,7 +41,7 @@ export default function AdminPayments() {
     try {
       const { fromISO, toISO } = rangeToISO(from, to);
       const { data } = await axios.get(`${API}/payments`, {
-        params: { from: fromISO, to: toISO, studentId: studentId || undefined },
+        params: { from: fromISO, to: toISO, personId: personId || undefined },
         headers
       });
       setRows(data.payments || []);
@@ -82,7 +82,7 @@ export default function AdminPayments() {
     try {
       const { fromISO, toISO } = rangeToISO(from, to);
       const { data } = await axios.post(`${API}/payments/resend-mails`, {
-        from: fromISO, to: toISO, studentId: studentId || undefined
+        from: fromISO, to: toISO, personId: personId || undefined
       }, { headers });
       alert(`Reenviados: ${data.sent} / Intentados: ${data.attempted}`);
       handleSearch();
@@ -94,15 +94,15 @@ export default function AdminPayments() {
 
   const exportCSV = () => {
     if (!rows.length) return;
-    const header = 'Fecha,Ticket,Alumno,Monto,Correo Enviado,Nota\n';
+    const header = 'Fecha,Ticket,Persona,Monto,Correo Enviado,Nota\n';
     const lines = rows.map(r => {
       const fecha = dayjs(r.date).tz(TZ).format('YYYY-MM-DD HH:mm');
       const ticket = r.ticketNumber;
-      const alumno = r.studentId;
+      const persona = r.personId;
       const monto = r.amount;
       const mail = r.sentEmail ? 'Sí' : 'No';
-      const nota = r?.tokenMovementId?.note?.replace(/[\r\n,]/g, ' ') || '';
-      return `${fecha},${ticket},${alumno},${monto},${mail},${nota}`;
+      const nota = r?.movementId?.note?.replace(/[\r\n,]/g, ' ') || '';
+      return `${fecha},${ticket},${persona},${monto},${mail},${nota}`;
     });
     const blob = new Blob([header + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -151,8 +151,8 @@ export default function AdminPayments() {
             <input type="date" className="form-control" value={to} onChange={e => setTo(e.target.value)} />
           </div>
           <div className="col-12 col-md-3">
-            <label className="form-label">Alumno (studentId)</label>
-            <input type="text" className="form-control" value={studentId} onChange={e => setStudentId(e.target.value)} placeholder="Opcional" />
+            <label className="form-label">Persona (personId)</label>
+            <input type="text" className="form-control" value={personId} onChange={e => setPersonId(e.target.value)} placeholder="Opcional" />
           </div>
           <div className="col-12 col-md-3 d-flex align-items-end">
             <button className="btn btn-primary w-100" type="submit" disabled={loading}>
@@ -182,7 +182,7 @@ export default function AdminPayments() {
           <table className="table table-sm table-striped">
             <thead>
               <tr>
-                <th>{groupBy === 'student' ? 'Alumno' : 'Fecha'}</th>
+                <th>{groupBy === 'student' ? 'Persona' : 'Fecha'}</th>
                 <th>Total</th>
                 <th>Pagos</th>
               </tr>
@@ -192,7 +192,7 @@ export default function AdminPayments() {
                 <tr key={idx}>
                   <td>
                     {groupBy === 'student'
-                      ? (<Link to={`/admin?studentId=${encodeURIComponent(r.studentId)}`} className="link-primary">{r.studentId}</Link>)
+                      ? (<Link to={`/admin?personId=${encodeURIComponent(r.personId)}`} className="link-primary">{r.personId}</Link>)
                       : dayjs(r.date).tz(TZ).format('YYYY-MM-DD')}
                   </td>
                   <td>{currencyFmt(r.total)}</td>
@@ -222,7 +222,7 @@ export default function AdminPayments() {
               <tr>
                 <th style={{whiteSpace:'nowrap'}}>Fecha</th>
                 <th>Ticket</th>
-                <th>Alumno</th>
+                <th>Persona</th>
                 <th>Monto</th>
                 <th>Correo</th>
                 <th>Nota</th>
@@ -234,13 +234,13 @@ export default function AdminPayments() {
                   <td style={{whiteSpace:'nowrap'}}>{dayjs(r.date).tz(TZ).format('YYYY-MM-DD HH:mm')}</td>
                   <td>{r.ticketNumber}</td>
                   <td>
-                    <Link to={`/admin?studentId=${encodeURIComponent(r.studentId)}`} className="link-primary">
-                      {r.studentId}
+                    <Link to={`/admin?personId=${encodeURIComponent(r.personId)}`} className="link-primary">
+                      {r.personId}
                     </Link>
                   </td>
                   <td>{currencyFmt(r.amount)}</td>
                   <td>{r.sentEmail ? 'Enviado' : 'Pendiente'}</td>
-                  <td>{r?.tokenMovementId?.note || ''}</td>
+                  <td>{r?.movementId?.note || ''}</td>
                 </tr>
               ))}
               {!rows.length && (
