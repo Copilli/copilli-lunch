@@ -1,6 +1,7 @@
 // src/components/PersonCalendarTable.jsx
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { useInvalidDates } from '../context/InvalidDatesContext';
 import dayjs from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
@@ -40,7 +41,9 @@ const PersonCalendarTable = ({
   // normaliza invalidDates (string o {date, reason})
   const invalidSet = useMemo(() => {
     const list = invalidDates.map(d =>
-      typeof d === 'string' ? d : dayjs(d.date).utc().startOf('day').format('YYYY-MM-DD')
+      typeof d === 'string' ? d : (
+        d.date && typeof d.date === 'string' ? d.date : dayjs(d.date).format('YYYY-MM-DD')
+      )
     );
     return new Set(list);
   }, [invalidDates]);
@@ -48,7 +51,9 @@ const PersonCalendarTable = ({
   const invalidReasonMap = useMemo(() => {
     const map = new Map();
     invalidDates.forEach(d => {
-      const k = typeof d === 'string' ? d : dayjs(d.date).utc().startOf('day').format('YYYY-MM-DD');
+      const k = typeof d === 'string' ? d : (
+        d.date && typeof d.date === 'string' ? d.date : dayjs(d.date).format('YYYY-MM-DD')
+      );
       const r = typeof d === 'string' ? '' : (d.reason || '');
       map.set(k, r);
     });
@@ -85,10 +90,10 @@ const PersonCalendarTable = ({
     </div>
   );
 
+  // ...existing code...
   return (
     <>
       <CalendarLegend />
-
       {/* Viewport + contenedor con scroll horizontal */}
       <div className="calendar-wrap">
         <div className="calendar-scroll-x">
@@ -111,7 +116,7 @@ const PersonCalendarTable = ({
               {persons.map((person) => {
                 // movimientos de la persona indexados por YYYY-MM-DD
                 const personMovs = movements
-                  .filter(m => String(m.entityId) === String(person.lunch?._id))
+                  .filter(m => String(m.entityId) === String(person.entityId))
                   .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
                 const tokenByDay = {};
@@ -123,11 +128,11 @@ const PersonCalendarTable = ({
                 const logs = periodLogsMap[person.lunch?._id] || [];
 
                 return (
-                  <tr key={person.personId}>
+                  <tr key={person.entityId}>
                     {/* Columna sticky "Persona" (ancho controlado por CSS + minWidth de arriba) */}
                     <td
                       className="fw-bold text-start"
-                      title={`${person.name} (${person.personId})`}
+                      title={`${person.name} (${person.entityId})`}
                     >
                       {person.name}
                     </td>
@@ -183,34 +188,47 @@ export const PersonCalendarContainer = ({ month, year, selectedPerson, currentGr
   const [persons, setPersons] = useState([]);
   const [movements, setMovements] = useState([]);
   const [periodLogs, setPeriodLogs] = useState([]);
-  const [invalidDates, setInvalidDates] = useState([]);
-  const [loading, setLoading] = useState(true);
 
+  const [loading, setLoading] = useState(true);
   const token = localStorage.getItem('token');
   const API = import.meta.env.VITE_API_URL;
+  const { invalidDates, loading: loadingInvalidDates } = useInvalidDates();
 
-  const fetchInvalidDates = async () => {
-    const res = await axios.get(`${API}/invalid-dates`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    setInvalidDates(res.data || []);
-  };
-
-  const fetchAllPeriodLogs = async (list) => {
-    const all = await Promise.all(
-      (list || []).map(async (p) => {
-        try {
-          if (!p.lunch?._id) return [];
-          const res = await axios.get(`${API}/lunch/${p.lunch._id}/period-logs`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          return (res.data || []).map(log => ({ ...log, lunchId: p.lunch._id }));
-        } catch {
-          return [];
+  // Solo pide period-logs del usuario seleccionado (o grupo actual)
+  const fetchPeriodLogs = async (list) => {
+    if (selectedPerson && selectedPerson.lunch?._id) {
+      try {
+        const res = await axios.get(`${API}/lunch/${selectedPerson.lunch._id}/period-logs`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        return (res.data || []).map(log => ({ ...log, lunchId: selectedPerson.lunch._id }));
+      } catch {
+        return [];
+      }
+    } else if (currentGroup) {
+      // Si hay grupo seleccionado, usar endpoint batch
+      const groupPersons = (list || []).filter(
+        p => p.groupName === currentGroup.name && p.level === currentGroup.level && p.lunch?._id && p.entityId
+      );
+      if (!groupPersons.length) return [];
+      const entityIds = groupPersons.map(p => p.entityId).join(',');
+      try {
+        const res = await axios.get(`${API}/lunch/period-logs?entityIds=${entityIds}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        // El resultado es un objeto { entityId: [logs] }
+        // Hay que mapear cada log para agregar lunchId
+        let logs = [];
+        for (const p of groupPersons) {
+          const arr = res.data[p.entityId] || [];
+          logs = logs.concat(arr.map(log => ({ ...log, lunchId: p.lunch._id })));
         }
-      })
-    );
-    return all.flat();
+        return logs;
+      } catch {
+        return [];
+      }
+    }
+    return [];
   };
 
   useEffect(() => {
@@ -225,8 +243,7 @@ export const PersonCalendarContainer = ({ month, year, selectedPerson, currentGr
 
         const p = pRes.data || [];
         const m = mRes.data || [];
-        const logs = await fetchAllPeriodLogs(p);
-        await fetchInvalidDates();
+        const logs = await fetchPeriodLogs(p);
 
         if (!alive) return;
         setPersons(p);
@@ -240,13 +257,13 @@ export const PersonCalendarContainer = ({ month, year, selectedPerson, currentGr
     })();
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedPerson, currentGroup]);
 
-  if (loading) return <p>Cargando calendario…</p>;
+  if (loading || loadingInvalidDates) return <p>Cargando calendario…</p>;
 
   let visiblePersons = persons;
   if (selectedPerson) {
-    visiblePersons = persons.filter(p => p.personId === selectedPerson.personId);
+    visiblePersons = persons.filter(p => p.entityId === selectedPerson.entityId);
   } else if (currentGroup) {
     visiblePersons = persons.filter(
       p => p.groupName === currentGroup.name && p.level === currentGroup.level
@@ -254,11 +271,11 @@ export const PersonCalendarContainer = ({ month, year, selectedPerson, currentGr
   }
 
   const visibleMovements = movements.filter(m =>
-    visiblePersons.some(p => p.lunch?._id && m.entityId === p.lunch._id)
+    visiblePersons.some(p => m.entityId === p.entityId)
   );
 
   const visiblePeriodLogs = periodLogs.filter(p =>
-    visiblePersons.some(per => per.lunch?._id && p.lunchId === per.lunch._id)
+    visiblePersons.some(per => p.lunchId === per.lunch?._id)
   );
 
   return (
@@ -266,7 +283,7 @@ export const PersonCalendarContainer = ({ month, year, selectedPerson, currentGr
       persons={visiblePersons}
       movements={visibleMovements}
       periodLogs={visiblePeriodLogs}
-      invalidDates={invalidDates}
+      invalidDates={invalidDates || []}
       month={month}
       year={year}
     />

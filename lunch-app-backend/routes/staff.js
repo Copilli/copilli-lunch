@@ -3,10 +3,10 @@ const router = express.Router();
 const Staff = require('../models/Staff');
 const Person = require('../models/Person');
 
-// GET staff-specific info by personId
-router.get('/:personId', async (req, res) => {
+// GET staff-specific info by entityId
+router.get('/:entityId', async (req, res) => {
   try {
-    const staff = await Staff.findOne({ person: req.params.personId }).lean();
+    const staff = await Staff.findOne({ person: req.params.entityId }).lean();
     if (!staff) return res.status(404).json({ error: 'Staff not found' });
     res.json(staff);
   } catch (err) {
@@ -15,10 +15,10 @@ router.get('/:personId', async (req, res) => {
 });
 
 // PUT update staff-specific info
-router.put('/:personId', async (req, res) => {
+router.put('/:entityId', async (req, res) => {
   try {
     const updated = await Staff.findOneAndUpdate(
-      { person: req.params.personId },
+      { person: req.params.entityId },
       req.body,
       { new: true }
     ).lean();

@@ -11,10 +11,14 @@ const SearchBar = ({ search, setSearch, persons, onSelect }) => {
     }
 
     const lowered = search.toLowerCase();
+    if (!Array.isArray(persons)) {
+      setSuggestions([]);
+      return;
+    }
     const filtered = persons.filter(
       (p) =>
         p.name.toLowerCase().includes(lowered) ||
-        (p.personId && p.personId.toLowerCase().includes(lowered))
+        (p.entityId && p.entityId.toLowerCase().includes(lowered))
     );
     setSuggestions(filtered.slice(0, 5)); // Limita a 5 sugerencias
   }, [search, persons]);
@@ -67,12 +71,12 @@ const SearchBar = ({ search, setSearch, persons, onSelect }) => {
         >
           {suggestions.map((p) => (
             <li
-              key={p.personId}
+              key={p.entityId}
               onClick={() => handleSelect(p)}
               className="list-group-item list-group-item-action"
               style={{ cursor: 'pointer' }}
             >
-              <strong>{p.name}</strong> ({p.personId})
+              <strong>{p.name}</strong> ({p.entityId})
             </li>
           ))}
         </ul>

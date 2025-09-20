@@ -18,24 +18,27 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
 
   useEffect(() => {
     if (person) {
+      const lunch = person.lunch || {};
       const today = dayjs.utc().startOf('day');
-      const periodStart = dayjs.utc(person.specialPeriod?.startDate).startOf('day');
-      const periodEnd = dayjs.utc(person.specialPeriod?.endDate).startOf('day');
-
-      const periodExists = !!(person.specialPeriod?.startDate && person.specialPeriod?.endDate);
-      const isActive = periodExists && today.isSameOrAfter(periodStart) && today.isSameOrBefore(periodEnd);
+      const specialPeriod = lunch.specialPeriod || {};
+      const periodStart = specialPeriod.startDate ? dayjs.utc(specialPeriod.startDate).startOf('day') : null;
+      const periodEnd = specialPeriod.endDate ? dayjs.utc(specialPeriod.endDate).startOf('day') : null;
+      const periodExists = !!(specialPeriod.startDate && specialPeriod.endDate);
+      const isActive = periodExists && periodStart && periodEnd && today.isSameOrAfter(periodStart) && today.isSameOrBefore(periodEnd);
 
       setForm({
         ...person,
+        tokens: lunch.tokens ?? 0,
+        status: lunch.status || 'sin-fondos',
         specialPeriod: {
-          startDate: person.specialPeriod?.startDate || null,
-          endDate: person.specialPeriod?.endDate || null
+          startDate: specialPeriod.startDate || null,
+          endDate: specialPeriod.endDate || null
         },
         hasSpecialPeriod: isActive
       });
 
-      setOriginalTokens(person.tokens);
-      setLastValidStatus(person.status);
+      setOriginalTokens(lunch.tokens ?? 0);
+      setLastValidStatus(lunch.status || 'sin-fondos');
       setVisibleMovements(5);
     }
   }, [person]);
@@ -57,7 +60,7 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
   const isAdmin = user?.role === 'admin';
 
   const personMovements = movements
-    .filter(m => m.personId === person.personId)
+    .filter(m => m.entityId === person.entityId)
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
   const showError = (msg) => {
@@ -161,7 +164,7 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
   const exportCSV = () => {
     if (!isAdmin) return;
     const header = 'Fecha,Motivo,Nota,Responsable,Cambio\n';
-    const rows = studentMovements.map(m => {
+  const rows = personMovements.map(m => {
       const fecha = dayjs(m.timestamp).format('YYYY-MM-DD HH:mm');
       const motivo = m.reason;
       const nota = m.note?.replace(/,/g, ';') || '';
@@ -172,7 +175,7 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
     const blob = new Blob([header + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-  link.setAttribute('download', `${person.personId}_historial.csv`);
+  link.setAttribute('download', `${person.entityId}_historial.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -193,7 +196,7 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
         hasSpecialPeriod: false,
         specialPeriod: { startDate: null, endDate: null }
       }));
-      if (fetchStudents) fetchStudents();
+  if (fetchPersons) fetchPersons();
       if (fetchMovements) fetchMovements();
       showSuccess('Periodo especial eliminado.');
     } catch (err) {
@@ -227,12 +230,21 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
         <div className="card-body">
           <div className="row mb-3">
             <div className="col-auto">
-              <img
-                src={form.photoUrl}
-                alt={form.name}
-                className="rounded-circle"
-                style={{ width: 100, height: 100, objectFit: 'cover' }}
-              />
+              {form.photoUrl ? (
+                <img
+                  src={form.photoUrl}
+                  alt={form.name}
+                  className="rounded-circle"
+                  style={{ width: 100, height: 100, objectFit: 'cover' }}
+                />
+              ) : (
+                <div
+                  className="rounded-circle bg-secondary d-flex align-items-center justify-content-center"
+                  style={{ width: 100, height: 100, color: '#fff', fontSize: 32 }}
+                >
+                  <span>{form.name ? form.name[0] : '?'}</span>
+                </div>
+              )}
             </div>
             <div className="col">
               <label className="form-label">URL de la foto:</label>
@@ -250,7 +262,7 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
             <label className="form-label">
               ID del {form.type === 'student' ? 'estudiante' : form.type === 'staff' ? 'empleado' : 'persona'}:
             </label>
-            <input type="text" className="form-control" value={form.personId} disabled />
+            <input type="text" className="form-control" value={form.entityId} disabled />
           </div>
 
           <div className="mb-3">
@@ -284,8 +296,8 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
               <input
                 type="text"
                 className="form-control"
-                value={form.group.level}
-                onChange={(e) => handleChange('group.level', e.target.value)}
+                value={form.level || ''}
+                onChange={(e) => handleChange('level', e.target.value)}
                 disabled={isReadOnly}
               />
             </div>
@@ -294,8 +306,8 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
               <input
                 type="text"
                 className="form-control"
-                value={form.group.name}
-                onChange={(e) => handleChange('group.name', e.target.value)}
+                value={form.groupName || ''}
+                onChange={(e) => handleChange('groupName', e.target.value)}
                 disabled={isReadOnly}
               />
             </div>
@@ -413,7 +425,7 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
               <p><strong>Cambio:</strong> {m.change > 0 ? '+' : ''}{m.change}</p>
             </div>
           ))}
-          {visibleMovements < studentMovements.length && (
+          {visibleMovements < personMovements.length && (
             <button className="btn btn-outline-secondary mt-2" onClick={handleLoadMore}>
               Cargar más
             </button>

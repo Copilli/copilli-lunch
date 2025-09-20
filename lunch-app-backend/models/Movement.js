@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const movementSchema = new mongoose.Schema({
-  entityId: { type: mongoose.Schema.Types.ObjectId, required: true }, // Can reference Lunch or other entities
+  entityId: { type: String, required: true }, // Always person.entityId (legacy, external to Lunch)
   change: { type: Number, required: true },
   reason: {
     type: String,

@@ -18,13 +18,17 @@ const statusLabels = {
 
 const PersonSummaryCard = ({ person, onSelect }) => {
   const today = dayjs.utc().startOf('day');
-  const start = dayjs.utc(person.specialPeriod?.startDate).startOf('day');
-  const end = dayjs.utc(person.specialPeriod?.endDate).startOf('day');
+  const lunch = person.lunch || {};
+  const specialPeriod = lunch.specialPeriod || {};
+  const hasPeriod = specialPeriod.startDate && specialPeriod.endDate;
+  let isPeriodActive = false;
+  if (hasPeriod) {
+    const start = dayjs.utc(specialPeriod.startDate).startOf('day');
+    const end = dayjs.utc(specialPeriod.endDate).startOf('day');
+    isPeriodActive = today.isSameOrAfter(start) && today.isSameOrBefore(end);
+  }
 
-  const isPeriodActive = person.specialPeriod?.startDate && person.specialPeriod?.endDate &&
-    today.isSameOrAfter(start) && today.isSameOrBefore(end);
-
-  const effectiveStatus = isPeriodActive ? 'periodo-activo' : person.status;
+  const effectiveStatus = isPeriodActive ? 'periodo-activo' : lunch.status;
 
   const bg = statusColors[effectiveStatus] || '#ffffff';
   const label = statusLabels[effectiveStatus] || effectiveStatus;
@@ -42,18 +46,28 @@ const PersonSummaryCard = ({ person, onSelect }) => {
         backgroundColor: bg
       }}
     >
-      <img
-        src={person.photoUrl}
-        alt={person.name}
-        style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover' }}
-      />
+      {person.photoUrl ? (
+        <img
+          src={person.photoUrl}
+          alt={person.name}
+          className="rounded-circle"
+          style={{ width: 60, height: 60, objectFit: 'cover' }}
+        />
+      ) : (
+        <div
+          className="rounded-circle bg-secondary d-flex align-items-center justify-content-center"
+          style={{ width: 60, height: 60, color: '#fff', fontSize: 24 }}
+        >
+          <span>{person.name ? person.name[0] : '?'}</span>
+        </div>
+      )}
       <div style={{ flex: 1 }}>
         <p><strong>{person.name}</strong></p>
-        <p>ID: {person.personId}</p>
-        <p>Tokens: {person.tokens}</p>
+        <p>ID: {person.entityId}</p>
+        <p>Tokens: {lunch.tokens ?? 0}</p>
         <p>Estado: {label}</p>
       </div>
-       <button type="button" className="btn btn-outline-secondary" onClick={() => onSelect(person)}>Ver detalles</button>
+      <button type="button" className="btn btn-outline-secondary" onClick={() => onSelect(person)}>Ver detalles</button>
     </div>
   );
 };

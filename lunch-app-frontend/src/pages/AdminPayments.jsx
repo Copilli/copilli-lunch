@@ -21,13 +21,13 @@ export default function AdminPayments() {
 
   const [from, setFrom] = useState(dayjs().tz(TZ).format('YYYY-MM-DD'));
   const [to, setTo] = useState(dayjs().tz(TZ).format('YYYY-MM-DD'));
-  const [personId, setPersonId] = useState('');
+  const [entityId, setEntityId] = useState('');
 
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const [groupBy, setGroupBy] = useState('day'); // 'day' | 'student'
+  const [groupBy, setGroupBy] = useState('day'); // 'day' | 'entity'
   const [summary, setSummary] = useState([]);
   const [overallTotal, setOverallTotal] = useState(0);
 
@@ -41,7 +41,7 @@ export default function AdminPayments() {
     try {
       const { fromISO, toISO } = rangeToISO(from, to);
       const { data } = await axios.get(`${API}/payments`, {
-        params: { from: fromISO, to: toISO, personId: personId || undefined },
+        params: { from: fromISO, to: toISO, entityId: entityId || undefined },
         headers
       });
       setRows(data.payments || []);
@@ -82,7 +82,7 @@ export default function AdminPayments() {
     try {
       const { fromISO, toISO } = rangeToISO(from, to);
       const { data } = await axios.post(`${API}/payments/resend-mails`, {
-        from: fromISO, to: toISO, personId: personId || undefined
+        from: fromISO, to: toISO, entityId: entityId || undefined
       }, { headers });
       alert(`Reenviados: ${data.sent} / Intentados: ${data.attempted}`);
       handleSearch();
@@ -94,15 +94,15 @@ export default function AdminPayments() {
 
   const exportCSV = () => {
     if (!rows.length) return;
-    const header = 'Fecha,Ticket,Persona,Monto,Correo Enviado,Nota\n';
+    const header = 'Fecha,Ticket,ID,Monto,Correo Enviado,Nota\n';
     const lines = rows.map(r => {
       const fecha = dayjs(r.date).tz(TZ).format('YYYY-MM-DD HH:mm');
       const ticket = r.ticketNumber;
-      const persona = r.personId;
+      const id = r.entityId;
       const monto = r.amount;
       const mail = r.sentEmail ? 'Sí' : 'No';
       const nota = r?.movementId?.note?.replace(/[\r\n,]/g, ' ') || '';
-      return `${fecha},${ticket},${persona},${monto},${mail},${nota}`;
+      return `${fecha},${ticket},${id},${monto},${mail},${nota}`;
     });
     const blob = new Blob([header + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -151,8 +151,8 @@ export default function AdminPayments() {
             <input type="date" className="form-control" value={to} onChange={e => setTo(e.target.value)} />
           </div>
           <div className="col-12 col-md-3">
-            <label className="form-label">Persona (personId)</label>
-            <input type="text" className="form-control" value={personId} onChange={e => setPersonId(e.target.value)} placeholder="Opcional" />
+            <label className="form-label">ID (entityId)</label>
+            <input type="text" className="form-control" value={entityId} onChange={e => setEntityId(e.target.value)} placeholder="Opcional" />
           </div>
           <div className="col-12 col-md-3 d-flex align-items-end">
             <button className="btn btn-primary w-100" type="submit" disabled={loading}>
@@ -172,7 +172,7 @@ export default function AdminPayments() {
               onChange={e => setGroupBy(e.target.value)}
             >
               <option value="day">Día</option>
-              <option value="student">Alumno</option>
+              <option value="entity">ID</option>
             </select>
           </div>
         </div>
@@ -182,7 +182,7 @@ export default function AdminPayments() {
           <table className="table table-sm table-striped">
             <thead>
               <tr>
-                <th>{groupBy === 'student' ? 'Persona' : 'Fecha'}</th>
+                <th>{groupBy === 'entity' ? 'ID' : 'Fecha'}</th>
                 <th>Total</th>
                 <th>Pagos</th>
               </tr>
@@ -191,8 +191,12 @@ export default function AdminPayments() {
               {summary.map((r, idx) => (
                 <tr key={idx}>
                   <td>
-                    {groupBy === 'student'
-                      ? (<Link to={`/admin?personId=${encodeURIComponent(r.personId)}`} className="link-primary">{r.personId}</Link>)
+                    {groupBy === 'entity'
+                      ? (
+                        r.entityId
+                          ? (<Link to={`/admin?entityId=${encodeURIComponent(r.entityId)}`} className="link-primary">{r.entityId}</Link>)
+                          : <span className="text-muted">Sin ID</span>
+                      )
                       : dayjs(r.date).tz(TZ).format('YYYY-MM-DD')}
                   </td>
                   <td>{currencyFmt(r.total)}</td>
@@ -222,7 +226,7 @@ export default function AdminPayments() {
               <tr>
                 <th style={{whiteSpace:'nowrap'}}>Fecha</th>
                 <th>Ticket</th>
-                <th>Persona</th>
+                <th>ID</th>
                 <th>Monto</th>
                 <th>Correo</th>
                 <th>Nota</th>
@@ -234,8 +238,8 @@ export default function AdminPayments() {
                   <td style={{whiteSpace:'nowrap'}}>{dayjs(r.date).tz(TZ).format('YYYY-MM-DD HH:mm')}</td>
                   <td>{r.ticketNumber}</td>
                   <td>
-                    <Link to={`/admin?personId=${encodeURIComponent(r.personId)}`} className="link-primary">
-                      {r.personId}
+                    <Link to={`/admin?entityId=${encodeURIComponent(r.entityId)}`} className="link-primary">
+                      {r.entityId}
                     </Link>
                   </td>
                   <td>{currencyFmt(r.amount)}</td>

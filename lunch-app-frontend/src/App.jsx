@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { InvalidDatesProvider } from './context/InvalidDatesContext';
 import Login from './pages/Login';
 import AdminPanel from './pages/AdminPanel';
 import OficinaPanel from './pages/OficinaPanel';
@@ -14,9 +15,30 @@ const AppShell = ({ children }) => (
   <main className="app-container">{children}</main>
 );
 
+
 const App = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Interceptor global para cerrar sesión si el token es inválido
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      response => response,
+      error => {
+        if (error.response && error.response.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setUser(null);
+          // Redirigir a login si no está ya ahí
+          if (window.location.pathname !== '/') {
+            window.location.href = '/';
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+    return () => axios.interceptors.response.eject(interceptor);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -34,7 +56,8 @@ const App = () => {
   if (loading) return null;
 
   return (
-    <Routes>
+    <InvalidDatesProvider>
+      <Routes>
       {/* raíz: login o redirect por rol */}
       <Route
         path="/"
@@ -65,7 +88,8 @@ const App = () => {
       <Route path="/admin/cutoffs"  element={<AppShell><AdminCutoffs  /></AppShell>} />
 
       <Route path="*" element={<Navigate to="/" />} />
-    </Routes>
+      </Routes>
+    </InvalidDatesProvider>
   );
 };
 

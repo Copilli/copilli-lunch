@@ -31,8 +31,8 @@ describe('/persons API Endpoints', () => {
         .post('/persons')
         .send(testPerson)
         .expect(201);
-      expect(res.body).toHaveProperty('personId');
-      createdPersonId = res.body.personId;
+      expect(res.body).toHaveProperty('entityId');
+      createdPersonId = res.body.entityId;
     });
     it('should fail to create with missing fields (negative)', async () => {
       await request(app)
@@ -52,7 +52,7 @@ describe('/persons API Endpoints', () => {
   describe('GET /persons/:id', () => {
     it('should get a person by id (happy path)', async () => {
       const res = await request(app).get(`/persons/${createdPersonId}`).expect(200);
-      expect(res.body).toHaveProperty('personId', createdPersonId);
+      expect(res.body).toHaveProperty('entityId', createdPersonId);
     });
     it('should 404 for non-existent id (negative)', async () => {
       await request(app).get('/persons/invalidid').expect(404);

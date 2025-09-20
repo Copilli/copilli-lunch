@@ -70,9 +70,9 @@ router.post('/resend-mails', verifyToken, allowRoles('admin'), async (req, res) 
     for (const pay of pending) {
       results.attempted += 1;
 
-      // Buscar entidad (ej. Lunch) para tener email
-      const lunch = await Lunch.findById(pay.entityId).lean();
-      if (!lunch || !lunch.email) {
+      // Buscar persona por entityId para tener email
+      const person = await Person.findOne({ entityId: pay.entityId }).lean();
+      if (!person || !person.email) {
         results.skippedNoEmail += 1;
         continue;
       }
@@ -80,7 +80,7 @@ router.post('/resend-mails', verifyToken, allowRoles('admin'), async (req, res) 
       try {
         // Recargar Payment como doc para actualizar sentEmail
         const paymentDoc = await Payment.findById(pay._id);
-        await sendPaymentEmail(lunch, paymentDoc, 'MXN');
+        await sendPaymentEmail(person, paymentDoc, 'MXN');
         if (paymentDoc.sentEmail) results.sent += 1;
       } catch (e) {
         results.errors.push({

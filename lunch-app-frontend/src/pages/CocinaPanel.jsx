@@ -1,5 +1,6 @@
 // src/pages/CocinaPanel.jsx
 import { useEffect, useState } from 'react';
+import { useInvalidDates } from '../context/InvalidDatesContext';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
@@ -9,26 +10,30 @@ import SearchBar from '../components/SearchBar';
 import LevelCard from '../components/LevelCard';
 import GroupCard from '../components/GroupCard';
 
-// Helper to get next N valid dates
-const getNextValidDates = async (n = 5) => {
-  const token = localStorage.getItem('token');
-  const res = await axios.get(`${import.meta.env.VITE_API_URL}/invalid-dates`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  const invalidDates = res.data.map(d => d.date);
+// Helper para obtener los próximos N días válidos usando el contexto
+function getNextValidDates(n = 5, invalidDates = []) {
   let dates = [];
   let day = dayjs();
+  const invalidSet = new Set(
+    invalidDates.map(d => typeof d === 'string' ? d : (d.dateYMD || d.date?.slice(0, 10) || d.date))
+  );
   while (dates.length < n) {
     const dStr = day.format('YYYY-MM-DD');
-    if (!invalidDates.includes(dStr)) dates.push(dStr);
+    if (!invalidSet.has(dStr)) dates.push(dStr);
     day = day.add(1, 'day');
   }
   return dates;
-};
+}
 
 const CocinaPanel = ({ setUser }) => {
   const [students, setStudents] = useState([]);
   const [validDates, setValidDates] = useState([]);
+  const { invalidDates, loading: loadingInvalidDates, fetchInvalidDates } = useInvalidDates();
+  useEffect(() => {
+    fetchInvalidDates && fetchInvalidDates();
+    // Solo se llama una vez al montar
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [lunchCounts, setLunchCounts] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedLevel, setSelectedLevel] = useState(null);
@@ -72,9 +77,10 @@ const CocinaPanel = ({ setUser }) => {
   }, []);
 
   useEffect(() => {
-    // Fetch next 5 valid dates
-    getNextValidDates(5).then(setValidDates);
-  }, []);
+    if (invalidDates) {
+      setValidDates(getNextValidDates(5, invalidDates));
+    }
+  }, [invalidDates]);
 
   useEffect(() => {
     if (students.length && validDates.length) {
@@ -106,17 +112,37 @@ const CocinaPanel = ({ setUser }) => {
     ? students.filter(
         s =>
           s.name.toLowerCase().includes(search.toLowerCase()) ||
-          (s.personId && s.personId.toLowerCase().includes(search.toLowerCase()))
+          (s.entityId && s.entityId.toLowerCase().includes(search.toLowerCase()))
       )
     : students;
 
   const groupsInLevel = selectedLevel
-    ? [...new Set(filtered.filter(s => s.group?.level === selectedLevel).map(s => s.group?.name))]
+    ? [
+        ...new Set(
+          filtered
+            .filter(
+              s =>
+                s.level &&
+                s.groupName &&
+                typeof s.level === 'string' &&
+                typeof s.groupName === 'string' &&
+                s.level.toLowerCase() === selectedLevel.toLowerCase()
+            )
+            .map(s => s.groupName)
+            .filter(name => !!name)
+        ),
+      ]
     : [];
 
   const studentsInGroup = selectedGroup
     ? filtered.filter(
-        s => s.group?.level === selectedLevel && s.group?.name === selectedGroup
+        s =>
+          s.level &&
+          s.groupName &&
+          typeof s.level === 'string' &&
+          typeof s.groupName === 'string' &&
+          s.level.toLowerCase() === selectedLevel.toLowerCase() &&
+          s.groupName === selectedGroup
       )
     : [];
 
@@ -219,10 +245,10 @@ const CocinaPanel = ({ setUser }) => {
         <SearchBar
           search={search}
           setSearch={setSearch}
-          students={students}
+          persons={students}
           onSelect={(student) => {
-            setSelectedLevel(student.group.level);
-            setSelectedGroup(student.group.name);
+            setSelectedLevel(student.level);
+            setSelectedGroup(student.groupName);
             setSelectedStudent(student); // vista de un solo alumno por búsqueda directa
           }}
         />
@@ -332,7 +358,7 @@ const CocinaPanel = ({ setUser }) => {
               style={{ objectFit: 'cover' }}
             />
             <strong className="d-block">{selectedStudent.name}</strong>
-            <p className="mb-1">ID: {selectedStudent.personId}</p>
+            <p className="mb-1">ID: {selectedStudent.entityId}</p>
             <p className="mb-1">Tokens: {selectedStudent.lunch?.tokens ?? 0}</p>
             <p className="mb-0">Status: {statusLabels[getStatus(selectedStudent)]}</p>
           </div>
@@ -368,9 +394,14 @@ const CocinaPanel = ({ setUser }) => {
                 <div className="row gx-3 gy-3 justify-content-center">
                   {groupsInLevel.map((group) => {
                     const count = students.filter(
-                      (s) => s.group.level === selectedLevel && s.group.name === group
+                      (s) =>
+                        s.level &&
+                        s.groupName &&
+                        typeof s.level === 'string' &&
+                        typeof s.groupName === 'string' &&
+                        s.level.toLowerCase() === selectedLevel.toLowerCase() &&
+                        s.groupName === group
                     ).length;
-
                     return (
                       <div key={group} className="col-12 col-sm-6 col-md-4">
                         <GroupCard
@@ -408,7 +439,7 @@ const CocinaPanel = ({ setUser }) => {
 
                   return (
                     <div
-                      key={student.personId}
+                      key={student.entityId}
                       className="col-12 col-sm-6 col-md-4 col-lg-3 d-flex justify-content-center"
                     >
                       <div
@@ -429,7 +460,7 @@ const CocinaPanel = ({ setUser }) => {
                           style={{ objectFit: 'cover' }}
                         />
                         <strong className="d-block">{student.name}</strong>
-                        <p className="mb-1">ID: {student.personId}</p>
+                        <p className="mb-1">ID: {student.entityId}</p>
                         <p className="mb-1">Tokens: {student.lunch?.tokens ?? 0}</p>
                         <p className="mb-0">Status: {statusLabels[status]}</p>
                       </div>

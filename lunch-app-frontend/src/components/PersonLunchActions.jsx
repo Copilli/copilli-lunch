@@ -9,11 +9,8 @@ dayjs.extend(isSameOrBefore);
 
 function getPricesForPerson(person) {
   if (!person) return { priceToken: 0, pricePeriod: 0 };
-  const level = (person.level || person.group?.level || '').toLowerCase();
-  const groupName =
-    person.groupName ||
-    person.group?.name ||
-    '';
+  const level = (person.level || '').toLowerCase();
+  const groupName = person.groupName || '';
 
   const groupNameUpper = groupName.toUpperCase();
 
@@ -176,7 +173,7 @@ const PersonLunchActions = ({ person, onUpdate }) => {
         }
 
         const resp = await axios.patch(
-          `${API}/persons/${person._id}/lunch`,
+          `${API}/lunch/${person.lunch._id}/tokens`,
           {
             delta: tokenAmountNum,
             reason,
@@ -223,7 +220,7 @@ const PersonLunchActions = ({ person, onUpdate }) => {
         }
 
         const resp = await axios.patch(
-          `${API}/persons/${person._id}/period`,
+          `${API}/lunch/${person.lunch._id}/period`,
           {
             startDate,
             endDate,
@@ -244,6 +241,7 @@ const PersonLunchActions = ({ person, onUpdate }) => {
         setEndDate(null);
         onUpdate && onUpdate();
 
+
       } else if (actionType === 'manual-consumption') {
         if (!consumptionDate || !consumptionReason) {
           showError('Debes seleccionar motivo y fecha para registrar el consumo.');
@@ -251,10 +249,9 @@ const PersonLunchActions = ({ person, onUpdate }) => {
           return;
         }
 
-        await axios.patch(
-          `${API}/persons/${person._id}/lunch`,
+        await axios.post(
+          `${API}/lunch/${person.lunch._id}/use`,
           {
-            delta: -1,
             reason: consumptionReason,
             note: `Consumo manual (${dayjs(consumptionDate).format('YYYY-MM-DD')})`,
             performedBy: user?.username || 'admin',
@@ -530,7 +527,7 @@ const PersonLunchActions = ({ person, onUpdate }) => {
               <div className="modal-body">
                 {actionType === 'tokens' && (
                   <>
-                    <p>Tokens actuales: {person.tokens} → Total: {person.tokens + tokenAmountNum}</p>
+                    <p>Tokens actuales: {person.lunch?.tokens ?? 0} → Total: {(person.lunch?.tokens ?? 0) + tokenAmountNum}</p>
                     <p><strong>Motivo:</strong> {reason}</p>
                     {reason === 'pago' ? (
                       <p className="mb-0"><strong>Total a pagar:</strong> ${totalForTokens}</p>

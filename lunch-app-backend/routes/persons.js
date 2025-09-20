@@ -12,7 +12,7 @@ const Payment = require('../models/Payment');
 // Helper: flatten person+student/staff+lunch for flat responses
 function toFlatPerson(p, extra, lunch) {
   return {
-    personId: p.personId || '',
+    entityId: p.entityId || '',
     name: p.name || '',
     email: p.email || '',
     type: p.type || '',
@@ -32,18 +32,35 @@ router.get('/', async (req, res) => {
     if (type) filter.type = type;
     if (level) filter['group.level'] = level;
     if (group) filter['group.name'] = group;
+
+    // 1. Traer todas las personas
     const persons = await Person.find(filter).lean();
-    // Populate student/staff and lunch info
-    const results = await Promise.all(persons.map(async p => {
+    if (!flat || (flat !== '1' && flat !== 'true')) {
+      // Modo no-flat: igual que antes
+      return res.json(persons);
+    }
+
+    // 2. Traer todos los Lunch de golpe
+    const allLunch = await Lunch.find({ person: { $in: persons.map(p => p._id) } }).lean();
+    const lunchMap = new Map(allLunch.map(l => [String(l.person), l]));
+
+    // 3. Traer todos los Student y Staff de golpe
+    const allStudents = await Student.find({ person: { $in: persons.map(p => p._id) } }).lean();
+    const allStaff = await Staff.find({ person: { $in: persons.map(p => p._id) } }).lean();
+    const studentMap = new Map(allStudents.map(s => [String(s.person), s]));
+    const staffMap = new Map(allStaff.map(s => [String(s.person), s]));
+
+    // 4. Armar respuesta plana
+    const results = persons.map(p => {
       let extra = {};
       if (p.type === 'student') {
-        extra = await Student.findOne({ person: p._id }).lean() || {};
+        extra = studentMap.get(String(p._id)) || {};
       } else if (p.type === 'staff') {
-        extra = await Staff.findOne({ person: p._id }).lean() || {};
+        extra = staffMap.get(String(p._id)) || {};
       }
-      const lunch = await Lunch.findOne({ person: p._id }).lean() || {};
-      return flat === '1' || flat === 'true' ? toFlatPerson(p, extra, lunch) : { ...p, ...extra, lunch };
-    }));
+      const lunch = lunchMap.get(String(p._id)) || {};
+      return toFlatPerson(p, extra, lunch);
+    });
     res.json(results);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -109,13 +126,13 @@ router.post('/import-bulk', async (req, res) => {
             throw new Error(`Fechas inválidas en periodo especial para ${p.name}`);
           }
         }
-        // Use provided personId if present, else auto-generate
+        // Use provided entityId if present, else auto-generate
         let existing = null;
-        if (p.personId) {
-          existing = await Person.findOne({ personId: p.personId });
+        if (p.entityId) {
+          existing = await Person.findOne({ entityId: p.entityId });
         }
         if (existing) {
-          await Person.updateOne({ personId: p.personId }, { $set: p });
+          await Person.updateOne({ entityId: p.entityId }, { $set: p });
           results.updated += 1;
         } else {
           const person = new Person(p);

@@ -1,18 +1,24 @@
 import { useEffect, useState } from 'react';
+import { useInvalidDates } from '../context/InvalidDatesContext';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import TopNavBar from '../components/TopNavBar';
 import SearchBar from '../components/SearchBar';
 import LevelCard from '../components/LevelCard';
 import GroupCard from '../components/GroupCard';
-import { StudentCalendarContainer } from '../components/PersonCalendarTable';
+import { PersonCalendarContainer } from '../components/PersonCalendarTable';
 import PersonSummaryCard from '../components/PersonSummaryCard';
 import PersonDetailsPanel from '../components/PersonDetailsPanel';
 
 const OficinaPanel = ({ setUser }) => {
   const [students, setStudents] = useState([]);
   const [movements, setMovements] = useState([]);
-  const [invalidDates, setInvalidDates] = useState([]);
+  const { invalidDates, loading: loadingInvalidDates, fetchInvalidDates } = useInvalidDates();
+  useEffect(() => {
+    fetchInvalidDates && fetchInvalidDates();
+    // Solo se llama una vez al montar
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [search, setSearch] = useState(''); 
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -40,20 +46,11 @@ const OficinaPanel = ({ setUser }) => {
     setMovements(res.data);
   };
 
-  const fetchInvalidDates = async () => {
-    const res = await axios.get(`${API}/invalid-dates`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    setInvalidDates(res.data.map(d => ({
-      date: dayjs(d.date).format('YYYY-MM-DD'),
-      reason: d.reason || 'Día no válido'
-    })));
-  };
 
   useEffect(() => {
     fetchStudents();
     fetchMovements();
-    fetchInvalidDates();
+  // invalidDates se obtiene del contexto global
   }, []);
 
   useEffect(() => {
@@ -67,17 +64,37 @@ const OficinaPanel = ({ setUser }) => {
     ? students.filter(
         s =>
           s.name.toLowerCase().includes(search.toLowerCase()) ||
-          (s.personId && s.personId.toLowerCase().includes(search.toLowerCase()))
+          (s.entityId && s.entityId.toLowerCase().includes(search.toLowerCase()))
       )
     : students;
 
   const groupsInLevel = selectedLevel
-    ? [...new Set(filtered.filter(s => s.group?.level === selectedLevel).map(s => s.group?.name))]
+    ? [
+        ...new Set(
+          filtered
+            .filter(
+              s =>
+                s.level &&
+                s.groupName &&
+                typeof s.level === 'string' &&
+                typeof s.groupName === 'string' &&
+                s.level.toLowerCase() === selectedLevel.toLowerCase()
+            )
+            .map(s => s.groupName)
+            .filter(name => !!name)
+        ),
+      ]
     : [];
 
   const studentsInGroup = selectedGroup
     ? filtered.filter(
-        s => s.group?.level === selectedLevel && s.group?.name === selectedGroup
+        s =>
+          s.level &&
+          s.groupName &&
+          typeof s.level === 'string' &&
+          typeof s.groupName === 'string' &&
+          s.level.toLowerCase() === selectedLevel.toLowerCase() &&
+          s.groupName === selectedGroup
       )
     : [];
 
@@ -88,10 +105,10 @@ const OficinaPanel = ({ setUser }) => {
         <SearchBar
           search={search}
           setSearch={setSearch}
-          students={students}
+          persons={students}
           onSelect={(student) => {
-            setSelectedLevel(student.group.level);
-            setSelectedGroup(student.group.name);
+            setSelectedLevel(student.level);
+            setSelectedGroup(student.groupName);
             setSelectedStudent(null);
             setShowDetails(false);
             setTimeout(() => {
@@ -129,7 +146,13 @@ const OficinaPanel = ({ setUser }) => {
             <div className="row gx-3 gy-3 justify-content-center">{/* ← antes: g-3 */}
               {groupsInLevel.map((group) => {
                 const count = students.filter(
-                  s => s.group.level === selectedLevel && s.group.name === group
+                  s =>
+                    s.level &&
+                    s.groupName &&
+                    typeof s.level === 'string' &&
+                    typeof s.groupName === 'string' &&
+                    s.level.toLowerCase() === selectedLevel.toLowerCase() &&
+                    s.groupName === group
                 ).length;
                 return (
                   <div key={group} className="col-12 col-sm-6 col-md-4">
@@ -171,9 +194,9 @@ const OficinaPanel = ({ setUser }) => {
             </select>
           </div>
 
-          <StudentCalendarContainer
+          <PersonCalendarContainer
             currentGroup={{ name: selectedGroup, level: selectedLevel }}
-            selectedStudent={showDetails ? selectedStudent : null}
+            selectedPerson={showDetails ? selectedStudent : null}
             month={calendarMonth}
             year={calendarYear}
             invalidDates={invalidDates}
@@ -183,11 +206,11 @@ const OficinaPanel = ({ setUser }) => {
             <h4 className='text-center'>Resumen por alumno</h4>
             <div>
               {studentsInGroup.map(student => (
-                <div key={student.personId}>
+                <div key={student.entityId}>
                   <PersonSummaryCard
-                    student={student}
+                    person={student}
                     onSelect={() => {
-                      if (selectedStudent && selectedStudent.personId === student.personId) {
+                      if (selectedStudent && selectedStudent.entityId === student.entityId) {
                         setSelectedStudent(null);
                         setShowDetails(false);
                       } else {
@@ -196,18 +219,18 @@ const OficinaPanel = ({ setUser }) => {
                       }
                     }}
                   />
-                  {showDetails && selectedStudent && selectedStudent.personId === student.personId && (
+                  {showDetails && selectedStudent && selectedStudent.entityId === student.entityId && (
                     <div className="accordion-panel card card-body bg-light mt-2 mb-3">
-                      <PersonDetailsPanel
-                        student={selectedStudent}
-                        movements={movements}
-                        onClose={() => {
-                          setSelectedStudent(null);
-                          setShowDetails(false);
-                        }}
-                        fetchStudents={fetchStudents}
-                        fetchMovements={fetchMovements}
-                      />
+                        <PersonDetailsPanel
+                          person={selectedStudent}
+                          movements={movements}
+                          onClose={() => {
+                            setSelectedStudent(null);
+                            setShowDetails(false);
+                          }}
+                          fetchPersons={fetchStudents}
+                          fetchMovements={fetchMovements}
+                        />
                     </div>
                   )}
                 </div>
