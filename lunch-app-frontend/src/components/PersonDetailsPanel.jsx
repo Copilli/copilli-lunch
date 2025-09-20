@@ -219,7 +219,9 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
 
       <div className="card mt-4 student-details-card">
         <div className="card-header d-flex justify-content-between align-items-center">
-          <h4 className="mb-0">Detalle de la persona</h4>
+          <h4 className="mb-0">
+            Detalle del {form.type === 'student' ? 'estudiante' : form.type === 'staff' ? 'empleado' : 'persona'}
+          </h4>
           <button className="btn btn-outline-secondary btn-sm" onClick={onClose}>Cerrar</button>
         </div>
         <div className="card-body">
@@ -245,7 +247,9 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
           </div>
 
           <div className="mb-3">
-            <label className="form-label">ID de la persona:</label>
+            <label className="form-label">
+              ID del {form.type === 'student' ? 'estudiante' : form.type === 'staff' ? 'empleado' : 'persona'}:
+            </label>
             <input type="text" className="form-control" value={form.personId} disabled />
           </div>
 

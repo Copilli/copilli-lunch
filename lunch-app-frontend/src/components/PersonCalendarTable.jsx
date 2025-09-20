@@ -1,4 +1,4 @@
-// src/components/StudentCalendarTable.jsx
+// src/components/PersonCalendarTable.jsx
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
@@ -27,8 +27,8 @@ const isInAnyPeriod = (dateISO, logs = []) => {
 };
 
 // ---------- PRESENTATION TABLE ----------
-const StudentCalendarTable = ({
-  students,
+const PersonCalendarTable = ({
+  persons,
   movements,
   periodLogs = [],
   invalidDates = [],
@@ -55,11 +55,11 @@ const StudentCalendarTable = ({
     return map;
   }, [invalidDates]);
 
-  // agrupa logs por estudiante
+  // agrupa logs por lunchId
   const periodLogsMap = useMemo(() => {
     if (Array.isArray(periodLogs)) {
       return periodLogs.reduce((acc, log) => {
-        (acc[log.studentId] ||= []).push(log);
+        (acc[log.lunchId] ||= []).push(log);
         return acc;
       }, {});
     }
@@ -68,7 +68,7 @@ const StudentCalendarTable = ({
 
   // tamaños base (coordinados con CSS responsive)
   const CELL_W = 30;        // ancho base de cada día
-  const FIRST_COL_W = 220;  // ancho base columna "Alumno"
+  const FIRST_COL_W = 220;  // ancho base columna "Persona"
 
   // minWidth dinámico para forzar/permitir la barra horizontal
   const tableDynamicStyle = {
@@ -98,7 +98,7 @@ const StudentCalendarTable = ({
           >
             <thead className="table-light">
               <tr>
-                {/* th "Alumno" sticky (CSS global) */}
+                {/* th "Persona" sticky (CSS global) */}
                 <th className="text-start" style={{minWidth: FIRST_COL_W}}>
                   Alumno
                 </th>
@@ -108,28 +108,28 @@ const StudentCalendarTable = ({
               </tr>
             </thead>
             <tbody>
-              {students.map((student) => {
-                // movimientos del alumno indexados por YYYY-MM-DD
-                const studentMovs = movements
-                  .filter(m => String(m.studentId) === String(student.studentId))
+              {persons.map((person) => {
+                // movimientos de la persona indexados por YYYY-MM-DD
+                const personMovs = movements
+                  .filter(m => String(m.entityId) === String(person.lunch?._id))
                   .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
                 const tokenByDay = {};
-                studentMovs.forEach(m => {
+                personMovs.forEach(m => {
                   const k = dayjs(m.timestamp).utc().startOf('day').format('YYYY-MM-DD');
                   (tokenByDay[k] ||= []).push(m);
                 });
 
-                const logs = periodLogsMap[student.studentId] || [];
+                const logs = periodLogsMap[person.lunch?._id] || [];
 
                 return (
-                  <tr key={student.studentId}>
-                    {/* Columna sticky "Alumno" (ancho controlado por CSS + minWidth de arriba) */}
+                  <tr key={person.personId}>
+                    {/* Columna sticky "Persona" (ancho controlado por CSS + minWidth de arriba) */}
                     <td
                       className="fw-bold text-start"
-                      title={`${student.name} (${student.studentId})`}
+                      title={`${person.name} (${person.personId})`}
                     >
-                      {student.name}
+                      {person.name}
                     </td>
 
                     {days.map(d => {
@@ -178,9 +178,9 @@ const StudentCalendarTable = ({
   );
 };
 
-// ---------- DATA CONTAINER (fetch + filtros de grupo/alumno) ----------
-export const StudentCalendarContainer = ({ month, year, selectedStudent, currentGroup }) => {
-  const [students, setStudents] = useState([]);
+// ---------- DATA CONTAINER (fetch + filtros de grupo/persona) ----------
+export const PersonCalendarContainer = ({ month, year, selectedPerson, currentGroup }) => {
+  const [persons, setPersons] = useState([]);
   const [movements, setMovements] = useState([]);
   const [periodLogs, setPeriodLogs] = useState([]);
   const [invalidDates, setInvalidDates] = useState([]);
@@ -198,12 +198,13 @@ export const StudentCalendarContainer = ({ month, year, selectedStudent, current
 
   const fetchAllPeriodLogs = async (list) => {
     const all = await Promise.all(
-      (list || []).map(async (s) => {
+      (list || []).map(async (p) => {
         try {
-          const res = await axios.get(`${API}/students/${s.studentId}/period-logs`, {
+          if (!p.lunch?._id) return [];
+          const res = await axios.get(`${API}/lunch/${p.lunch._id}/period-logs`, {
             headers: { Authorization: `Bearer ${token}` },
           });
-          return (res.data || []).map(log => ({ ...log, studentId: s.studentId }));
+          return (res.data || []).map(log => ({ ...log, lunchId: p.lunch._id }));
         } catch {
           return [];
         }
@@ -217,18 +218,18 @@ export const StudentCalendarContainer = ({ month, year, selectedStudent, current
     (async () => {
       try {
         setLoading(true);
-        const [sRes, mRes] = await Promise.all([
-          axios.get(`${API}/students`, { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get(`${API}/token-movements`, { headers: { Authorization: `Bearer ${token}` } }),
+        const [pRes, mRes] = await Promise.all([
+          axios.get(`${API}/persons?flat=1`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${API}/movements`, { headers: { Authorization: `Bearer ${token}` } }),
         ]);
 
-        const s = sRes.data || [];
+        const p = pRes.data || [];
         const m = mRes.data || [];
-        const logs = await fetchAllPeriodLogs(s);
+        const logs = await fetchAllPeriodLogs(p);
         await fetchInvalidDates();
 
         if (!alive) return;
-        setStudents(s);
+        setPersons(p);
         setMovements(m);
         setPeriodLogs(logs);
       } catch (e) {
@@ -243,26 +244,26 @@ export const StudentCalendarContainer = ({ month, year, selectedStudent, current
 
   if (loading) return <p>Cargando calendario…</p>;
 
-  let visibleStudents = students;
-  if (selectedStudent) {
-    visibleStudents = students.filter(s => s.studentId === selectedStudent.studentId);
+  let visiblePersons = persons;
+  if (selectedPerson) {
+    visiblePersons = persons.filter(p => p.personId === selectedPerson.personId);
   } else if (currentGroup) {
-    visibleStudents = students.filter(
-      s => s.group?.name === currentGroup.name && s.group?.level === currentGroup.level
+    visiblePersons = persons.filter(
+      p => p.groupName === currentGroup.name && p.level === currentGroup.level
     );
   }
 
   const visibleMovements = movements.filter(m =>
-    visibleStudents.some(s => s.studentId === m.studentId)
+    visiblePersons.some(p => p.lunch?._id && m.entityId === p.lunch._id)
   );
 
   const visiblePeriodLogs = periodLogs.filter(p =>
-    visibleStudents.some(s => s.studentId === p.studentId)
+    visiblePersons.some(per => per.lunch?._id && p.lunchId === per.lunch._id)
   );
 
   return (
-    <StudentCalendarTable
-      students={visibleStudents}
+    <PersonCalendarTable
+      persons={visiblePersons}
       movements={visibleMovements}
       periodLogs={visiblePeriodLogs}
       invalidDates={invalidDates}
@@ -272,4 +273,4 @@ export const StudentCalendarContainer = ({ month, year, selectedStudent, current
   );
 };
 
-export default StudentCalendarTable;
+export default PersonCalendarTable;

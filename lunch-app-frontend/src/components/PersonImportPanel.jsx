@@ -194,7 +194,7 @@ const PersonImportPanel = ({ onSuccess, onCancel }) => {
         </div>
         <p className="text-muted mb-2">
           Campos obligatorios: <code>name</code>, <code>email</code>, <code>level</code>, <code>group</code>.
-          El <code>studentId</code> se genera automáticamente para altas nuevas.
+          El <code>entityId</code> se genera automáticamente para altas nuevas.
         </p>
 
         {/* Tabla responsive (compacta en pantallas pequeñas) */}
