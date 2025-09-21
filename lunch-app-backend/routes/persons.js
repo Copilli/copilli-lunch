@@ -223,7 +223,11 @@ router.delete('/:id', async (req, res) => {
     if (lunch) {
       const lunchId = lunch._id;
       await Lunch.deleteOne({ person: id });
-  await Movement.deleteMany({ entityId: lunchId });
+      // Fetch the person to get entityId for Movement deletion
+      const person = await Person.findById(id).lean();
+      if (person && person.entityId) {
+        await Movement.deleteMany({ entityId: person.entityId });
+      }
       await PeriodLog.deleteMany({ lunchId });
       await Payment.deleteMany({ lunchId });
     }
