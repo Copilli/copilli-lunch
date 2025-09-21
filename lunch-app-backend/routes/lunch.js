@@ -164,10 +164,10 @@ router.post('/:id/use', async (req, res) => {
       useDate = dayjs().startOf('day');
     }
 
-    // Día inválido
+    // Día inválido: solo admin puede registrar consumo en días inválidos
     const isInvalidDate = await InvalidDate.findOne({ date: useDate.toDate() });
-    if (isInvalidDate) {
-      return res.status(403).json({ error: 'La fecha seleccionada es un día inválido (fin de semana o puente). No se puede registrar consumo.' });
+    if (isInvalidDate && role !== 'admin') {
+      return res.status(403).json({ error: 'La fecha seleccionada es un día inválido (fin de semana o puente). Solo un administrador puede registrar consumo en este día.' });
     }
 
     // Periodo especial activo
@@ -314,7 +314,7 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
     }
     // ✅ Crear/actualizar periodo
     const start = dayjs(startDate).startOf('day');
-    const end   = dayjs(endDate).endOf('day');
+    const end   = dayjs(endDate).startOf('day');
     if (!start.isValid() || !end.isValid()) {
       return res.status(400).json({ error: 'Fechas del periodo inválidas.' });
     }
@@ -344,6 +344,9 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
         return res.status(400).json({ error: 'El nuevo periodo se solapa con uno ya registrado en el historial.' });
       }
     }
+    // Buscar entityId legacy (antes de usar person)
+    const person = await Person.findById(lunch.person);
+    if (!person) return res.status(404).json({ error: 'Persona no encontrada para este Lunch' });
     // Guardar periodo en lunch
     lunch.specialPeriod = { startDate: start.toDate(), endDate: end.toDate() };
     lunch.hasSpecialPeriod = start.isSameOrBefore(today) && end.isSameOrAfter(today);
@@ -352,6 +355,7 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
     // Logs
     await PeriodLog.create({
       lunchId: lunch._id,
+      entityId: person.entityId,
       startDate: start.toDate(),
       endDate: end.toDate(),
       note: note || '',
@@ -359,9 +363,6 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       performedBy: req.user?.username || 'sistema',
       userRole: req.user?.role || 'sistema'
     });
-    // Buscar entityId legacy
-  const person = await Person.findById(lunch.person);
-    if (!person) return res.status(404).json({ error: 'Persona no encontrada para este Lunch' });
     const move = await Movement.create({
       entityId: person.entityId,
       change: 0,
@@ -412,13 +413,20 @@ router.delete('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async 
   try {
     const lunch = await Lunch.findById(req.params.id);
     if (!lunch) return res.status(404).json({ error: 'Lunch info not found' });
+    // Guardar fechas previas para borrar el log
+    const prevStart = lunch.specialPeriod?.startDate;
+    const prevEnd = lunch.specialPeriod?.endDate;
     lunch.hasSpecialPeriod = false;
     lunch.specialPeriod = { startDate: null, endDate: null };
     if (lunch.status === 'periodo-activo') {
       lunch.status = lunch.tokens > 0 ? 'con-fondos' : 'sin-fondos';
     }
     await lunch.save();
-    await TokenMovement.create({
+    // Buscar entityId legacy
+    const person = await Person.findById(lunch.person);
+    if (!person) return res.status(404).json({ error: 'Persona no encontrada para este Lunch' });
+    await Movement.create({
+      entityId: person.entityId,
       lunchId: lunch._id,
       change: 0,
       reason: 'periodo-removido',
@@ -426,6 +434,14 @@ router.delete('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async 
       performedBy: req.user?.username || 'sistema',
       userRole: req.user?.role || 'sistema'
     });
+    // Borrar el log de periodo correspondiente
+    if (prevStart && prevEnd) {
+      await PeriodLog.deleteMany({
+        entityId: person.entityId,
+        startDate: { $gte: new Date(prevStart), $lte: new Date(prevStart) },
+        endDate: { $gte: new Date(prevEnd), $lte: new Date(prevEnd) }
+      });
+    }
     res.json({ message: 'Periodo especial eliminado', hasSpecialPeriod: false, specialPeriod: null });
   } catch (err) {
     res.status(500).json({ error: err.message || 'Error al eliminar el periodo especial' });

@@ -20,6 +20,7 @@ function toFlatPerson(p, extra, lunch) {
     groupName: p.group?.name || '',
     photoUrl: p.photoUrl || '',
     ...extra,
+    _id: p._id, 
     lunch: lunch || {}
   };
 }
@@ -54,10 +55,13 @@ router.get('/', async (req, res) => {
     const results = persons.map(p => {
       let extra = {};
       if (p.type === 'student') {
-        extra = studentMap.get(String(p._id)) || {};
+        extra = { ...(studentMap.get(String(p._id)) || {}) };
       } else if (p.type === 'staff') {
-        extra = staffMap.get(String(p._id)) || {};
+        extra = { ...(staffMap.get(String(p._id)) || {}) };
       }
+  // Eliminar los campos person y _id de los extras para evitar sobrescribir el _id
+  if (extra && extra.person) delete extra.person;
+  if (extra && extra._id) delete extra._id;
       const lunch = lunchMap.get(String(p._id)) || {};
       return toFlatPerson(p, extra, lunch);
     });
@@ -66,11 +70,45 @@ router.get('/', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-// PUT /api/persons/:id - update a person by id
+
+// PUT /api/persons/:id - update a person by id (incluye lunch, student, staff)
 router.put('/:id', async (req, res) => {
   try {
-    const updated = await Person.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    res.json(updated);
+    const personId = req.params.id;
+    const { lunch, student, staff, ...personFields } = req.body;
+    // Actualizar Person
+    const updatedPerson = await Person.findByIdAndUpdate(personId, personFields, { new: true });
+    // Actualizar Lunch si viene
+    let updatedLunch = null;
+    if (lunch) {
+      updatedLunch = await Lunch.findOneAndUpdate(
+        { person: personId },
+        lunch,
+        { new: true }
+      );
+    }
+    // Actualizar Student o Staff si viene
+    let updatedStudent = null, updatedStaff = null;
+    if (student && updatedPerson.type === 'student') {
+      updatedStudent = await Student.findOneAndUpdate(
+        { person: personId },
+        student,
+        { new: true }
+      );
+    }
+    if (staff && updatedPerson.type === 'staff') {
+      updatedStaff = await Staff.findOneAndUpdate(
+        { person: personId },
+        staff,
+        { new: true }
+      );
+    }
+    res.json({
+      person: updatedPerson,
+      lunch: updatedLunch,
+      student: updatedStudent,
+      staff: updatedStaff
+    });
   } catch (err) {
     res.status(400).json({ error: 'Error al actualizar datos de la persona', detail: err.message });
   }

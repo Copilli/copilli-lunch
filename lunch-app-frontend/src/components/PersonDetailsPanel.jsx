@@ -134,8 +134,22 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
         });
       }
 
-      // Guardar cambios generales de la persona (incluye email)
-      await axios.put(`${import.meta.env.VITE_API_URL}/persons/${person._id}`, form, {
+      // Construir payload con lunch anidado
+      const payload = {
+        ...form,
+        lunch: {
+          tokens: form.tokens,
+          status: form.status,
+          hasSpecialPeriod: form.hasSpecialPeriod,
+          specialPeriod: form.specialPeriod
+        }
+      };
+      delete payload.tokens;
+      delete payload.status;
+      delete payload.hasSpecialPeriod;
+      delete payload.specialPeriod;
+
+      await axios.put(`${import.meta.env.VITE_API_URL}/persons/${person._id}`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -188,7 +202,10 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
     setSaving(true);
     const token = localStorage.getItem('token');
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL}/persons/${person._id}/period`, {
+      // Usar el ID de lunch, no de persona
+      const lunchId = person?.lunch?._id;
+      if (!lunchId) throw new Error('No se encontró información de Lunch');
+      await axios.delete(`${import.meta.env.VITE_API_URL}/lunch/${lunchId}/period`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setForm(prev => ({
@@ -196,7 +213,7 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
         hasSpecialPeriod: false,
         specialPeriod: { startDate: null, endDate: null }
       }));
-  if (fetchPersons) fetchPersons();
+      if (fetchPersons) fetchPersons();
       if (fetchMovements) fetchMovements();
       showSuccess('Periodo especial eliminado.');
     } catch (err) {

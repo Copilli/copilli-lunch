@@ -527,7 +527,7 @@ const PersonLunchActions = ({ person, onUpdate }) => {
               <div className="modal-body">
                 {actionType === 'tokens' && (
                   <>
-                    <p>Tokens actuales: {person.lunch?.tokens ?? 0} → Total: {(person.lunch?.tokens ?? 0) + tokenAmountNum}</p>
+                    <p>Tokens actuales: {(person.lunch && typeof person.lunch.tokens === 'number') ? person.lunch.tokens : 0} → Total: {((person.lunch && typeof person.lunch.tokens === 'number') ? person.lunch.tokens : 0) + tokenAmountNum}</p>
                     <p><strong>Motivo:</strong> {reason}</p>
                     {reason === 'pago' ? (
                       <p className="mb-0"><strong>Total a pagar:</strong> ${totalForTokens}</p>
