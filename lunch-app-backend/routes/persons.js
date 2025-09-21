@@ -114,13 +114,21 @@ router.put('/:id', async (req, res) => {
 });
 
 // POST bulk import persons (flat CSV support, minimal and full data, use provided IDs)
-router.post('/import-bulk', async (req, res) => {
-  try {
-    const persons = req.body;
-    if (!Array.isArray(persons)) {
-      return res.status(400).json({ error: 'Formato incorrecto. Se esperaba un arreglo de personas.' });
-    }
-    const results = { created: 0, updated: 0, errores: [] };
+// Limit request body size to 1MB for bulk import
+router.post(
+  '/import-bulk',
+  express.json({ limit: '1mb' }),
+  async (req, res) => {
+    try {
+      const persons = req.body;
+      if (!Array.isArray(persons)) {
+        return res.status(400).json({ error: 'Formato incorrecto. Se esperaba un arreglo de personas.' });
+      }
+      const MAX_PERSONS = 1000;
+      if (persons.length > MAX_PERSONS) {
+        return res.status(400).json({ error: `Demasiadas personas en una sola solicitud. El máximo permitido es ${MAX_PERSONS}.` });
+      }
+      const results = { created: 0, updated: 0, errores: [] };
     for (let p of persons) {
       try {
         // Support flat CSV: map flat fields to nested structure if needed
