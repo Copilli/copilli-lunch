@@ -387,13 +387,15 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
         date: new Date(),
         sentEmail: false
       });
+
       // Dejar nota con ticket
       await Movement.findByIdAndUpdate(move._id, {
         note: `Pago de periodo (${start.format('YYYY-MM-DD')} → ${end.format('YYYY-MM-DD')}) • Total: $${amount.toFixed(2)} MXN • Ticket ${ticketNumber}`
       });
-  // Buscar persona por entityId para el email
-  const person = await Person.findById(lunch.person).lean();
-  await sendPaymentEmail(person, payment, 'MXN');
+
+      // Buscar persona por entityId para el email
+      const personForEmail = await Person.findById(lunch.person).lean();
+      await sendPaymentEmail(personForEmail, payment, 'MXN');
       paymentInfo = { ticketNumber, amount };
     }
 
