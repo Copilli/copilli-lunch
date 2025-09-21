@@ -241,7 +241,6 @@ const PersonLunchActions = ({ person, onUpdate }) => {
         setEndDate(null);
         onUpdate && onUpdate();
 
-
       } else if (actionType === 'manual-consumption') {
         if (!consumptionDate || !consumptionReason) {
           showError('Debes seleccionar motivo y fecha para registrar el consumo.');
