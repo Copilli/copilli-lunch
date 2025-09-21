@@ -26,7 +26,7 @@ const AdminPanel = ({ setUser }) => {
   const [showImportModal, setShowImportModal] = useState(false);
   const { invalidDates, loading: loadingInvalidDates, fetchInvalidDates } = useInvalidDates();
   useEffect(() => {
-    fetchInvalidDates && fetchInvalidDates();
+    fetchInvalidDates?.();
     // Solo se llama una vez al montar
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
