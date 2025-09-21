@@ -114,7 +114,7 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
     let paymentInfo = null;
     // 💸 AUTO-PAGO si es "pago" y delta > 0
     if ((reason || '').toLowerCase() === 'pago' && delta > 0) {
-      const prices = getPricesForLevel(lunch.level, lunch.groupName);
+      const prices = getPricesForLevel(person.level, person.groupName);
       const amount = Number((delta * prices.priceToken).toFixed(2));
       const ticketNumber = await Payment.generateTicketNumber();
       const payment = await Payment.create({
