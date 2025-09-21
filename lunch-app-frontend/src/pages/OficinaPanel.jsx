@@ -17,8 +17,7 @@ const OficinaPanel = ({ setUser }) => {
   useEffect(() => {
     fetchInvalidDates();
     // Solo se llama una vez al montar
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchInvalidDates]);
   const [search, setSearch] = useState(''); 
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
