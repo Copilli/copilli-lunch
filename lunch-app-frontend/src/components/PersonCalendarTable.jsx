@@ -90,7 +90,6 @@ const PersonCalendarTable = ({
     </div>
   );
 
-  // ...existing code...
   return (
     <>
       <CalendarLegend />
