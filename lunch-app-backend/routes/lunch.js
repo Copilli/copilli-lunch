@@ -376,7 +376,7 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
     let paymentInfo = null;
     // 💸 AUTO-PAGO si reason === 'pago'
     if ((reason || '').toLowerCase() === 'pago') {
-      const prices = getPricesForLevel(lunch.level, lunch.groupName);
+      const prices = getPricesForLevel(person.level, person.groupName);
       const amount = Number((validDayCount * prices.pricePeriod).toFixed(2));
       const ticketNumber = await Payment.generateTicketNumber();
       const payment = await Payment.create({
