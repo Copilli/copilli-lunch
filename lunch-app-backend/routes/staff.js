@@ -1,23 +1,23 @@
-// routes/students.js
 const express = require('express');
 const router = express.Router();
-const Student = require('../models/Student');
+const Staff = require('../models/Staff');
+const Person = require('../models/Person');
 
-// GET student-specific info by entityId
+// GET staff-specific info by entityId
 router.get('/:entityId', async (req, res) => {
   try {
-    const student = await Student.findOne({ person: req.params.entityId }).lean();
-    if (!student) return res.status(404).json({ error: 'Student not found' });
-    res.json(student);
+    const staff = await Staff.findOne({ person: req.params.entityId }).lean();
+    if (!staff) return res.status(404).json({ error: 'Staff not found' });
+    res.json(staff);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// PUT update student-specific info
+// PUT update staff-specific info
 router.put('/:entityId', async (req, res) => {
   try {
-    const updated = await Student.findOneAndUpdate(
+    const updated = await Staff.findOneAndUpdate(
       { person: req.params.entityId },
       req.body,
       { new: true }

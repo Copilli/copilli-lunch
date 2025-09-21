@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
+import { useInvalidDates } from '../context/InvalidDatesContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import dayjs from 'dayjs';
@@ -6,14 +7,14 @@ import TopNavBar from '../components/TopNavBar';
 import SearchBar from '../components/SearchBar';
 import LevelCard from '../components/LevelCard';
 import GroupCard from '../components/GroupCard';
-import { StudentCalendarContainer } from '../components/StudentCalendarTable';
-import StudentSummaryCard from '../components/StudentSummaryCard';
-import StudentDetailsPanel from '../components/StudentDetailsPanel';
-import StudentImportPanel from '../components/StudentImportPanel';
+import { PersonCalendarContainer } from '../components/PersonCalendarTable';
+import PersonSummaryCard from '../components/PersonSummaryCard';
+import PersonDetailsPanel from '../components/PersonDetailsPanel';
+import PersonImportPanel from '../components/PersonImportPanel';
 
 const AdminPanel = ({ setUser }) => {
   const navigate = useNavigate();
-  const [students, setStudents] = useState([]);
+  const [persons, setPersons] = useState([]);
   const [movements, setMovements] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedLevel, setSelectedLevel] = useState(null);
@@ -23,80 +24,75 @@ const AdminPanel = ({ setUser }) => {
   const [calendarYear, setCalendarYear] = useState(dayjs().year());
   const [showDetails, setShowDetails] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [invalidDates, setInvalidDates] = useState([]);
+  const { invalidDates, loading: loadingInvalidDates, fetchInvalidDates } = useInvalidDates();
+  useEffect(() => {
+    fetchInvalidDates?.();
+    // Solo se llama una vez al montar
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const user = JSON.parse(localStorage.getItem('user'));
   const location = useLocation();
   const API = import.meta.env.VITE_API_URL;
   const token = localStorage.getItem('token');
 
-  const selectStudentForDetails = (student) => {
-    setSelectedLevel(student.group.level);
-    setSelectedGroup(student.group.name);
+  const selectPersonForDetails = (person) => {
+    setSelectedLevel(person.level);
+    setSelectedGroup(person.groupName);
     setSelectedStudent(null);
     setShowDetails(false);
     setTimeout(() => {
-      setSelectedStudent(student);
+      setSelectedStudent(person);
       setShowDetails(true);
     }, 100);
   };
 
   const openedFromQueryRef = useRef(false);
 
-  const fetchStudents = async () => {
-    const token = localStorage.getItem('token');
-    const res = await axios.get(`${import.meta.env.VITE_API_URL}/students`, {
+  // Fetch all persons (flat)
+  const fetchPersons = async () => {
+    const res = await axios.get(`${API}/persons?flat=1`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    setStudents(res.data);
+    setPersons(res.data);
   };
 
+  // Fetch all movements
   const fetchMovements = async () => {
-    const token = localStorage.getItem('token');
-    const res = await axios.get(`${import.meta.env.VITE_API_URL}/token-movements`, {
+    const res = await axios.get(`${API}/movements`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     setMovements(res.data);
   };
 
-  const fetchInvalidDates = async () => {
-    const token = localStorage.getItem('token');
-    const res = await axios.get(`${import.meta.env.VITE_API_URL}/invalid-dates`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    setInvalidDates(res.data.map(d => ({
-      date: dayjs(d.date).format('YYYY-MM-DD'),
-      reason: d.reason || 'Día no válido'
-    })));
-  };
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const sid = params.get('studentId');
-    if (!sid || openedFromQueryRef.current) return;
+    const pid = params.get('entityId');
+    if (!pid || openedFromQueryRef.current) return;
 
     const tryOpen = (list) => {
-      const student = Array.isArray(list) ? list.find(s => s.studentId === sid) : null;
-      if (student) {
+      const person = Array.isArray(list) ? list.find(s => s.entityId === pid) : null;
+      if (person) {
         openedFromQueryRef.current = true;
-        selectStudentForDetails(student);
+        selectPersonForDetails(person);
         navigate('/admin', { replace: true });
       }
     };
-    // 1) Si ya tienes estudiantes cargados, intenta directo
-    if (Array.isArray(students) && students.length) {
-      tryOpen(students);
+    // 1) Si ya tienes personas cargadas, intenta directo
+    if (Array.isArray(persons) && persons.length) {
+      tryOpen(persons);
       return;
     }
     // 2) Si aún no están, pide la lista y luego intenta
-    axios.get(`${API}/students`, { headers: { Authorization: `Bearer ${token}` } })
+    axios.get(`${API}/persons?flat=1`, { headers: { Authorization: `Bearer ${token}` } })
       .then(({ data }) => tryOpen(data))
       .catch(() => { /* silencioso */ });
-  }, [location.search, students]);
+  }, [location.search, persons]);
 
   useEffect(() => {
-    fetchStudents();
+    fetchPersons();
     fetchMovements();
-    fetchInvalidDates();
+  // invalidDates se obtiene del contexto global
   }, []);
 
   useEffect(() => {
@@ -107,20 +103,40 @@ const AdminPanel = ({ setUser }) => {
   const levels = ['preescolar', 'primaria', 'secundaria', 'personal'];
 
   const filtered = search
-    ? students.filter(
+    ? persons.filter(
         s =>
           s.name.toLowerCase().includes(search.toLowerCase()) ||
-          s.studentId.toLowerCase().includes(search.toLowerCase())
+          (s.entityId && s.entityId.toLowerCase().includes(search.toLowerCase()))
       )
-    : students;
+    : persons;
 
   const groupsInLevel = selectedLevel
-    ? [...new Set(filtered.filter(s => s.group.level === selectedLevel).map(s => s.group.name))]
+    ? [
+        ...new Set(
+          persons
+            .filter(
+              s =>
+                s.level &&
+                s.groupName &&
+                typeof s.level === 'string' &&
+                typeof s.groupName === 'string' &&
+                s.level.toLowerCase() === selectedLevel.toLowerCase()
+            )
+            .map(s => s.groupName)
+            .filter(name => !!name)
+        ),
+      ]
     : [];
 
-  const studentsInGroup = selectedGroup
-    ? filtered.filter(
-        s => s.group.level === selectedLevel && s.group.name === selectedGroup
+  const personsInGroup = selectedGroup
+    ? persons.filter(
+        s =>
+          s.level &&
+          s.groupName &&
+          typeof s.level === 'string' &&
+          typeof s.groupName === 'string' &&
+          s.level.toLowerCase() === selectedLevel.toLowerCase() &&
+          s.groupName === selectedGroup
       )
     : [];
 
@@ -139,14 +155,14 @@ const AdminPanel = ({ setUser }) => {
         <SearchBar
           search={search}
           setSearch={setSearch}
-          students={students}
-          onSelect={(student) => {
-            setSelectedLevel(student.group.level);
-            setSelectedGroup(student.group.name);
+          persons={persons}
+          onSelect={(person) => {
+            setSelectedLevel(person.level);
+            setSelectedGroup(person.groupName);
             setSelectedStudent(null);
             setShowDetails(false);
             setTimeout(() => {
-              setSelectedStudent(student);
+              setSelectedStudent(person);
               setShowDetails(true);
             }, 100);
           }}
@@ -158,13 +174,13 @@ const AdminPanel = ({ setUser }) => {
           <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">Importar estudiantes</h5>
+                <h5 className="modal-title">Importar personas</h5>
                 <button type="button" className="btn-close" onClick={() => setShowImportModal(false)}></button>
               </div>
               <div className="modal-body">
-                <StudentImportPanel
+                <PersonImportPanel
                   onSuccess={() => {
-                    fetchStudents();
+                    fetchPersons();
                     setShowImportModal(false);
                   }}
                 />
@@ -178,7 +194,13 @@ const AdminPanel = ({ setUser }) => {
         <div className="row gx-3 gy-3 justify-content-center">
           {levels.map(level => (
             <div key={level} className="col-12 col-sm-6 col-md-4">
-              <LevelCard level={level} onClick={setSelectedLevel} />
+              <LevelCard
+                level={level}
+                onClick={() => {
+                  setSearch('');
+                  setSelectedLevel(level);
+                }}
+              />
             </div>
           ))}
         </div>
@@ -200,8 +222,14 @@ const AdminPanel = ({ setUser }) => {
           ) : (
             <div className="row gx-3 gy-3 justify-content-center">{/* ← antes: g-3 */}
               {groupsInLevel.map((group) => {
-                const count = students.filter(
-                  s => s.group.level === selectedLevel && s.group.name === group
+                const count = persons.filter(
+                  s =>
+                    s.level &&
+                    s.groupName &&
+                    typeof s.level === 'string' &&
+                    typeof s.groupName === 'string' &&
+                    s.level.toLowerCase() === selectedLevel.toLowerCase() &&
+                    s.groupName === group
                 ).length;
                 return (
                   <div key={group} className="col-12 col-sm-6 col-md-4">
@@ -222,8 +250,8 @@ const AdminPanel = ({ setUser }) => {
 
       {selectedGroup && (
         <div>
-          <h3 className='text-center'>Estudiantes en {selectedLevel} - Grupo {selectedGroup}</h3>
-          <p className='text-center'>{studentsInGroup.length} estudiante(s)</p>
+          <h3 className='text-center'>Personas en {selectedLevel} - Grupo {selectedGroup}</h3>
+          <p className='text-center'>{personsInGroup.length} persona(s)</p>
 
           <div style={{ marginBottom: '1rem' }}>
             <label>Mes:  </label> 
@@ -243,40 +271,40 @@ const AdminPanel = ({ setUser }) => {
             </select>
           </div>
 
-          <StudentCalendarContainer
+          <PersonCalendarContainer
             currentGroup={{ name: selectedGroup, level: selectedLevel }}
-            selectedStudent={showDetails ? selectedStudent : null}
+            selectedPerson={showDetails ? selectedStudent : null}
             month={calendarMonth}
             year={calendarYear}
             invalidDates={invalidDates}
           />
 
           <div style={{ marginTop: '2rem' }}>
-            <h4 className='text-center'>Resumen por alumno</h4>
-            {studentsInGroup.map(student => (
-              <div key={student.studentId}>
-                <StudentSummaryCard
-                  student={student}
+            <h4 className='text-center'>Resumen por persona</h4>
+            {personsInGroup.map(person => (
+              <div key={person.entityId}>
+                <PersonSummaryCard
+                  person={person}
                   onSelect={() => {
-                    if (selectedStudent && selectedStudent.studentId === student.studentId) {
+                    if (selectedStudent && selectedStudent.entityId === person.entityId) {
                       setSelectedStudent(null);
                       setShowDetails(false);
                     } else {
-                      setSelectedStudent(student);
+                      setSelectedStudent(person);
                       setShowDetails(true);
                     }
                   }}
                 />
-                {showDetails && selectedStudent?.studentId === student.studentId && (
+                {showDetails && selectedStudent?.entityId === person.entityId && (
                   <div className="accordion-panel card card-body bg-light mt-2 mb-3">
-                    <StudentDetailsPanel
-                      student={selectedStudent}
+                    <PersonDetailsPanel
+                      person={selectedStudent}
                       movements={movements}
                       onClose={() => {
                         setSelectedStudent(null);
                         setShowDetails(false);
                       }}
-                      fetchStudents={fetchStudents}
+                      fetchPersons={fetchPersons}
                       fetchMovements={fetchMovements}
                     />
                   </div>

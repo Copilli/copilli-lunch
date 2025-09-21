@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
-import StudentLunchActions from './StudentLunchActions';
+import PersonLunchActions from './PersonLunchActions';
 import utc from 'dayjs/plugin/utc';
 dayjs.extend(utc);
 
-const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetchMovements }) => {
+const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMovements }) => {
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [originalTokens, setOriginalTokens] = useState(0);
@@ -17,28 +17,31 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
   const user = JSON.parse(localStorage.getItem('user'));
 
   useEffect(() => {
-    if (student) {
+    if (person) {
+      const lunch = person.lunch || {};
       const today = dayjs.utc().startOf('day');
-      const periodStart = dayjs.utc(student.specialPeriod?.startDate).startOf('day');
-      const periodEnd = dayjs.utc(student.specialPeriod?.endDate).startOf('day');
-
-      const periodExists = !!(student.specialPeriod?.startDate && student.specialPeriod?.endDate);
-      const isActive = periodExists && today.isSameOrAfter(periodStart) && today.isSameOrBefore(periodEnd);
+      const specialPeriod = lunch.specialPeriod || {};
+      const periodStart = specialPeriod.startDate ? dayjs.utc(specialPeriod.startDate).startOf('day') : null;
+      const periodEnd = specialPeriod.endDate ? dayjs.utc(specialPeriod.endDate).startOf('day') : null;
+      const periodExists = !!(specialPeriod.startDate && specialPeriod.endDate);
+      const isActive = periodExists && periodStart && periodEnd && today.isSameOrAfter(periodStart) && today.isSameOrBefore(periodEnd);
 
       setForm({
-        ...student,
+        ...person,
+        tokens: lunch.tokens ?? 0,
+        status: lunch.status || 'sin-fondos',
         specialPeriod: {
-          startDate: student.specialPeriod?.startDate || null,
-          endDate: student.specialPeriod?.endDate || null
+          startDate: specialPeriod.startDate || null,
+          endDate: specialPeriod.endDate || null
         },
         hasSpecialPeriod: isActive
       });
 
-      setOriginalTokens(student.tokens);
-      setLastValidStatus(student.status);
+      setOriginalTokens(lunch.tokens ?? 0);
+      setLastValidStatus(lunch.status || 'sin-fondos');
       setVisibleMovements(5);
     }
-  }, [student]);
+  }, [person]);
 
   useEffect(() => {
     const fetchInvalidDates = async () => {
@@ -51,13 +54,13 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
     fetchInvalidDates();
   }, []);
 
-  if (!student || !form) return null;
+  if (!person || !form) return null;
 
   const isReadOnly = user?.role === 'oficina';
   const isAdmin = user?.role === 'admin';
 
-  const studentMovements = movements
-    .filter(m => m.studentId === student.studentId)
+  const personMovements = movements
+    .filter(m => m.entityId === person.entityId)
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
   const showError = (msg) => {
@@ -120,7 +123,7 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
 
       // Si hay ajuste de tokens y es admin
       if (tokenDelta !== 0 && isAdmin) {
-        await axios.patch(`${import.meta.env.VITE_API_URL}/students/${student._id}/tokens`, {
+        await axios.patch(`${import.meta.env.VITE_API_URL}/persons/${person._id}/lunch`, {
           delta: tokenDelta,
           reason: 'ajuste manual',
           note: 'ajuste desde panel admin',
@@ -131,12 +134,26 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
         });
       }
 
-      // Guardar cambios generales del estudiante (incluye email)
-      await axios.put(`${import.meta.env.VITE_API_URL}/students/${student._id}`, form, {
+      // Construir payload con lunch anidado
+      const payload = {
+        ...form,
+        lunch: {
+          tokens: form.tokens,
+          status: form.status,
+          hasSpecialPeriod: form.hasSpecialPeriod,
+          specialPeriod: form.specialPeriod
+        }
+      };
+      delete payload.tokens;
+      delete payload.status;
+      delete payload.hasSpecialPeriod;
+      delete payload.specialPeriod;
+
+      await axios.put(`${import.meta.env.VITE_API_URL}/persons/${person._id}`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      showSuccess('Estudiante actualizado.');
+      showSuccess('Persona actualizada.');
     } catch (err) {
       console.error(err);
       showError('Error al guardar cambios.');
@@ -161,7 +178,7 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
   const exportCSV = () => {
     if (!isAdmin) return;
     const header = 'Fecha,Motivo,Nota,Responsable,Cambio\n';
-    const rows = studentMovements.map(m => {
+  const rows = personMovements.map(m => {
       const fecha = dayjs(m.timestamp).format('YYYY-MM-DD HH:mm');
       const motivo = m.reason;
       const nota = m.note?.replace(/,/g, ';') || '';
@@ -172,7 +189,7 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
     const blob = new Blob([header + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', `${student.studentId}_historial.csv`);
+  link.setAttribute('download', `${person.entityId}_historial.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -185,7 +202,10 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
     setSaving(true);
     const token = localStorage.getItem('token');
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL}/students/${student._id}/period`, {
+      // Usar el ID de lunch, no de persona
+      const lunchId = person?.lunch?._id;
+      if (!lunchId) throw new Error('No se encontró información de Lunch');
+      await axios.delete(`${import.meta.env.VITE_API_URL}/lunch/${lunchId}/period`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setForm(prev => ({
@@ -193,7 +213,7 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
         hasSpecialPeriod: false,
         specialPeriod: { startDate: null, endDate: null }
       }));
-      if (fetchStudents) fetchStudents();
+      if (fetchPersons) fetchPersons();
       if (fetchMovements) fetchMovements();
       showSuccess('Periodo especial eliminado.');
     } catch (err) {
@@ -219,18 +239,29 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
 
       <div className="card mt-4 student-details-card">
         <div className="card-header d-flex justify-content-between align-items-center">
-          <h4 className="mb-0">Detalle del alumno</h4>
+          <h4 className="mb-0">
+            Detalle del {form.type === 'student' ? 'estudiante' : form.type === 'staff' ? 'empleado' : 'persona'}
+          </h4>
           <button className="btn btn-outline-secondary btn-sm" onClick={onClose}>Cerrar</button>
         </div>
         <div className="card-body">
           <div className="row mb-3">
             <div className="col-auto">
-              <img
-                src={form.photoUrl}
-                alt={form.name}
-                className="rounded-circle"
-                style={{ width: 100, height: 100, objectFit: 'cover' }}
-              />
+              {form.photoUrl ? (
+                <img
+                  src={form.photoUrl}
+                  alt={form.name}
+                  className="rounded-circle"
+                  style={{ width: 100, height: 100, objectFit: 'cover' }}
+                />
+              ) : (
+                <div
+                  className="rounded-circle bg-secondary d-flex align-items-center justify-content-center"
+                  style={{ width: 100, height: 100, color: '#fff', fontSize: 32 }}
+                >
+                  <span>{form.name ? form.name[0] : '?'}</span>
+                </div>
+              )}
             </div>
             <div className="col">
               <label className="form-label">URL de la foto:</label>
@@ -245,8 +276,10 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
           </div>
 
           <div className="mb-3">
-            <label className="form-label">ID del estudiante:</label>
-            <input type="text" className="form-control" value={form.studentId} disabled />
+            <label className="form-label">
+              ID del {form.type === 'student' ? 'estudiante' : form.type === 'staff' ? 'empleado' : 'persona'}:
+            </label>
+            <input type="text" className="form-control" value={form.entityId} disabled />
           </div>
 
           <div className="mb-3">
@@ -280,8 +313,8 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
               <input
                 type="text"
                 className="form-control"
-                value={form.group.level}
-                onChange={(e) => handleChange('group.level', e.target.value)}
+                value={form.level || ''}
+                onChange={(e) => handleChange('level', e.target.value)}
                 disabled={isReadOnly}
               />
             </div>
@@ -290,8 +323,8 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
               <input
                 type="text"
                 className="form-control"
-                value={form.group.name}
-                onChange={(e) => handleChange('group.name', e.target.value)}
+                value={form.groupName || ''}
+                onChange={(e) => handleChange('groupName', e.target.value)}
                 disabled={isReadOnly}
               />
             </div>
@@ -380,10 +413,10 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
         </div>
       </div>
 
-      <StudentLunchActions
-        student={student}
+  <PersonLunchActions
+        person={person}
         onUpdate={() => {
-          if (fetchStudents) fetchStudents();
+          if (fetchPersons) fetchPersons();
           if (fetchMovements) fetchMovements();
         }}
       />
@@ -399,8 +432,8 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
             )}
           </div>
 
-          {studentMovements.length === 0 && <p>No hay transacciones registradas.</p>}
-          {studentMovements.slice(0, visibleMovements).map((m, i) => (
+          {personMovements.length === 0 && <p>No hay transacciones registradas.</p>}
+          {personMovements.slice(0, visibleMovements).map((m, i) => (
             <div key={i} className="border rounded p-3 mb-2 bg-light">
               <p><strong>Fecha:</strong> {dayjs.utc(m.timestamp).local().format('DD/MM/YYYY HH:mm')}</p>
               <p><strong>Motivo:</strong> {m.reason}</p>
@@ -409,7 +442,7 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
               <p><strong>Cambio:</strong> {m.change > 0 ? '+' : ''}{m.change}</p>
             </div>
           ))}
-          {visibleMovements < studentMovements.length && (
+          {visibleMovements < personMovements.length && (
             <button className="btn btn-outline-secondary mt-2" onClick={handleLoadMore}>
               Cargar más
             </button>
@@ -441,4 +474,4 @@ const StudentDetailsPanel = ({ student, movements, onClose, fetchStudents, fetch
   );
 };
 
-export default StudentDetailsPanel;
+export default PersonDetailsPanel;

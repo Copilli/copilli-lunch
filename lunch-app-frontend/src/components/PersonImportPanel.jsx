@@ -1,16 +1,16 @@
-// src/components/StudentImportPanel.jsx
+// src/components/PersonImportPanel.jsx
 import { useRef, useState } from 'react';
 import Papa from 'papaparse';
 import axios from 'axios';
 import dayjs from 'dayjs';
 
 const CSV_HEADERS_FULL = [
-  'studentId','name','email','level','group','photoUrl',
-  'tokens','hasSpecialPeriod','specialPeriod.startDate','specialPeriod.endDate','status'
+  'entityId','name','email','type','level','groupName','photoUrl',
+  'lunch.tokens','lunch.hasSpecialPeriod','lunch.specialPeriod.startDate','lunch.specialPeriod.endDate','lunch.status'
 ];
 
 // Solo campos mínimos requeridos
-const CSV_HEADERS_TEMPLATE = ['name','email','level','group']; // level: preescolar | primaria | secundaria
+const CSV_HEADERS_TEMPLATE = ['name','email','type','level','groupName']; // type: student|staff
 
 function toCsvRow(values) {
   return values.map(v => `"${(v ?? '').toString().replace(/"/g,'""')}"`).join(',');
@@ -28,16 +28,16 @@ function downloadCsv(filename, headers, rows) {
   URL.revokeObjectURL(url);
 }
 
-async function fetchAllStudentsFlat() {
+async function fetchAllPersonsFlat() {
   const token = localStorage.getItem('token') || '';
-  const res = await fetch(`${import.meta.env.VITE_API_URL}/students?flat=1`, {
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/persons?flat=1`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {}
   });
-  if (!res.ok) throw new Error('No se pudo obtener estudiantes');
+  if (!res.ok) throw new Error('No se pudo obtener usuarios');
   return await res.json();
 }
 
-const StudentImportPanel = ({ onSuccess, onCancel }) => {
+const PersonImportPanel = ({ onSuccess, onCancel }) => {
   const fileInputRef = useRef(null);
   const [fileName, setFileName] = useState('');
   const [result, setResult] = useState(null);
@@ -48,30 +48,31 @@ const StudentImportPanel = ({ onSuccess, onCancel }) => {
   // === Descargas ===
   const handleDownloadFullCSV = async () => {
     try {
-      const list = await fetchAllStudentsFlat();
+      const list = await fetchAllPersonsFlat();
       const rows = list.map(s => toCsvRow([
-        s.studentId || '',
+        s.entityId || '',
         s.name || '',
         s.email || '',
+        s.type || '',
         s.level || '',
         s.groupName || '',
         s.photoUrl || '',
-        s.tokens ?? '',
-        s.hasSpecialPeriod ? 'TRUE' : 'FALSE',
-        s.specialStartDate || '',
-        s.specialEndDate || '',
-        s.status || ''
+        s.lunch?.tokens ?? s['lunch.tokens'] ?? '',
+        s.lunch?.hasSpecialPeriod ?? s['lunch.hasSpecialPeriod'] ?? '',
+        s.lunch?.specialPeriod?.startDate || s['lunch.specialPeriod.startDate'] || '',
+        s.lunch?.specialPeriod?.endDate || s['lunch.specialPeriod.endDate'] || '',
+        s.lunch?.status || s['lunch.status'] || ''
       ]));
-      downloadCsv(`students_full_${dayjs().format('YYYYMMDD_HHmm')}.csv`, CSV_HEADERS_FULL, rows);
+      downloadCsv(`persons_full_${dayjs().format('YYYYMMDD_HHmm')}.csv`, CSV_HEADERS_FULL, rows);
     } catch {
-      setErrorMsg('No se pudo descargar el CSV de estudiantes.');
+      setErrorMsg('No se pudo descargar el CSV de usuarios.');
       setTimeout(()=>setErrorMsg(''), 3500);
     }
   };
 
   const handleDownloadTemplateCSV = () => {
     downloadCsv(
-      `students_template_min_${dayjs().format('YYYYMMDD_HHmm')}.csv`,
+      `persons_template_min_${dayjs().format('YYYYMMDD_HHmm')}.csv`,
       CSV_HEADERS_TEMPLATE,
       []
     );
@@ -94,16 +95,18 @@ const StudentImportPanel = ({ onSuccess, onCancel }) => {
         try {
           const transformed = results.data.map(row => {
             const {
-              'group.level': level, 'group.name': name,
+              level,
+              groupName,
               'specialPeriod.startDate': startDate,
               'specialPeriod.endDate': endDate, ...rest
             } = row;
 
             return {
               ...rest,
+              level: (level || '').toLowerCase(),
+              groupName: groupName || '',
               tokens: parseInt(row.tokens || 0, 10),
               hasSpecialPeriod: row.hasSpecialPeriod === 'TRUE' || row.hasSpecialPeriod === true,
-              group: { level: (level || row.level || '').toLowerCase(), name: name || row.group },
               specialPeriod:
                 (row.hasSpecialPeriod === 'TRUE' || row.hasSpecialPeriod === true)
                   ? { startDate: startDate || row['specialPeriod.startDate'] || null,
@@ -113,19 +116,20 @@ const StudentImportPanel = ({ onSuccess, onCancel }) => {
           });
 
           const token = localStorage.getItem('token') || '';
+          // Backend expects an array, not an object with 'persons' key
           const res = await axios.post(
-            `${import.meta.env.VITE_API_URL}/students/import-bulk`,
-            { students: transformed },
+            `${import.meta.env.VITE_API_URL}/persons/import-bulk`,
+            transformed,
             { headers: token ? { Authorization: `Bearer ${token}` } : {} }
           );
 
           setResult(res.data);
           setSuccessMsg('Importación completada.');
           setTimeout(()=>setSuccessMsg(''), 3500);
-          if (onSuccess) onSuccess();
+          // No cerrar el modal automáticamente, solo mostrar resultados
         } catch (err) {
           console.error(err);
-          setErrorMsg(err?.response?.data?.error || 'Error al importar estudiantes.');
+                    setErrorMsg(err?.response?.data?.error || 'Error al importar usuarios.');
         } finally {
           setLoading(false);
         }
@@ -134,21 +138,6 @@ const StudentImportPanel = ({ onSuccess, onCancel }) => {
   };
 
   const onFileChange = (e) => setFileName(e.target.files?.[0]?.name || '');
-
-  // === Cancelar ===
-  const handleCancel = () => {
-    if (typeof onCancel === 'function') {
-      onCancel();
-      return;
-    }
-    // Fallback: reset local del formulario
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    setFileName('');
-    setResult(null);
-    setLoading(false);
-    setErrorMsg('');
-    setSuccessMsg('');
-  };
 
   return (
     <form onSubmit={handleFileUpload} className="card p-3 p-md-5 shadow-sm">
@@ -193,8 +182,8 @@ const StudentImportPanel = ({ onSuccess, onCancel }) => {
           <h6 className="m-0">Agregar o editar la información en la plantilla</h6>
         </div>
         <p className="text-muted mb-2">
-          Campos obligatorios: <code>name</code>, <code>email</code>, <code>level</code>, <code>group</code>.
-          El <code>studentId</code> se genera automáticamente para altas nuevas.
+          Campos obligatorios: <code>name</code>, <code>email</code>, <code>type</code>, <code>level</code>, <code>groupName</code>.
+          El <code>entityId</code> se genera automáticamente para altas nuevas.
         </p>
 
         {/* Tabla responsive (compacta en pantallas pequeñas) */}
@@ -204,14 +193,16 @@ const StudentImportPanel = ({ onSuccess, onCancel }) => {
               <tr>
                 <th>Name</th>
                 <th>Email</th>
+                <th>Type</th>
                 <th>Level</th>
-                <th>Group</th>
+                <th>GroupName</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td>Juan Pérez</td>
                 <td>juan@colegio.mx</td>
+                <td>student</td>
                 <td>primaria</td>
                 <td>3B</td>
               </tr>
@@ -279,7 +270,7 @@ const StudentImportPanel = ({ onSuccess, onCancel }) => {
       {/* Footer de acciones: apilado en móvil, horizontal desde sm */}
       <div className="d-flex flex-column flex-sm-row justify-content-between align-items-stretch gap-2">
         <div className="text-muted small">
-          Tamaño recomendado &lt; 5MB.
+          Tamaño recomendado &lt; 1MB.
         </div>
         <button
           type="submit"
@@ -293,4 +284,4 @@ const StudentImportPanel = ({ onSuccess, onCancel }) => {
   );
 };
 
-export default StudentImportPanel;
+export default PersonImportPanel;

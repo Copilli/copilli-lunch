@@ -4,20 +4,34 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const cron = require('node-cron');
 const dayjs = require('dayjs');
-const Student = require('./models/Student');
+const Person = require('./models/Person');
+const Lunch = require('./models/Lunch');
+const Movement = require('./models/Movement');
 const PeriodLog = require('./models/PeriodLog');
-const TokenMovement = require('./models/TokenMovement');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middlewares globales
+const allowedOrigins = [
+  'https://copilli.github.io',
+  'http://localhost:5173'
+];
 app.use(cors({
-  origin: 'https://copilli.github.io',
+  origin: function(origin, callback) {
+    // Permitir solicitudes sin origen (como Postman) o desde los orígenes permitidos
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ limit: '1mb', extended: true }));
 
 // Conexión a MongoDB
 mongoose
@@ -33,22 +47,24 @@ mongoose
 
 // Rutas
 const authRoutes = require('./routes/auth');
-const studentRoutes = require('./routes/students');
-const tokenMovementsRoutes = require('./routes/tokenMovements');
+const personsRoutes = require('./routes/persons');
+const lunchRoutes = require('./routes/lunch');
+const movementsRoutes = require('./routes/movements');
+const paymentsRoutes = require('./routes/payments');
 const invalidDatesRoutes = require('./routes/invalidDates');
-const paymentRoutes = require('./routes/payments');
 const cutoffRoutes = require('./routes/cutoffs');
 
-if (!authRoutes || !studentRoutes || !tokenMovementsRoutes || !invalidDatesRoutes || !paymentRoutes || !cutoffRoutes) {
+if (!authRoutes || !personsRoutes || !lunchRoutes || !movementsRoutes || !paymentsRoutes || !invalidDatesRoutes || !cutoffRoutes) {
   console.error('❌ Uno de los archivos de rutas no se pudo cargar.');
   process.exit(1);
 }
 
 app.use('/api/auth', authRoutes);
-app.use('/api/students', studentRoutes);
-app.use('/api/token-movements', tokenMovementsRoutes);
+app.use('/api/persons', personsRoutes);
+app.use('/api/lunch', lunchRoutes);
+app.use('/api/movements', movementsRoutes);
+app.use('/api/payments', paymentsRoutes);
 app.use('/api/invalid-dates', invalidDatesRoutes);
-app.use('/api/payments', paymentRoutes);
 app.use('/api/cutoffs', cutoffRoutes);
 
 // 🕒 CRON: Ejecutar manualmente para activar/desactivar periodos
@@ -57,26 +73,28 @@ app.get('/api/cron/wake', async (req, res) => {
     const today = dayjs().startOf('day').toDate();
 
     // 🔴 Desactivar periodos expirados
-    const expiredStudents = await Student.find({
+    const expiredLunches = await Lunch.find({
       hasSpecialPeriod: true,
       'specialPeriod.endDate': { $lt: today }
     });
 
     let desactivados = 0;
-    for (const student of expiredStudents) {
-      student.hasSpecialPeriod = false;
-      student.specialPeriod = { startDate: null, endDate: null };
-      student.status = student.tokens > 0 ? 'con-fondos' : 'sin-fondos';
-      await student.save();
+    for (const lunch of expiredLunches) {
+    lunch.hasSpecialPeriod = false;
+    lunch.specialPeriod = { startDate: null, endDate: null };
+    lunch.status = lunch.tokens > 0 ? 'con-fondos' : 'sin-fondos';
+    await lunch.save();
 
-      await TokenMovement.create({
-        studentId: student.studentId,
-        change: 0,
-        reason: 'periodo-expirado',
-        note: 'Periodo especial expirado automáticamente por cron',
-        performedBy: 'sistema',
-        userRole: 'sistema'
-      });
+    // Find the person for this lunch to get entityId
+    const person = await Person.findById(lunch.person).lean();
+    await Movement.create({
+      entityId: person && person.entityId ? person.entityId : '',
+      change: 0,
+      reason: 'periodo-expirado',
+      note: 'Periodo especial expirado automáticamente por cron',
+      performedBy: 'sistema',
+      userRole: 'sistema'
+    });
 
       desactivados++;
     }
@@ -86,25 +104,27 @@ app.get('/api/cron/wake', async (req, res) => {
 
     let activados = 0;
     for (const log of logs) {
-      const student = await Student.findOne({ studentId: log.studentId });
-      if (!student) continue;
+    const lunch = await Lunch.findById(log.lunchId);
+    if (!lunch) continue;
 
-      student.specialPeriod = {
-        startDate: log.startDate,
-        endDate: log.endDate
-      };
-      student.hasSpecialPeriod = true;
-      student.status = 'periodo-activo';
-      await student.save();
+    lunch.specialPeriod = {
+      startDate: log.startDate,
+      endDate: log.endDate
+    };
+    lunch.hasSpecialPeriod = true;
+    lunch.status = 'periodo-activo';
+    await lunch.save();
 
-      await TokenMovement.create({
-        studentId: student.studentId,
-        change: 0,
-        reason: 'periodo-activado',
-        note: 'Periodo activado automáticamente desde PeriodLog',
-        performedBy: 'sistema',
-        userRole: 'sistema'
-      });
+    // Find the person for this lunch to get entityId
+    const person = await Person.findById(lunch.person).lean();
+    await Movement.create({
+      entityId: person && person.entityId ? person.entityId : '',
+      change: 0,
+      reason: 'periodo-activado',
+      note: 'Periodo activado automáticamente desde PeriodLog',
+      performedBy: 'sistema',
+      userRole: 'sistema'
+    });
 
       activados++;
     }
@@ -134,27 +154,28 @@ cron.schedule('5 0 * * 1-5', async () => {
   try {
     const today = dayjs().startOf('day').toDate();
 
-    const expiredStudents = await Student.find({
+    const expiredLunches = await Lunch.find({
       hasSpecialPeriod: true,
       'specialPeriod.endDate': { $lt: today }
     });
 
     let desactivados = 0;
-    for (const student of expiredStudents) {
-      student.hasSpecialPeriod = false;
-      student.specialPeriod = { startDate: null, endDate: null };
-      student.status = student.tokens > 0 ? 'con-fondos' : 'sin-fondos';
-      await student.save();
+    for (const lunch of expiredLunches) {
+      lunch.hasSpecialPeriod = false;
+      lunch.specialPeriod = { startDate: null, endDate: null };
+      lunch.status = lunch.tokens > 0 ? 'con-fondos' : 'sin-fondos';
+      await lunch.save();
 
-      const movement = new TokenMovement({
-        studentId: student.studentId,
+      // Find the person for this lunch to get entityId
+      const person = await Person.findById(lunch.person).lean();
+      await Movement.create({
+        entityId: person && person.entityId ? person.entityId : '',
         change: 0,
         reason: 'periodo-expirado',
         note: 'Periodo especial expirado automáticamente por cron',
         performedBy: 'sistema',
         userRole: 'sistema'
       });
-      await movement.save();
 
       desactivados++;
     }
@@ -174,31 +195,32 @@ cron.schedule('5 0 * * 1-5', async () => {
 
     let activados = 0;
     for (const log of logs) {
-      const student = await Student.findOne({ studentId: log.studentId });
-      if (!student) continue;
+    const lunch = await Lunch.findById(log.lunchId);
+    if (!lunch) continue;
 
-      student.specialPeriod = {
-        startDate: log.startDate,
-        endDate: log.endDate
-      };
-      student.hasSpecialPeriod = true;
-      student.status = 'periodo-activo';
-      await student.save();
+    lunch.specialPeriod = {
+      startDate: log.startDate,
+      endDate: log.endDate
+    };
+    lunch.hasSpecialPeriod = true;
+    lunch.status = 'periodo-activo';
+    await lunch.save();
 
-      const movement = new TokenMovement({
-        studentId: student.studentId,
-        change: 0,
-        reason: 'periodo-activado',
-        note: 'Periodo activado automáticamente desde PeriodLog',
-        performedBy: 'sistema',
-        userRole: 'sistema'
-      });
-      await movement.save();
+    // Find the person for this lunch to get entityId
+    const person = await Person.findById(lunch.person).lean();
+    await Movement.create({
+      entityId: person && person.entityId ? person.entityId : '',
+      change: 0,
+      reason: 'periodo-activado',
+      note: 'Periodo activado automáticamente desde PeriodLog',
+      performedBy: 'sistema',
+      userRole: 'sistema'
+    });
 
       activados++;
     }
 
-    console.log(`[CRON] Periodos activados para ${activados} estudiante(s).`);
+    console.log(`[CRON] Periodos activados para ${activados} lunch(es).`);
   } catch (err) {
     console.error('[CRON] Error al activar nuevos periodos:', err.message);
   }

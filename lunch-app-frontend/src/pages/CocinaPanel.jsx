@@ -1,5 +1,6 @@
 // src/pages/CocinaPanel.jsx
 import { useEffect, useState } from 'react';
+import { useInvalidDates } from '../context/InvalidDatesContext';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
@@ -9,26 +10,30 @@ import SearchBar from '../components/SearchBar';
 import LevelCard from '../components/LevelCard';
 import GroupCard from '../components/GroupCard';
 
-// Helper to get next N valid dates
-const getNextValidDates = async (n = 5) => {
-  const token = localStorage.getItem('token');
-  const res = await axios.get(`${import.meta.env.VITE_API_URL}/invalid-dates`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  const invalidDates = res.data.map(d => d.date);
+// Helper para obtener los próximos N días válidos usando el contexto
+function getNextValidDates(n = 5, invalidDates = []) {
   let dates = [];
   let day = dayjs();
+  const invalidSet = new Set(
+    invalidDates.map(d => typeof d === 'string' ? d : (d.dateYMD || d.date?.slice(0, 10) || d.date))
+  );
   while (dates.length < n) {
     const dStr = day.format('YYYY-MM-DD');
-    if (!invalidDates.includes(dStr)) dates.push(dStr);
+    if (!invalidSet.has(dStr)) dates.push(dStr);
     day = day.add(1, 'day');
   }
   return dates;
-};
+}
 
 const CocinaPanel = ({ setUser }) => {
   const [students, setStudents] = useState([]);
   const [validDates, setValidDates] = useState([]);
+  const { invalidDates, loading: loadingInvalidDates, fetchInvalidDates } = useInvalidDates();
+  useEffect(() => {
+    fetchInvalidDates?.();
+    // Solo se llama una vez al montar
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [lunchCounts, setLunchCounts] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedLevel, setSelectedLevel] = useState(null);
@@ -57,9 +62,10 @@ const CocinaPanel = ({ setUser }) => {
     setTimeout(() => setSuccessMsg(''), 3000);
   };
 
+  // Fetch all persons (flat)
   const fetchStudents = async () => {
     const token = localStorage.getItem('token');
-    const res = await axios.get(`${import.meta.env.VITE_API_URL}/students`, {
+    const res = await axios.get(`${import.meta.env.VITE_API_URL}/persons?flat=1`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     setStudents(res.data);
@@ -71,9 +77,10 @@ const CocinaPanel = ({ setUser }) => {
   }, []);
 
   useEffect(() => {
-    // Fetch next 5 valid dates
-    getNextValidDates(5).then(setValidDates);
-  }, []);
+    if (invalidDates) {
+      setValidDates(getNextValidDates(5, invalidDates));
+    }
+  }, [invalidDates]);
 
   useEffect(() => {
     if (students.length && validDates.length) {
@@ -82,12 +89,13 @@ const CocinaPanel = ({ setUser }) => {
         let periodCount = 0;
         let tokenCount = 0;
         students.forEach(s => {
-          const inPeriod = s.hasSpecialPeriod &&
-            dayjs(date).isSameOrAfter(dayjs(s.specialPeriod?.startDate)) &&
-            dayjs(date).isSameOrBefore(dayjs(s.specialPeriod?.endDate));
+          const lunch = s.lunch || {};
+          const inPeriod = lunch.hasSpecialPeriod &&
+            dayjs(date).isSameOrAfter(dayjs(lunch.specialPeriod?.startDate)) &&
+            dayjs(date).isSameOrBefore(dayjs(lunch.specialPeriod?.endDate));
           if (inPeriod) {
             periodCount++;
-          } else if (s.tokens > 0) {
+          } else if (lunch.tokens > 0) {
             tokenCount++;
           }
         });
@@ -104,35 +112,57 @@ const CocinaPanel = ({ setUser }) => {
     ? students.filter(
         s =>
           s.name.toLowerCase().includes(search.toLowerCase()) ||
-          s.studentId.toLowerCase().includes(search.toLowerCase())
+          (s.entityId && s.entityId.toLowerCase().includes(search.toLowerCase()))
       )
     : students;
 
   const groupsInLevel = selectedLevel
-    ? [...new Set(filtered.filter(s => s.group.level === selectedLevel).map(s => s.group.name))]
+    ? [
+        ...new Set(
+          filtered
+            .filter(
+              s =>
+                s.level &&
+                s.groupName &&
+                typeof s.level === 'string' &&
+                typeof s.groupName === 'string' &&
+                s.level.toLowerCase() === selectedLevel.toLowerCase()
+            )
+            .map(s => s.groupName)
+            .filter(name => !!name)
+        ),
+      ]
     : [];
 
   const studentsInGroup = selectedGroup
     ? filtered.filter(
-        s => s.group.level === selectedLevel && s.group.name === selectedGroup
+        s =>
+          s.level &&
+          s.groupName &&
+          typeof s.level === 'string' &&
+          typeof s.groupName === 'string' &&
+          s.level.toLowerCase() === selectedLevel.toLowerCase() &&
+          s.groupName === selectedGroup
       )
     : [];
 
   const getStatus = (student) => {
-    const inPeriod = student.hasSpecialPeriod &&
-      dayjs(today).isSameOrAfter(dayjs(student.specialPeriod.startDate)) &&
-      dayjs(today).isSameOrBefore(dayjs(student.specialPeriod.endDate));
+    const lunch = student.lunch || {};
+    const inPeriod = lunch.hasSpecialPeriod &&
+      dayjs(today).isSameOrAfter(dayjs(lunch.specialPeriod?.startDate)) &&
+      dayjs(today).isSameOrBefore(dayjs(lunch.specialPeriod?.endDate));
 
     if (inPeriod) return 'periodo-activo';
-    if (student.status === 'bloqueado') return 'bloqueado';
-    if (student.tokens > 0) return 'con-fondos';
+    if (lunch.status === 'bloqueado') return 'bloqueado';
+    if (lunch.tokens > 0) return 'con-fondos';
     return 'sin-fondos';
   };
 
   // Click en tarjeta: prepara modal sin alterar la vista de fondo
   const handleClick = (student) => {
+    const lunch = student.lunch || {};
     const status = getStatus(student);
-    const hasTokens = student.tokens > 0;
+    const hasTokens = lunch.tokens > 0;
 
     if (status === 'periodo-activo') {
       showError('Tiene un periodo activo. No se requiere token.');
@@ -147,8 +177,8 @@ const CocinaPanel = ({ setUser }) => {
     setPendingStudent(student);
     setConfirmMessage(
       hasTokens
-        ? `¿Deseas descontar un token? Total final: ${student.tokens - 1}`
-        : `No tiene tokens ni periodo activo. ¿Deseas registrar el desayuno en negativo? Total final: ${student.tokens - 1}`
+        ? `¿Deseas descontar un token? Total final: ${lunch.tokens - 1}`
+        : `No tiene tokens ni periodo activo. ¿Deseas registrar el desayuno en negativo? Total final: ${lunch.tokens - 1}`
     );
     setConfirming(true);
   };
@@ -161,8 +191,9 @@ const CocinaPanel = ({ setUser }) => {
   };
 
   const handleConfirm = async () => {
-    if (!pendingStudent?._id) {
-      showError('Estudiante no seleccionado');
+    const lunch = pendingStudent?.lunch;
+    if (!lunch?._id) {
+      showError('No se encontró el registro de lunch para este estudiante');
       closeModal();
       return;
     }
@@ -170,7 +201,7 @@ const CocinaPanel = ({ setUser }) => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        `${import.meta.env.VITE_API_URL}/students/${pendingStudent._id}/use`,
+        `${import.meta.env.VITE_API_URL}/lunch/${lunch._id}/use`,
         { performedBy: localStorage.getItem('username') || 'cocina' },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -214,10 +245,10 @@ const CocinaPanel = ({ setUser }) => {
         <SearchBar
           search={search}
           setSearch={setSearch}
-          students={students}
+          persons={students}
           onSelect={(student) => {
-            setSelectedLevel(student.group.level);
-            setSelectedGroup(student.group.name);
+            setSelectedLevel(student.level);
+            setSelectedGroup(student.groupName);
             setSelectedStudent(student); // vista de un solo alumno por búsqueda directa
           }}
         />
@@ -327,8 +358,8 @@ const CocinaPanel = ({ setUser }) => {
               style={{ objectFit: 'cover' }}
             />
             <strong className="d-block">{selectedStudent.name}</strong>
-            <p className="mb-1">ID: {selectedStudent.studentId}</p>
-            <p className="mb-1">Tokens: {selectedStudent.tokens}</p>
+            <p className="mb-1">ID: {selectedStudent.entityId}</p>
+            <p className="mb-1">Tokens: {selectedStudent.lunch?.tokens ?? 0}</p>
             <p className="mb-0">Status: {statusLabels[getStatus(selectedStudent)]}</p>
           </div>
         </div>
@@ -363,9 +394,14 @@ const CocinaPanel = ({ setUser }) => {
                 <div className="row gx-3 gy-3 justify-content-center">
                   {groupsInLevel.map((group) => {
                     const count = students.filter(
-                      (s) => s.group.level === selectedLevel && s.group.name === group
+                      (s) =>
+                        s.level &&
+                        s.groupName &&
+                        typeof s.level === 'string' &&
+                        typeof s.groupName === 'string' &&
+                        s.level.toLowerCase() === selectedLevel.toLowerCase() &&
+                        s.groupName === group
                     ).length;
-
                     return (
                       <div key={group} className="col-12 col-sm-6 col-md-4">
                         <GroupCard
@@ -403,7 +439,7 @@ const CocinaPanel = ({ setUser }) => {
 
                   return (
                     <div
-                      key={student.studentId}
+                      key={student.entityId}
                       className="col-12 col-sm-6 col-md-4 col-lg-3 d-flex justify-content-center"
                     >
                       <div
@@ -424,8 +460,8 @@ const CocinaPanel = ({ setUser }) => {
                           style={{ objectFit: 'cover' }}
                         />
                         <strong className="d-block">{student.name}</strong>
-                        <p className="mb-1">ID: {student.studentId}</p>
-                        <p className="mb-1">Tokens: {student.tokens}</p>
+                        <p className="mb-1">ID: {student.entityId}</p>
+                        <p className="mb-1">Tokens: {student.lunch?.tokens ?? 0}</p>
                         <p className="mb-0">Status: {statusLabels[status]}</p>
                       </div>
                     </div>

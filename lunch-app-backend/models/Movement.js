@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
-const tokenMovementSchema = new mongoose.Schema({
-  studentId: { type: String, required: true },
+const movementSchema = new mongoose.Schema({
+  entityId: { type: String, required: true }, // Always person.entityId (legacy, external to Lunch)
   change: { type: Number, required: true },
   reason: {
     type: String,
@@ -15,4 +15,4 @@ const tokenMovementSchema = new mongoose.Schema({
   userRole: { type: String, enum: ['admin', 'oficina', 'cocina'] }
 });
 
-module.exports = mongoose.model('TokenMovement', tokenMovementSchema);
+module.exports = mongoose.model('Movement', movementSchema);

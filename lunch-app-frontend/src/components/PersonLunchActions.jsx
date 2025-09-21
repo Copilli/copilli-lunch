@@ -1,4 +1,4 @@
-// src/pages/StudentLunchActions.jsx
+// src/components/PersonLunchActions.jsx
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
@@ -7,13 +7,10 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 dayjs.extend(isSameOrBefore);
 
-function getPricesForStudent(student) {
-  if (!student) return { priceToken: 0, pricePeriod: 0 };
-  const level = (student.level || student.group?.level || '').toLowerCase();
-  const groupName =
-    student.groupName ||
-    student.group?.name ||
-    '';
+function getPricesForPerson(person) {
+  if (!person) return { priceToken: 0, pricePeriod: 0 };
+  const level = (person.level || '').toLowerCase();
+  const groupName = person.groupName || '';
 
   const groupNameUpper = groupName.toUpperCase();
 
@@ -37,7 +34,7 @@ function getPricesForStudent(student) {
     return { priceToken: 62, pricePeriod: 52 };
 }
 
-const StudentLunchActions = ({ student, onUpdate }) => {
+const PersonLunchActions = ({ person, onUpdate }) => {
   const [actionType, setActionType] = useState('tokens');
 
   // Input numérico como string (permite borrar/editar libremente)
@@ -76,12 +73,12 @@ const StudentLunchActions = ({ student, onUpdate }) => {
   };
 
   useEffect(() => {
-    if (!student) {
+    if (!person) {
       resetFields();
     } else {
       if (!isAdmin) setReason('pago');
     }
-  }, [student, isAdmin]);
+  }, [person, isAdmin]);
 
   // Cargar días inválidos y normalizarlos a medianoche
   useEffect(() => {
@@ -133,10 +130,10 @@ const StudentLunchActions = ({ student, onUpdate }) => {
     [startDate, endDate, invalidDates]
   );
   const prices = useMemo(() => {
-    const result = getPricesForStudent(student);
+    const result = getPricesForPerson(person);
     if (!result) return { priceToken: 62, pricePeriod: 52 };
     return result;
-  }, [student]);
+  }, [person]);
   const priceToken = prices.priceToken;
   const pricePeriod = prices.pricePeriod;
   const totalForTokens = useMemo(
@@ -176,7 +173,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
         }
 
         const resp = await axios.patch(
-          `${API}/students/${student._id}/tokens`,
+          `${API}/lunch/${person.lunch._id}/tokens`,
           {
             delta: tokenAmountNum,
             reason,
@@ -223,7 +220,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
         }
 
         const resp = await axios.patch(
-          `${API}/students/${student._id}/period`,
+          `${API}/lunch/${person.lunch._id}/period`,
           {
             startDate,
             endDate,
@@ -251,10 +248,9 @@ const StudentLunchActions = ({ student, onUpdate }) => {
           return;
         }
 
-        await axios.patch(
-          `${API}/students/${student._id}/tokens`,
+        await axios.post(
+          `${API}/lunch/${person.lunch._id}/use`,
           {
-            delta: -1,
             reason: consumptionReason,
             note: `Consumo manual (${dayjs(consumptionDate).format('YYYY-MM-DD')})`,
             performedBy: user?.username || 'admin',
@@ -300,7 +296,10 @@ const StudentLunchActions = ({ student, onUpdate }) => {
     setConfirming(true);
   };
 
-  if (!student) return null;
+  // Helper for current tokens
+  const currentTokens = (person.lunch && typeof person.lunch.tokens === 'number') ? person.lunch.tokens : 0;
+
+  if (!person) return null;
 
   return (
     <>
@@ -530,7 +529,7 @@ const StudentLunchActions = ({ student, onUpdate }) => {
               <div className="modal-body">
                 {actionType === 'tokens' && (
                   <>
-                    <p>Tokens actuales: {student.tokens} → Total: {student.tokens + tokenAmountNum}</p>
+                    <p>Tokens actuales: {currentTokens} → Total: {currentTokens + tokenAmountNum}</p>
                     <p><strong>Motivo:</strong> {reason}</p>
                     {reason === 'pago' ? (
                       <p className="mb-0"><strong>Total a pagar:</strong> ${totalForTokens}</p>
@@ -577,4 +576,4 @@ const StudentLunchActions = ({ student, onUpdate }) => {
   );
 };
 
-export default StudentLunchActions;
+export default PersonLunchActions;

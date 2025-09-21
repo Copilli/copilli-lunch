@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 
-const SearchBar = ({ search, setSearch, students, onSelect }) => {
+const SearchBar = ({ search, setSearch, persons, onSelect }) => {
   const [suggestions, setSuggestions] = useState([]);
   const containerRef = useRef(null);
 
@@ -11,18 +11,22 @@ const SearchBar = ({ search, setSearch, students, onSelect }) => {
     }
 
     const lowered = search.toLowerCase();
-    const filtered = students.filter(
-      (s) =>
-        s.name.toLowerCase().includes(lowered) ||
-        s.studentId.toLowerCase().includes(lowered)
+    if (!Array.isArray(persons)) {
+      setSuggestions([]);
+      return;
+    }
+    const filtered = persons.filter(
+      (p) =>
+        p.name.toLowerCase().includes(lowered) ||
+        (p.entityId && p.entityId.toLowerCase().includes(lowered))
     );
     setSuggestions(filtered.slice(0, 5)); // Limita a 5 sugerencias
-  }, [search, students]);
+  }, [search, persons]);
 
-  const handleSelect = (student) => {
+  const handleSelect = (person) => {
     setSearch('');
     setSuggestions([]);
-    if (onSelect) onSelect(student);
+    if (onSelect) onSelect(person);
   };
 
   const handleKeyDown = (e) => {
@@ -65,14 +69,14 @@ const SearchBar = ({ search, setSearch, students, onSelect }) => {
             overflowY: 'auto',
           }}
         >
-          {suggestions.map((s) => (
+          {suggestions.map((p) => (
             <li
-              key={s.studentId}
-              onClick={() => handleSelect(s)}
+              key={p.entityId}
+              onClick={() => handleSelect(p)}
               className="list-group-item list-group-item-action"
               style={{ cursor: 'pointer' }}
             >
-              <strong>{s.name}</strong> ({s.studentId})
+              <strong>{p.name}</strong> ({p.entityId})
             </li>
           ))}
         </ul>

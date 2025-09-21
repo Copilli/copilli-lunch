@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 
 const paymentSchema = new mongoose.Schema({
-  studentId: { type: String, required: true },
-  tokenMovementId: { type: mongoose.Schema.Types.ObjectId, ref: 'TokenMovement', required: true },
+  entityId: { type: String, required: true },
+  movementId: { type: mongoose.Schema.Types.ObjectId, ref: 'Movement', required: true },
   ticketNumber: { type: String, required: true, unique: true },
   amount: { type: Number, required: true },
   date: { type: Date, default: Date.now },
@@ -18,17 +18,17 @@ paymentSchema.statics.generateTicketNumber = async function () {
   return `TCK-${nextNum}`;
 };
 
-/** 🔒 Máximo 1 Payment por TokenMovement (evita duplicados por doble click). */
+/** 🔒 Máximo 1 Payment por Movement (evita duplicados por doble click). */
 paymentSchema.index(
-  { tokenMovementId: 1 },
+  { movementId: 1 },
   {
     unique: true,
-    partialFilterExpression: { tokenMovementId: { $exists: true } } // evita choque si hay docs viejos sin ese campo
+    partialFilterExpression: { movementId: { $exists: true } } // evita choque si hay docs viejos sin ese campo
   }
 );
 
 /** ⚡ Consultas más rápidas en reportes/dashboard */
-paymentSchema.index({ studentId: 1, date: -1 });
+paymentSchema.index({ entityId: 1, date: -1 });
 paymentSchema.index({ sentEmail: 1, date: -1 });
 
 module.exports = mongoose.model('Payment', paymentSchema);

@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const TokenMovement = require('../models/TokenMovement');
-const Student = require('../models/Student');
+const Movement = require('../models/Movement');
+const Lunch = require('../models/Lunch');
 
-// Crear un nuevo movimiento de token (sumar/restar y registrar)
+// Crear un nuevo movimiento general (solo registrar, no modificar tokens)
 router.post('/', async (req, res) => {
   try {
     const {
-      studentId,
+  entityId,
       change,
       reason,
       note,
@@ -16,17 +16,14 @@ router.post('/', async (req, res) => {
       userRole
     } = req.body;
 
-    // Validar existencia del estudiante
-    const student = await Student.findOne({ studentId });
-    if (!student) return res.status(404).json({ error: 'Estudiante no encontrado' });
+    // Validar existencia del lunch
+  // Optionally validate entityId exists for known types (e.g., Lunch)
+  // For now, just check it's a valid ObjectId
+  if (!entityId) return res.status(400).json({ error: 'entityId is required' });
 
-    // Aplicar el cambio
-    student.tokens += change;
-    await student.save();
-
-    // Registrar el movimiento
-    const movement = new TokenMovement({
-      studentId,
+    // Registrar el movimiento (no modificar tokens)
+    const movement = new Movement({
+      entityId,
       change,
       reason,
       note,
@@ -37,9 +34,8 @@ router.post('/', async (req, res) => {
 
     await movement.save();
 
-    res.status(201).json({ message: 'Movimiento registrado', tokens: student.tokens });
+    res.status(201).json({ message: 'Movimiento registrado', movement });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: 'Error al registrar movimiento' });
   }
 });
@@ -47,20 +43,17 @@ router.post('/', async (req, res) => {
 // Obtener todos los movimientos (con filtros opcionales)
 router.get('/', async (req, res) => {
   try {
-    const { studentId, reason, performedBy, from, to } = req.query;
+    const { reason, performedBy, from, to } = req.query;
     const filter = {};
-
-    if (studentId) filter.studentId = studentId;
+  if (req.query.entityId) filter.entityId = req.query.entityId;
     if (reason) filter.reason = reason;
     if (performedBy) filter.performedBy = performedBy;
-
     if (from || to) {
       filter.timestamp = {};
       if (from) filter.timestamp.$gte = new Date(from);
       if (to) filter.timestamp.$lte = new Date(to);
     }
-
-    const movements = await TokenMovement.find(filter).sort({ timestamp: -1 });
+    const movements = await Movement.find(filter).sort({ timestamp: -1 });
     res.json(movements);
   } catch (err) {
     res.status(500).json({ error: 'Error al obtener movimientos' });

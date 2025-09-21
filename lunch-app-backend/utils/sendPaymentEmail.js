@@ -1,7 +1,8 @@
 // utils/sendPaymentEmail.js
 const nodemailer = require('nodemailer');
-const TokenMovement = require('../models/TokenMovement');
-const Student = require('../models/Student');
+const Movement = require('../models/Movement');
+const Lunch = require('../models/Lunch');
+const Person = require('../models/Person');
 
 const DEFAULT_CURRENCY = 'MXN';
 const MX_TZ = 'America/Mexico_City';
@@ -24,9 +25,9 @@ function fmtMoney(n, currency = DEFAULT_CURRENCY) {
   }
 }
 
-function getPricesForStudent(student) {
-  const level = (student.group?.level || '').toLowerCase();
-  const groupName = (student.group?.name || '').toUpperCase();
+function getPricesForPerson(person) {
+  const level = (person.group?.level || '').toLowerCase();
+  const groupName = (person.group?.name || '').toUpperCase();
 
   if (level === 'preescolar') {
     return { priceToken: 44, pricePeriod: 40 };
@@ -44,8 +45,8 @@ function getPricesForStudent(student) {
     // Grupo no válido: usar el precio más alto de primaria
     return { priceToken: 57, pricePeriod: 47 };
   }
-    // Grupo no válido: usar el precio más alto de secundaria
-    return { priceToken: 62, pricePeriod: 52 };
+  // Grupo no válido: usar el precio más alto de secundaria
+  return { priceToken: 62, pricePeriod: 52 };
 }
 
 /**
@@ -56,23 +57,30 @@ function getPricesForStudent(student) {
  */
 async function getConceptAndQty(payment) {
   try {
-    const mov = await TokenMovement.findById(payment.tokenMovementId).lean();
+    const mov = await Movement.findById(payment.movementId).lean();
     if (!mov) return { concept: 'Pago', qty: null, units: '', rangeLabel: '' };
 
-    // Obtener el estudiante para precios
-    const student = await Student.findOne({ studentId: payment.studentId }).lean();
-    const prices = getPricesForStudent(student || {});
+    // Buscar Person por entityId (Movement.entityId)
+    let person = null;
+    if (mov.entityId) {
+      person = await Person.findOne({ entityId: mov.entityId }).lean();
+    }
+    if (!person) return { concept: 'Pago', qty: null, units: '', rangeLabel: '' };
+
+    // Buscar Lunch por person._id
+    let lunch = await Lunch.findOne({ person: person._id }).lean();
+    if (!lunch) return { concept: 'Pago', qty: null, units: '', rangeLabel: '' };
+
+    const prices = getPricesForPerson(person);
 
     // ¿Periodo? (nuestro flujo guarda change=0 para periodo)
     if (!mov.change || mov.change === 0) {
       const qty = Math.round((payment.amount || 0) / prices.pricePeriod) || 0;
       let rangeLabel = '';
-      // intentar extraer fechas del note: "... (YYYY-MM-DD → YYYY-MM-DD) ..."
       const m = mov.note && mov.note.match(/(\d{4}-\d{2}-\d{2}).*?(\d{4}-\d{2}-\d{2})/);
       if (m) rangeLabel = ` (${m[1]} → ${m[2]})`;
       return { concept: 'Periodo', qty, units: `día${qty === 1 ? '' : 's'}`, rangeLabel };
     }
-
     // Si no, lo tratamos como compra de tokens
     const qty = Number(mov.change) || Math.round((payment.amount || 0) / prices.priceToken) || 0;
     return { concept: 'Tokens', qty, units: `token${qty === 1 ? '' : 's'}`, rangeLabel: '' };
@@ -88,9 +96,17 @@ async function getConceptAndQty(payment) {
  * @param {string} currency - Ej: 'MXN' (opcional)
  * @returns {Promise<boolean>} true si se envió; false si no había email
  */
-async function sendPaymentEmail(student, payment, currency = DEFAULT_CURRENCY) {
-  if (!student?.email) {
-    console.log(`[ℹ️ Email] ${student?.name || 'Alumno'} sin correo; no se envía.`);
+
+async function sendPaymentEmail(personObj, payment, currency = DEFAULT_CURRENCY) {
+  // Buscar Person por entityId (payment.entityId)
+  let person = null;
+  if (personObj && personObj.email) {
+    person = personObj;
+  } else if (payment && payment.entityId) {
+    person = await Person.findOne({ entityId: payment.entityId }).lean();
+  }
+  if (!person?.email) {
+    console.log(`[ℹ️ Email] ${person?.name || 'Alumno'} sin correo; no se envía.`);
     return false;
   }
 
@@ -110,7 +126,7 @@ async function sendPaymentEmail(student, payment, currency = DEFAULT_CURRENCY) {
         <h2 style="color:#2c3e50; margin:0;">Ticket de Pago - Copilli Lunch</h2>
       </div>
 
-      <p>Hola <strong>${student.name}</strong>,</p>
+      <p>Hola <strong>${person.name}</strong>,</p>
       <p>Se ha registrado tu pago correctamente. Aquí están los detalles:</p>
 
       <table style="width:100%; border-collapse:collapse; margin-top:10px;">
@@ -124,7 +140,7 @@ async function sendPaymentEmail(student, payment, currency = DEFAULT_CURRENCY) {
         </tr>
         <tr>
           <td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Alumno</td>
-          <td style="border:1px solid #ddd; padding:8px;">${student.name}</td>
+          <td style="border:1px solid #ddd; padding:8px;">${person.name}</td>
         </tr>
         <tr>
           <td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Concepto</td>
@@ -147,7 +163,7 @@ async function sendPaymentEmail(student, payment, currency = DEFAULT_CURRENCY) {
 
   const mailOptions = {
     from: `"Copilli Lunch" <${process.env.MAIL_USER}>`,
-    to: student.email,
+    to: person.email,
     subject: `Confirmación de pago - Ticket ${payment.ticketNumber}`,
     html
   };
@@ -156,7 +172,7 @@ async function sendPaymentEmail(student, payment, currency = DEFAULT_CURRENCY) {
     await getTransporter().sendMail(mailOptions);
     payment.sentEmail = true;
     await payment.save();
-    console.log(`[✅ Email] Ticket ${payment.ticketNumber} enviado a ${student.email}`);
+    console.log(`[✅ Email] Ticket ${payment.ticketNumber} enviado a ${person.email}`);
     return true;
   } catch (err) {
     console.error('[❌ Email ERROR]', err);
