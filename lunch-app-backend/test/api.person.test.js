@@ -63,7 +63,7 @@ describe('/persons API Endpoints', () => {
     it('should import persons in bulk (happy path)', async () => {
       const res = await request(app)
         .post('/persons/import-bulk')
-        .send({ persons: [testPerson] })
+        .send([testPerson])
         .expect(200);
       expect(res.body).toHaveProperty('created');
     });
