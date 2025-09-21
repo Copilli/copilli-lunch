@@ -59,11 +59,10 @@ router.get('/', async (req, res) => {
       } else if (p.type === 'staff') {
         extra = { ...(staffMap.get(String(p._id)) || {}) };
       }
-  // Eliminar los campos person y _id de los extras para evitar que se sobrescriba el _id
-  if (extra && extra.person) delete extra.person;
-  if (extra && extra._id) delete extra._id;
+      // Eliminar los campos person y _id de los extras para evitar que se sobrescriba el _id
+      const { person, _id, ...cleanExtra } = extra;
       const lunch = lunchMap.get(String(p._id)) || {};
-      return toFlatPerson(p, extra, lunch);
+      return toFlatPerson(p, cleanExtra, lunch);
     });
     res.json(results);
   } catch (err) {
