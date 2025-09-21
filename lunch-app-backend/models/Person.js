@@ -12,8 +12,6 @@ const personSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Person', personSchema);
-
 /** Genera un entityId secuencial: STD-00001 para estudiantes, STF-00001 para staff */
 personSchema.statics.generatePersonId = async function (type) {
   const prefix = type === 'staff' ? 'STF' : 'STD';
@@ -33,3 +31,5 @@ personSchema.pre('save', async function (next) {
   }
   next();
 });
+
+module.exports = mongoose.model('Person', personSchema);
