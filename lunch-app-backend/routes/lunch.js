@@ -286,8 +286,10 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
         lunch.status = lunch.tokens > 0 ? 'con-fondos' : 'sin-fondos';
       }
       await lunch.save();
+      // Get the person's entityId for Movement
+      const person = await Person.findById(lunch.person);
       await Movement.create({
-        entityId: lunch._id,
+        entityId: person.entityId,
         change: 0,
         reason: 'periodo-removido',
         note: 'Periodo especial eliminado',
