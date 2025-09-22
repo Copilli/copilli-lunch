@@ -346,17 +346,24 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       return res.status(400).json({ error: `El periodo debe incluir al menos 5 días válidos. Actualmente incluye ${validDayCount}.` });
     }
       // ❗ Evitar solapamiento con cualquier periodo anterior (no permitir crear periodos que se solapen, estén contenidos o contengan a otros)
-      const previousPeriods = await PeriodLog.find({ lunchId: lunch._id });
-      const overlapPeriod = previousPeriods.some(log => {
-        const logStart = dayjs(log.startDate).startOf('day');
-        const logEnd = dayjs(log.endDate).startOf('day');
-        // Solapamiento total, parcial, contenido o contenedor
-        return (
-          start.isSameOrBefore(logEnd) && end.isSameOrAfter(logStart)
-        );
-      });
-      if (overlapPeriod) {
-        return res.status(400).json({ error: 'El nuevo periodo se solapa, está contenido o contiene a uno ya registrado en el historial.' });
+    const previousPeriods = await PeriodLog.find({ lunchId: lunch._id });
+    const overlapPeriod = previousPeriods.some(log => {
+      const logStart = dayjs(log.startDate).startOf('day');
+      const logEnd = dayjs(log.endDate).startOf('day');
+      // 1. Fechas exactamente iguales
+      if (start.isSame(logStart) && end.isSame(logEnd)) return true;
+      // 2. startDate o endDate dentro de un periodo existente
+      if ((start.isAfter(logStart) && start.isBefore(logEnd)) || (end.isAfter(logStart) && end.isBefore(logEnd))) return true;
+      // 3. El nuevo periodo contiene completamente a uno existente
+      if (start.isBefore(logStart) && end.isAfter(logEnd)) return true;
+      // 4. El nuevo periodo está completamente contenido en uno existente
+      if (start.isAfter(logStart) && end.isBefore(logEnd)) return true;
+      // 5. El nuevo periodo empieza o termina exactamente en el inicio o fin de uno existente
+      if (start.isSame(logStart) || start.isSame(logEnd) || end.isSame(logStart) || end.isSame(logEnd)) return true;
+      return false;
+    });
+    if (overlapPeriod) {
+      return res.status(400).json({ error: 'El nuevo periodo se solapa, está contenido, contiene o coincide en fechas con uno ya registrado en el historial.' });
     }
     // Buscar entityId legacy (antes de usar person)
     const person = await Person.findById(lunch.person);
