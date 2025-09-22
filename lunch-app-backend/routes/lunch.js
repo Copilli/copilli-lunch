@@ -274,6 +274,7 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
     const { startDate, endDate, reason, note } = req.body;
     const lunch = await Lunch.findById(req.params.id);
     if (!lunch) return res.status(404).json({ error: 'Lunch info not found' });
+    // Definir today solo una vez
     const today = dayjs().startOf('day');
     // ❌ Eliminar periodo (solo si está activo)
     if (!startDate || !endDate) {
@@ -331,6 +332,11 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
     if (lunch.tokens < 0) {
       return res.status(400).json({ error: 'No se puede asignar un periodo especial si el usuario tiene saldo negativo.' });
     }
+    // Solo admin puede crear periodos en fechas pasadas
+    const isAdmin = req.user?.role === 'admin';
+    if (!isAdmin && start.isBefore(today)) {
+      return res.status(403).json({ error: 'Solo un administrador puede crear periodos en fechas pasadas.' });
+    }
     const invalidSet = await getInvalidSet();
     if (invalidSet.has(start.format('YYYY-MM-DD')) || invalidSet.has(dayjs(endDate).format('YYYY-MM-DD'))) {
       return res.status(400).json({ error: 'El periodo no puede comenzar ni terminar en un día inválido.' });
@@ -339,17 +345,18 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
     if (validDayCount < 5) {
       return res.status(400).json({ error: `El periodo debe incluir al menos 5 días válidos. Actualmente incluye ${validDayCount}.` });
     }
-    // ❗ Evitar solapamiento con historial si ya hay periodo activo
-    if (lunch.hasSpecialPeriod && lunch.specialPeriod?.startDate && lunch.specialPeriod?.endDate) {
+      // ❗ Evitar solapamiento con cualquier periodo anterior (no permitir crear periodos que se solapen, estén contenidos o contengan a otros)
       const previousPeriods = await PeriodLog.find({ lunchId: lunch._id });
       const overlapPeriod = previousPeriods.some(log => {
         const logStart = dayjs(log.startDate).startOf('day');
         const logEnd = dayjs(log.endDate).startOf('day');
-        return start.isSameOrBefore(logEnd) && end.isSameOrAfter(logStart);
+        // Solapamiento total, parcial, contenido o contenedor
+        return (
+          start.isSameOrBefore(logEnd) && end.isSameOrAfter(logStart)
+        );
       });
       if (overlapPeriod) {
-        return res.status(400).json({ error: 'El nuevo periodo se solapa con uno ya registrado en el historial.' });
-      }
+        return res.status(400).json({ error: 'El nuevo periodo se solapa, está contenido o contiene a uno ya registrado en el historial.' });
     }
     // Buscar entityId legacy (antes de usar person)
     const person = await Person.findById(lunch.person);
@@ -374,7 +381,7 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       entityId: person.entityId,
       change: 0,
       reason: reason || 'ajuste manual',
-      note: `Periodo especial del ${start.format('YYYY-MM-DD')} al ${end.format('YYYY-MM-DD')} - ${note || ''}`,
+      note: `Periodo especial del ${start.format('YYYY-MM-DD')} al ${end.format('YYYY-MM-DD')} • Días válidos: ${validDayCount} - ${note || ''}`,
       performedBy: req.user?.username || 'sistema',
       userRole: req.user?.role || 'sistema',
       timestamp: new Date()
