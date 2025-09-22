@@ -88,6 +88,7 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
         error: 'No se permite disminuir tokens con este endpoint. Para registrar un consumo, usa POST /api/lunch/:id/use.'
       });
     }
+
     const lunch = await Lunch.findById(req.params.id);
     if (!lunch) return res.status(404).json({ error: 'Lunch info not found' });
     // aplicar tokens
@@ -99,7 +100,8 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
     await lunch.save();
     // registrar movimiento
     // Buscar entityId legacy
-  const person = await Person.findById(lunch.person);
+    // Obtener nivel y grupo actualizados de la persona
+    const person = await Person.findById(lunch.person);
     if (!person) return res.status(404).json({ error: 'Persona no encontrada para este Lunch' });
     const movement = await Movement.create({
       entityId: person.entityId,
@@ -114,7 +116,12 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
     let paymentInfo = null;
     // 💸 AUTO-PAGO si es "pago" y delta > 0
     if ((reason || '').toLowerCase() === 'pago' && delta > 0) {
-      const prices = getPricesForLevel(person.level, person.groupName);
+      // Asegurarse de obtener el nivel y grupo más recientes y correctos
+      const freshPerson = await Person.findById(lunch.person).lean();
+      // Usar group.level y group.name según el modelo
+      const level = freshPerson.group?.level || '';
+      const groupName = freshPerson.group?.name || '';
+      const prices = getPricesForLevel(level, groupName);
       const amount = Number((delta * prices.priceToken).toFixed(2));
       const ticketNumber = await Payment.generateTicketNumber();
       const payment = await Payment.create({
@@ -129,9 +136,7 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
       await Movement.findByIdAndUpdate(movement._id, {
         note: `Pago de tokens • Total: $${amount.toFixed(2)} MXN • Ticket ${ticketNumber}`
       });
-      // Buscar persona por entityId para el email (no sobrescribir person)
-      const personLean = await Person.findById(lunch.person).lean();
-      await sendPaymentEmail(personLean, payment, 'MXN');
+      await sendPaymentEmail(freshPerson, payment, 'MXN');
       paymentInfo = { ticketNumber, amount };
     }
 
@@ -378,7 +383,11 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
     let paymentInfo = null;
     // 💸 AUTO-PAGO si reason === 'pago'
     if ((reason || '').toLowerCase() === 'pago') {
-      const prices = getPricesForLevel(person.level, person.groupName);
+      // Usar group.level y group.name según el modelo
+      const freshPerson = await Person.findById(lunch.person).lean();
+      const level = freshPerson.group?.level || '';
+      const groupName = freshPerson.group?.name || '';
+      const prices = getPricesForLevel(level, groupName);
       const amount = Number((validDayCount * prices.pricePeriod).toFixed(2));
       const ticketNumber = await Payment.generateTicketNumber();
       const payment = await Payment.create({
@@ -395,9 +404,7 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
         note: `Pago de periodo (${start.format('YYYY-MM-DD')} → ${end.format('YYYY-MM-DD')}) • Total: $${amount.toFixed(2)} MXN • Ticket ${ticketNumber}`
       });
 
-      // Buscar persona por entityId para el email
-      const personForEmail = await Person.findById(lunch.person).lean();
-      await sendPaymentEmail(personForEmail, payment, 'MXN');
+      await sendPaymentEmail(freshPerson, payment, 'MXN');
       paymentInfo = { ticketNumber, amount };
     }
 
