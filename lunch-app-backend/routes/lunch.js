@@ -363,8 +363,15 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
     if (!person) return res.status(404).json({ error: 'Persona no encontrada para este Lunch' });
     // Guardar periodo en lunch
     lunch.specialPeriod = { startDate: start.toDate(), endDate: end.toDate() };
-    lunch.hasSpecialPeriod = start.isSameOrBefore(today) && end.isSameOrAfter(today);
-    if (lunch.hasSpecialPeriod) lunch.status = 'periodo-activo';
+    // Calcular si el periodo es activo respecto a la fecha actual
+    const isActivePeriod = start.isSameOrBefore(today) && end.isSameOrAfter(today);
+    lunch.hasSpecialPeriod = isActivePeriod;
+    if (isActivePeriod) {
+      lunch.status = 'periodo-activo';
+    } else if (lunch.status === 'periodo-activo') {
+      // Si el periodo ya no es activo, actualizar status según tokens
+      lunch.status = lunch.tokens > 0 ? 'con-fondos' : 'sin-fondos';
+    }
     await lunch.save();
     // Logs
     await PeriodLog.create({

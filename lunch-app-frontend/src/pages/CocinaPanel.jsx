@@ -148,11 +148,12 @@ const CocinaPanel = ({ setUser }) => {
 
   const getStatus = (student) => {
     const lunch = student.lunch || {};
-    const inPeriod = lunch.hasSpecialPeriod &&
-      dayjs(today).isSameOrAfter(dayjs(lunch.specialPeriod?.startDate)) &&
-      dayjs(today).isSameOrBefore(dayjs(lunch.specialPeriod?.endDate));
+    // Considerar periodo activo si las fechas de specialPeriod lo indican
+    const start = lunch.specialPeriod?.startDate ? dayjs(lunch.specialPeriod.startDate) : null;
+    const end = lunch.specialPeriod?.endDate ? dayjs(lunch.specialPeriod.endDate) : null;
+    const isActivePeriod = start && end && dayjs(today).isSameOrAfter(start) && dayjs(today).isSameOrBefore(end);
 
-    if (inPeriod) return 'periodo-activo';
+    if (isActivePeriod) return 'periodo-activo';
     if (lunch.status === 'bloqueado') return 'bloqueado';
     if (lunch.tokens > 0) return 'con-fondos';
     return 'sin-fondos';
