@@ -1,3 +1,4 @@
+// routes/lunch.js
 const mongoose = require('mongoose');
 const { sendPaymentEmail } = require('../utils/sendPaymentEmail');
 const { sendUseEmail } = require('../utils/sendUseEmail');
@@ -123,7 +124,7 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
       entityId: person.entityId,
       startDate: { $lte: today.toDate() },
       endDate: { $gte: today.toDate() }
-    });
+    }).session(session);
     if (activePeriodLog) {
       return res.status(403).json({ error: 'No se pueden asignar tokens mientras hay un periodo especial activo.' });
     }
@@ -138,9 +139,10 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
 
     let paymentInfo = null;
     let movement;
+    let createdPaymentId = null; // <- para recargar fuera de la tx
 
     if ((reason || '').toLowerCase() === 'pago' && delta > 0) {
-      const freshPerson = await Person.findById(lunch.person).lean();
+      const freshPerson = await Person.findById(lunch.person).lean().session(session);
       const level = freshPerson?.group?.level || '';
       const groupName = freshPerson?.group?.name || '';
       const prices = getPricesForLevel(level, groupName);
@@ -156,7 +158,7 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
         sentEmail: false
       }], { session });
 
-      // Crear Movement después de Payment, con paymentId
+      // Crear Movement después, con paymentId
       movement = await Movement.create([{
         entityId: person.entityId,
         change: delta,
@@ -168,16 +170,12 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
         paymentId: payment[0]._id
       }], { session });
 
-      // Actualizar Payment con movementId
+      // Vincular movementId en Payment
       payment[0].movementId = movement[0]._id;
       await payment[0].save({ session });
 
-      // Enviar email de pago
-      try {
-        await sendPaymentEmail(person, payment[0]);
-      } catch (err) {
-        console.error('[Email Payment Error]', err);
-      }
+      // Guardar para envío fuera de la sesión
+      createdPaymentId = payment[0]._id;
 
       paymentInfo = { ticketNumber, amount };
     } else {
@@ -195,6 +193,18 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
 
     await session.commitTransaction();
     session.endSession();
+
+    // ========= Enviar email de pago DESPUÉS del commit =========
+    if (createdPaymentId) {
+      try {
+        const freshPayment = await Payment.findById(createdPaymentId);
+        const freshPersonOut = await Person.findById(lunch.person).lean();
+        await sendPaymentEmail(freshPersonOut, freshPayment, 'MXN');
+      } catch (err) {
+        console.error('[Email Payment Error]', err);
+      }
+    }
+    // ===========================================================
 
     return res.json({
       message: 'Tokens actualizados',
@@ -215,7 +225,6 @@ router.post('/:id/use', async (req, res) => {
     const { performedBy, userRole, customDate } = req.body;
     const lunch = await Lunch.findById(req.params.id);
     if (!lunch) return res.status(404).json({ error: 'Lunch info not found' });
-
 
     // Permitir customDate para admin y oficina
     const role = (userRole || '').toLowerCase();
@@ -241,7 +250,6 @@ router.post('/:id/use', async (req, res) => {
     const inPeriod = lunch.hasSpecialPeriod && lunch.specialPeriod &&
       dayjs(lunch.specialPeriod.startDate).isSameOrBefore(useDate) &&
       dayjs(lunch.specialPeriod.endDate).isSameOrAfter(useDate);
-
 
     // Previene doble uso en el día (incluye periodo especial)
     let person = await Person.findById(lunch.person).lean();
@@ -275,9 +283,9 @@ router.post('/:id/use', async (req, res) => {
       });
     }
 
-  // Disminuir tokens por consumo
-  const wouldHave = lunch.tokens - 1;
-  lunch.tokens = wouldHave;
+    // Disminuir tokens por consumo
+    const wouldHave = lunch.tokens - 1;
+    lunch.tokens = wouldHave;
     if (lunch.tokens === 0 && lunch.status === 'con-fondos') {
       lunch.status = 'sin-fondos';
     }
@@ -384,7 +392,7 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       return earlyReturnWithSession(res, 403, { error: 'Solo un administrador puede crear periodos en fechas pasadas.' }, session);
     }
 
-    const invalidSet = await getInvalidSet(); // (puedes pasar session si tu helper lo soporta)
+    const invalidSet = await getInvalidSet();
     if (invalidSet.has(start.format('YYYY-MM-DD')) || invalidSet.has(end.format('YYYY-MM-DD'))) {
       return earlyReturnWithSession(res, 400, { error: 'El periodo no puede comenzar ni terminar en un día inválido.' }, session);
     }
@@ -403,7 +411,6 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
     const overlapPeriod = previousPeriods.some(log => {
       const logStart = dayjs(log.startDate).startOf('day');
       const logEnd = dayjs(log.endDate).startOf('day');
-      // Solapamiento si el rango nuevo toca cualquier parte del rango existente
       return start.isSameOrBefore(logEnd) && end.isSameOrAfter(logStart);
     });
     if (overlapPeriod) {
@@ -435,8 +442,10 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
 
     let move;
     let paymentInfo = null;
+    let createdPaymentId = null; // <- para enviar correo fuera de la tx
+
     if ((reason || '').toLowerCase() === 'pago') {
-      const freshPerson = await Person.findById(lunch.person).lean();
+      const freshPerson = await Person.findById(lunch.person).lean().session(session);
       const level = freshPerson?.group?.level || '';
       const groupName = freshPerson?.group?.name || '';
       const prices = getPricesForLevel(level, groupName);
@@ -468,12 +477,8 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       payment[0].movementId = move[0]._id;
       await payment[0].save({ session });
 
-      // Enviar email de pago
-      try {
-        await sendPaymentEmail(person, payment[0]);
-      } catch (err) {
-        console.error('[Email Payment Error]', err);
-      }
+      // Guardar para enviar fuera de la tx
+      createdPaymentId = payment[0]._id;
 
       paymentInfo = { ticketNumber, amount };
     } else {
@@ -492,6 +497,18 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
     await session.commitTransaction();
     session.endSession();
 
+    // ========= Enviar email de pago DESPUÉS del commit =========
+    if (createdPaymentId) {
+      try {
+        const freshPayment = await Payment.findById(createdPaymentId);
+        const freshPersonOut = await Person.findById(lunch.person).lean();
+        await sendPaymentEmail(freshPersonOut, freshPayment, 'MXN');
+      } catch (err) {
+        console.error('[Email Payment Error]', err);
+      }
+    }
+    // ===========================================================
+
     return res.json({
       message: 'Periodo especial actualizado',
       hasSpecialPeriod: lunch.hasSpecialPeriod,
@@ -504,7 +521,6 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
     return res.status(500).json({ error: err.message || 'Error al actualizar el periodo' });
   }
 });
-
 
 // DELETE /api/lunch/:id/period
 router.delete('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (req, res) => {
@@ -545,7 +561,6 @@ router.delete('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async 
     res.status(500).json({ error: err.message || 'Error al eliminar el periodo especial' });
   }
 });
-
 
 // GET /api/lunch/period-logs?entityIds=1,2,3  ó  /api/lunch/:id/period-logs
 router.get(['/period-logs', '/:id/period-logs'], verifyToken, async (req, res) => {
