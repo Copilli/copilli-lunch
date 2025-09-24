@@ -379,27 +379,16 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
     const person = await Person.findById(lunch.person).session(session);
     if (!person) return earlyReturnWithSession(res, 404, { error: 'Persona no encontrada para este Lunch' }, session);
 
-    // 👉 Verificación de solapamientos usando lunchId (más preciso).
-    //    Si prefieres por persona, combina ambos: { lunchId: lunch._id, entityId: person.entityId }
-    const previousPeriods = await PeriodLog.find({ lunchId: lunch._id }).session(session);
+    // Verificación de solapamientos por persona (entityId)
+    const previousPeriods = await PeriodLog.find({ entityId: person.entityId }).session(session);
     const overlapPeriod = previousPeriods.some(log => {
       const logStart = dayjs(log.startDate).startOf('day');
-      const logEnd   = dayjs(log.endDate).startOf('day');
-      // No permitir si:
-      // - start está dentro de un periodo existente
-      // - end está dentro de un periodo existente
-      // - el nuevo periodo está contenido en uno existente
-      // - el nuevo periodo contiene a uno existente
-      // - las fechas coinciden exactamente
-      if (start.isSameOrAfter(logStart) && start.isSameOrBefore(logEnd)) return true; // start dentro
-      if (end.isSameOrAfter(logStart) && end.isSameOrBefore(logEnd)) return true; // end dentro
-      if (start.isSameOrBefore(logStart) && end.isSameOrAfter(logEnd)) return true; // contiene
-      if (start.isSame(logStart) || end.isSame(logEnd)) return true; // fechas iguales
-      if (logStart.isSameOrAfter(start) && logEnd.isSameOrBefore(end)) return true; // contenido
-      return false;
+      const logEnd = dayjs(log.endDate).startOf('day');
+      // Solapamiento si el rango nuevo toca cualquier parte del rango existente
+      return start.isSameOrBefore(logEnd) && end.isSameOrAfter(logStart);
     });
     if (overlapPeriod) {
-      return earlyReturnWithSession(res, 400, { error: 'El nuevo periodo se solapa, está contenido, contiene o coincide en fechas con uno ya registrado en el historial.' }, session);
+      return earlyReturnWithSession(res, 400, { error: 'El nuevo periodo se solapa con uno ya registrado en el historial.' }, session);
     }
 
     // Guardar en Lunch
