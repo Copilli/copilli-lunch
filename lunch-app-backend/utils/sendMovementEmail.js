@@ -64,12 +64,27 @@ async function sendMovementEmail(movement, extra = {}) {
     return false;
   }
 
-  // Layout dinámico y detallado
-  const type = getMovementType(movement);
-  const dateStr = fmtDate(movement.timestamp || movement.dateAffected || Date.now());
-  const amount = extra.amount ? fmtMoney(extra.amount) : '';
-  const ticket = extra.ticketNumber || '';
+  // Si es pago y tiene paymentId, obtener ticket y monto directamente
+  let amount = '';
+  let ticket = '';
+  if (movement.reason === 'pago' && movement.paymentId) {
+    const payment = await Payment.findById(movement.paymentId);
+    if (payment) {
+      amount = fmtMoney(payment.amount);
+      ticket = payment.ticketNumber;
+    }
+  } else {
+    amount = extra.amount ? fmtMoney(extra.amount) : '';
+    ticket = extra.ticketNumber || '';
+  }
 
+  // Corrige la fecha para evitar desfase por zona horaria
+  let dateObj = movement.timestamp || movement.dateAffected || Date.now();
+  if (typeof dateObj === 'string' || typeof dateObj === 'number') dateObj = new Date(dateObj);
+  // Ajusta a MX_TZ correctamente
+  const dateStr = dayjs(dateObj).tz(MX_TZ).format('DD/MM/YYYY HH:mm');
+
+  const type = getMovementType(movement);
   let details = '';
   if (type === 'Pago') {
     details += `<tr><td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Ticket</td><td style="border:1px solid #ddd; padding:8px;">${ticket}</td></tr>`;
@@ -80,23 +95,23 @@ async function sendMovementEmail(movement, extra = {}) {
   details += `<tr><td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Cambio</td><td style="border:1px solid #ddd; padding:8px;">${movement.change}</td></tr>`;
 
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 640px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+    <div style="font-family: Arial, sans-serif; max-width: 640px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; color: #111;">
       <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
         <img src="https://copilli.edu.mx/wp-content/uploads/2017/06/Favicon.jpeg" alt="Copilli" width="28" height="28" style="border-radius:6px" />
-        <h2 style="color:#2c3e50; margin:0;">Ticket de ${type} - Copilli Lunch</h2>
+        <h2 style="color:#111; margin:0;">Ticket de ${type} - Copilli Lunch</h2>
       </div>
 
-      <p>Hola <strong>${person.name}</strong>,</p>
-      <p>Se ha registrado un ${type.toLowerCase()} en el sistema. Aquí están los detalles:</p>
+      <p style="color:#111;">Hola <strong>${person.name}</strong>,</p>
+      <p style="color:#111;">Se ha registrado un ${type.toLowerCase()} en el sistema. Aquí están los detalles:</p>
 
-      <table style="width:100%; border-collapse:collapse; margin-top:10px;">
-        ${ticket ? `<tr><td style=\"border:1px solid #ddd; padding:8px; background:#fafafa;\">Ticket</td><td style=\"border:1px solid #ddd; padding:8px;\">${ticket}</td></tr>` : ''}
-        <tr><td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Fecha</td><td style="border:1px solid #ddd; padding:8px;">${dateStr}</td></tr>
-        <tr><td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Alumno</td><td style="border:1px solid #ddd; padding:8px;">${person.name}</td></tr>
+      <table style="width:100%; border-collapse:collapse; margin-top:10px; color:#111;">
+        ${ticket ? `<tr><td style=\"border:1px solid #ddd; padding:8px; background:#fafafa; color:#111;\">Ticket</td><td style=\"border:1px solid #ddd; padding:8px; color:#111;\">${ticket}</td></tr>` : ''}
+        <tr><td style="border:1px solid #ddd; padding:8px; background:#fafafa; color:#111;">Fecha</td><td style="border:1px solid #ddd; padding:8px; color:#111;">${dateStr}</td></tr>
+        <tr><td style="border:1px solid #ddd; padding:8px; background:#fafafa; color:#111;">Alumno</td><td style="border:1px solid #ddd; padding:8px; color:#111;">${person.name}</td></tr>
         ${details}
       </table>
 
-      <p style="margin-top:16px;">Gracias por usar Copilli Lunch.</p>
+      <p style="margin-top:16px; color:#111;">Gracias por usar Copilli Lunch.</p>
       <p style="font-size:12px; color:#888;">Este correo fue enviado automáticamente por el sistema Copilli Lunch.</p>
     </div>
   `;
