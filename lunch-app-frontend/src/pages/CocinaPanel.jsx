@@ -26,7 +26,7 @@ function getNextValidDates(n = 5, invalidDates = []) {
 }
 
 const CocinaPanel = ({ setUser }) => {
-  const [students, setStudents] = useState([]);
+  const [persons, setPersons] = useState([]);
   const [validDates, setValidDates] = useState([]);
   const { invalidDates, loading: loadingInvalidDates, fetchInvalidDates } = useInvalidDates();
   useEffect(() => {
@@ -40,7 +40,7 @@ const CocinaPanel = ({ setUser }) => {
   const [selectedGroup, setSelectedGroup] = useState(null);
 
   // Vista por búsqueda directa
-  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [selectedPerson, setSelectedPerson] = useState(null);
 
   // Mensajes
   const [formError, setFormError] = useState('');
@@ -50,7 +50,7 @@ const CocinaPanel = ({ setUser }) => {
   const [confirming, setConfirming] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [pendingStudent, setPendingStudent] = useState(null); // <- alumno del modal
+  const [pendingPerson, setPendingPerson] = useState(null); // <- persona del modal
 
   const showError = (msg) => {
     setFormError(msg);
@@ -63,17 +63,17 @@ const CocinaPanel = ({ setUser }) => {
   };
 
   // Fetch all persons (flat)
-  const fetchStudents = async () => {
+  const fetchPersons = async () => {
     const token = localStorage.getItem('token');
     const res = await axios.get(`${import.meta.env.VITE_API_URL}/persons?flat=1`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    setStudents(res.data);
+    setPersons(res.data);
   };
 
 
   useEffect(() => {
-    fetchStudents();
+    fetchPersons();
   }, []);
 
   useEffect(() => {
@@ -83,13 +83,13 @@ const CocinaPanel = ({ setUser }) => {
   }, [invalidDates]);
 
   useEffect(() => {
-    if (students.length && validDates.length) {
-      // For each valid date, count students with valid period and with tokens
+    if (persons.length && validDates.length) {
+      // For each valid date, count persons with valid period and with tokens
       const counts = validDates.map(date => {
         let periodCount = 0;
         let tokenCount = 0;
-        students.forEach(s => {
-          const lunch = s.lunch || {};
+        persons.forEach(p => {
+          const lunch = p.lunch || {};
           const inPeriod = lunch.hasSpecialPeriod &&
             dayjs(date).isSameOrAfter(dayjs(lunch.specialPeriod?.startDate)) &&
             dayjs(date).isSameOrBefore(dayjs(lunch.specialPeriod?.endDate));
@@ -103,52 +103,52 @@ const CocinaPanel = ({ setUser }) => {
       });
       setLunchCounts(counts);
     }
-  }, [students, validDates]);
+  }, [persons, validDates]);
 
   const today = dayjs().format('YYYY-MM-DD');
   const levels = ['preescolar', 'primaria', 'secundaria', 'personal'];
 
   const filtered = search
-    ? students.filter(
-        s =>
-          s.name.toLowerCase().includes(search.toLowerCase()) ||
-          (s.entityId && s.entityId.toLowerCase().includes(search.toLowerCase()))
+    ? persons.filter(
+        p =>
+          p.name.toLowerCase().includes(search.toLowerCase()) ||
+          (p.entityId && p.entityId.toLowerCase().includes(search.toLowerCase()))
       )
-    : students;
+    : persons;
 
   const groupsInLevel = selectedLevel
     ? [
         ...new Set(
           filtered
             .filter(
-              s =>
-                s.level &&
-                s.groupName &&
-                typeof s.level === 'string' &&
-                typeof s.groupName === 'string' &&
-                s.level.toLowerCase() === selectedLevel.toLowerCase()
+              p =>
+                p.level &&
+                p.groupName &&
+                typeof p.level === 'string' &&
+                typeof p.groupName === 'string' &&
+                p.level.toLowerCase() === selectedLevel.toLowerCase()
             )
-            .map(s => s.groupName)
+            .map(p => p.groupName)
             .filter(name => !!name)
         ),
       ]
     : [];
 
-  const studentsInGroup = selectedGroup
+  const personsInGroup = selectedGroup
     ? filtered.filter(
-        s =>
-          s.level &&
-          s.groupName &&
-          typeof s.level === 'string' &&
-          typeof s.groupName === 'string' &&
-          s.level.toLowerCase() === selectedLevel.toLowerCase() &&
-          s.groupName === selectedGroup
+        p =>
+          p.level &&
+          p.groupName &&
+          typeof p.level === 'string' &&
+          typeof p.groupName === 'string' &&
+          p.level.toLowerCase() === selectedLevel.toLowerCase() &&
+          p.groupName === selectedGroup
       )
     : [];
 
   // Helper para saber si ya tiene consumo ese día
-  const hasConsumptionToday = (student) => {
-    const lunch = student.lunch || {};
+  const hasConsumptionToday = (person) => {
+    const lunch = person.lunch || {};
     if (!lunch.movements) return false;
     return lunch.movements.some(mov => {
       const movDate = mov.timestamp ? dayjs(mov.timestamp).format('YYYY-MM-DD') : null;
@@ -156,8 +156,8 @@ const CocinaPanel = ({ setUser }) => {
     });
   };
 
-  const getStatus = (student) => {
-    const lunch = student.lunch || {};
+  const getStatus = (person) => {
+    const lunch = person.lunch || {};
     const start = lunch.specialPeriod?.startDate ? dayjs(lunch.specialPeriod.startDate) : null;
     const end = lunch.specialPeriod?.endDate ? dayjs(lunch.specialPeriod.endDate) : null;
     const isActivePeriod = start && end && dayjs(today).isSameOrAfter(start) && dayjs(today).isSameOrBefore(end);
@@ -168,39 +168,40 @@ const CocinaPanel = ({ setUser }) => {
   };
 
   // Click en tarjeta: para periodo activo, registra consumo especial; para otros, sigue igual
-  const handleClick = async (student) => {
-    const lunch = student.lunch || {};
-    const status = getStatus(student);
+  const handleClick = async (person) => {
+    const lunch = person.lunch || {};
+    const status = getStatus(person);
     const hasTokens = lunch.tokens > 0;
 
-    if (hasConsumptionToday(student)) {
-      showError('Ya se registró consumo para este alumno hoy.');
+    if (hasConsumptionToday(person)) {
+      showError('Ya se registró consumo para esta persona hoy.');
       return;
     }
 
     if (status === 'periodo-activo') {
-      // Registrar movimiento especial
-      if (!lunch._id || !student.entityId) {
-        showError('No se encontró el registro de lunch para este estudiante');
+      // Registrar consumo especial usando el endpoint correcto
+      if (!lunch._id) {
+        showError('No se encontró el registro de lunch para esta persona');
         return;
       }
       try {
         const token = localStorage.getItem('token');
         await axios.post(
-          `${import.meta.env.VITE_API_URL}/movements`,
+          `${import.meta.env.VITE_API_URL}/lunch/${lunch._id}/use`,
           {
-            entityId: student.entityId,
-            change: 0,
-            reason: 'uso-periodo',
-            note: 'Consumo con periodo activo',
             performedBy: localStorage.getItem('username') || 'cocina',
-            userRole: 'cocina',
-            dateAffected: today
+            userRole: 'cocina'
           },
           { headers: { Authorization: `Bearer ${token}` } }
         );
         showSuccess('Consumo de periodo activo registrado');
-        await fetchStudents();
+        await fetchPersons();
+        // Actualiza selectedPerson con los datos más recientes
+        setSelectedPerson(prev => {
+          if (!prev) return null;
+          const updated = persons.find(p => p.entityId === prev.entityId || p.entityId === prev.person?.entityId);
+          return updated || prev;
+        });
       } catch (err) {
         console.error(err);
         const backendError = err?.response?.data?.error;
@@ -210,11 +211,11 @@ const CocinaPanel = ({ setUser }) => {
     }
 
     if (status === 'bloqueado' && !hasTokens) {
-      showError('Este alumno está bloqueado y no tiene tokens. No se puede registrar consumo.');
+      showError('Esta persona está bloqueada y no tiene tokens. No se puede registrar consumo.');
       return;
     }
 
-    setPendingStudent(student);
+    setPendingPerson(person);
     setConfirmMessage(
       hasTokens
         ? `¿Deseas descontar un token? Total final: ${lunch.tokens - 1}`
@@ -227,13 +228,13 @@ const CocinaPanel = ({ setUser }) => {
     setConfirming(false);
     setSubmitting(false);
     setConfirmMessage('');
-    setPendingStudent(null); // <- no tocar selectedStudent
+    setPendingPerson(null); // <- no tocar selectedPerson
   };
 
   const handleConfirm = async () => {
-    const lunch = pendingStudent?.lunch;
+    const lunch = pendingPerson?.lunch;
     if (!lunch?._id) {
-      showError('No se encontró el registro de lunch para este estudiante');
+      showError('No se encontró el registro de lunch para esta persona');
       closeModal();
       return;
     }
@@ -247,10 +248,10 @@ const CocinaPanel = ({ setUser }) => {
       );
 
       showSuccess('Registro guardado');
-      await fetchStudents();
+      await fetchPersons();
 
       // Opcional: limpiar la vista de búsqueda directa
-      setSelectedStudent(null);
+      setSelectedPerson(null);
       setSearch('');
     } catch (err) {
       console.error(err);
@@ -289,11 +290,11 @@ const CocinaPanel = ({ setUser }) => {
         <SearchBar
           search={search}
           setSearch={setSearch}
-          persons={students}
-          onSelect={(student) => {
-            setSelectedLevel(student.level);
-            setSelectedGroup(student.groupName);
-            setSelectedStudent(student); // vista de un solo alumno por búsqueda directa
+          persons={persons}
+          onSelect={(person) => {
+            setSelectedLevel(person.level);
+            setSelectedGroup(person.groupName);
+            setSelectedPerson(person); // vista de una sola persona por búsqueda directa
           }}
         />
       </TopNavBar>
@@ -382,29 +383,38 @@ const CocinaPanel = ({ setUser }) => {
       )}
 
       {/* Vista seleccionada por búsqueda directa — CARD CENTRADO */}
-      {selectedStudent ? (
+      {selectedPerson ? (
         <div className="d-flex justify-content-center mt-4">
           <div
-            onClick={() => handleClick(selectedStudent)}
+            onClick={() => handleClick(selectedPerson)}
             className="student-tile card p-3 rounded-4 text-center"
             style={{
-              backgroundColor: statusColor[getStatus(selectedStudent)],
+              backgroundColor: statusColor[getStatus(selectedPerson)],
               width: 320,
               cursor: 'pointer'
             }}
           >
-            <img
-              className="student-photo rounded-circle mx-auto d-block mb-2"
-              src={selectedStudent.photoUrl || 'https://via.placeholder.com/88'}
-              alt={selectedStudent.name}
-              width={88}
-              height={88}
-              style={{ objectFit: 'cover' }}
-            />
-            <strong className="d-block">{selectedStudent.name}</strong>
-            <p className="mb-1">ID: {selectedStudent.entityId}</p>
-            <p className="mb-1">Tokens: {selectedStudent.lunch?.tokens ?? 0}</p>
-            <p className="mb-0">Status: {statusLabels[getStatus(selectedStudent)]}</p>
+            <div className="col-auto mb-2">
+              {selectedPerson.photoUrl ? (
+                <img
+                  src={selectedPerson.photoUrl}
+                  alt={selectedPerson.name}
+                  className="rounded-circle mx-auto d-block"
+                  style={{ width: 88, height: 88, objectFit: 'cover' }}
+                />
+              ) : (
+                <div
+                  className="rounded-circle bg-secondary d-flex align-items-center justify-content-center mx-auto mb-2"
+                  style={{ width: 88, height: 88, color: '#fff', fontSize: 32 }}
+                >
+                  <span>{selectedPerson.name ? selectedPerson.name[0] : '?'}</span>
+                </div>
+              )}
+            </div>
+            <strong className="d-block">{selectedPerson.name}</strong>
+            <p className="mb-1">ID: {selectedPerson.entityId}</p>
+            <p className="mb-1">Tokens: {selectedPerson.lunch?.tokens ?? 0}</p>
+            <p className="mb-0">Status: {statusLabels[getStatus(selectedPerson)]}</p>
           </div>
         </div>
       ) : (
@@ -467,23 +477,23 @@ const CocinaPanel = ({ setUser }) => {
             </div>
           )}
 
-          {/* Estudiantes */}
+          {/* Personas */}
           {selectedGroup && (
             <div className="mt-3">
               <div className="pb-2 section-title text-center">
                 <h3 className="mb-0">
-                  Estudiantes en {selectedLevel} — Grupo {selectedGroup}
+                  Personas en {selectedLevel} — Grupo {selectedGroup}
                 </h3>
               </div>
 
               <div className="row gx-3 gy-3 justify-content-center">
-                {studentsInGroup.map((student) => {
-                  const status = getStatus(student);
-                  const disabled = hasConsumptionToday(student);
+                {personsInGroup.map((person) => {
+                  const status = getStatus(person);
+                  const disabled = hasConsumptionToday(person);
 
                   return (
                     <div
-                      key={student.entityId}
+                      key={person.entityId}
                       className="col-12 col-sm-6 col-md-4 col-lg-3 d-flex justify-content-center"
                     >
                       <div
@@ -494,19 +504,28 @@ const CocinaPanel = ({ setUser }) => {
                           cursor: disabled ? 'not-allowed' : 'pointer',
                           ...(disabled ? disabledStyle : {})
                         }}
-                        onClick={() => !disabled && handleClick(student)}
+                        onClick={() => !disabled && handleClick(person)}
                       >
-                        <img
-                          className="student-photo rounded-circle mx-auto d-block mb-2"
-                          src={student.photoUrl || 'https://via.placeholder.com/88'}
-                          alt={student.name}
-                          width={88}
-                          height={88}
-                          style={{ objectFit: 'cover' }}
-                        />
-                        <strong className="d-block">{student.name}</strong>
-                        <p className="mb-1">ID: {student.entityId}</p>
-                        <p className="mb-1">Tokens: {student.lunch?.tokens ?? 0}</p>
+                        <div className="col-auto mb-2">
+                          {person.photoUrl ? (
+                            <img
+                              src={person.photoUrl}
+                              alt={person.name}
+                              className="rounded-circle mx-auto d-block"
+                              style={{ width: 88, height: 88, objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <div
+                              className="rounded-circle bg-secondary d-flex align-items-center justify-content-center mx-auto mb-2"
+                              style={{ width: 88, height: 88, color: '#fff', fontSize: 32 }}
+                            >
+                              <span>{person.name ? person.name[0] : '?'}</span>
+                            </div>
+                          )}
+                        </div>
+                        <strong className="d-block">{person.name}</strong>
+                        <p className="mb-1">ID: {person.entityId}</p>
+                        <p className="mb-1">Tokens: {person.lunch?.tokens ?? 0}</p>
                         <p className="mb-0">Status: {statusLabels[status]}</p>
                       </div>
                     </div>
