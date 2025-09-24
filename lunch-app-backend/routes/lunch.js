@@ -265,7 +265,7 @@ router.post('/:id/use', async (req, res) => {
 
     if (inPeriod) {
       // No descuenta token, solo permite comer
-      await Movement.create({
+      const movement = await Movement.create({
         entityId: person.entityId,
         change: 0,
         reason: 'uso-periodo',
@@ -274,7 +274,12 @@ router.post('/:id/use', async (req, res) => {
         userRole: userRole || 'cocina',
         timestamp: useDate.toDate()
       });
-
+      // Enviar email de consumo con periodo
+      try {
+        await sendUseEmail(person, movement, lunch);
+      } catch (err) {
+        console.error('[Email Use Error]', err);
+      }
       return res.json({
         canEat: true,
         method: 'period',
@@ -291,7 +296,7 @@ router.post('/:id/use', async (req, res) => {
     }
     await lunch.save();
     const isDebt = lunch.tokens < 0;
-    const movement = await Movement.create({
+    const movement2 = await Movement.create({
       entityId: person.entityId,
       change: -1,
       reason: isDebt ? 'uso-con-deuda' : 'uso',
@@ -302,7 +307,7 @@ router.post('/:id/use', async (req, res) => {
     });
     // Enviar email de consumo
     try {
-      await sendUseEmail(person, movement, lunch);
+      await sendUseEmail(person, movement2, lunch);
     } catch (err) {
       console.error('[Email Use Error]', err);
     }

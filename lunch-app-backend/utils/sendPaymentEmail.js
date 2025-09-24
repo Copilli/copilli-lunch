@@ -120,44 +120,44 @@ async function sendPaymentEmail(personObj, payment, currency = DEFAULT_CURRENCY)
   });
 
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 640px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+    <div style="font-family: Arial, sans-serif; max-width: 640px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; color:#222;">
       <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
         <img src="https://copilli.edu.mx/wp-content/uploads/2017/06/Favicon.jpeg" alt="Copilli" width="28" height="28" style="border-radius:6px" />
-        <h2 style="color:#2c3e50; margin:0;">Ticket de Pago - Copilli Lunch</h2>
+        <h2 style="color:#222; margin:0;">Ticket de Pago - Copilli Lunch</h2>
       </div>
 
-      <p>Hola <strong>${person.name}</strong>,</p>
-      <p>Se ha registrado tu pago correctamente. Aquí están los detalles:</p>
+      <p style="color:#222;">Hola <strong>${person.name}</strong>,</p>
+      <p style="color:#222;">Se ha registrado tu pago correctamente. Aquí están los detalles:</p>
 
-      <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+      <table style="width:100%; border-collapse:collapse; margin-top:10px; color:#222;">
         <tr>
-          <td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Ticket</td>
-          <td style="border:1px solid #ddd; padding:8px;">${payment.ticketNumber}</td>
+          <td style="border:1px solid #ddd; padding:8px; background:#fafafa; color:#222;">Ticket</td>
+          <td style="border:1px solid #ddd; padding:8px; color:#222;">${payment.ticketNumber}</td>
         </tr>
         <tr>
-          <td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Fecha</td>
-          <td style="border:1px solid #ddd; padding:8px;">${dateStr}</td>
+          <td style="border:1px solid #ddd; padding:8px; background:#fafafa; color:#222;">Fecha</td>
+          <td style="border:1px solid #ddd; padding:8px; color:#222;">${dateStr}</td>
         </tr>
         <tr>
-          <td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Alumno</td>
-          <td style="border:1px solid #ddd; padding:8px;">${person.name}</td>
+          <td style="border:1px solid #ddd; padding:8px; background:#fafafa; color:#222;">Alumno</td>
+          <td style="border:1px solid #ddd; padding:8px; color:#222;">${person.name}</td>
         </tr>
         <tr>
-          <td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Concepto</td>
-          <td style="border:1px solid #ddd; padding:8px;">${concept}${rangeLabel}</td>
+          <td style="border:1px solid #ddd; padding:8px; background:#fafafa; color:#222;">Concepto</td>
+          <td style="border:1px solid #ddd; padding:8px; color:#222;">${concept}${rangeLabel}</td>
         </tr>
         <tr>
-          <td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Cantidad</td>
-          <td style="border:1px solid #ddd; padding:8px;">${qty ?? '-'} ${units}</td>
+          <td style="border:1px solid #ddd; padding:8px; background:#fafafa; color:#222;">Cantidad</td>
+          <td style="border:1px solid #ddd; padding:8px; color:#222;">${qty ?? '-'} ${units}</td>
         </tr>
         <tr>
-          <td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Monto</td>
-          <td style="border:1px solid #ddd; padding:8px;">${amountFmt}</td>
+          <td style="border:1px solid #ddd; padding:8px; background:#fafafa; color:#222;">Monto</td>
+          <td style="border:1px solid #ddd; padding:8px; color:#222;">${amountFmt}</td>
         </tr>
       </table>
 
-      <p style="margin-top:16px;">Gracias por tu pago.</p>
-      <p style="font-size:12px; color:#888;">Este correo fue enviado automáticamente por el sistema Copilli Lunch.</p>
+      <p style="margin-top:16px; color:#222;">Gracias por tu pago.</p>
+      <p style="font-size:12px; color:#222;">Este correo fue enviado automáticamente por el sistema Copilli Lunch.</p>
     </div>
   `;
 
