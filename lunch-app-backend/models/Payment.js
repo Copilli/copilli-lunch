@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 
 const paymentSchema = new mongoose.Schema({
   entityId: { type: String, required: true },
-  movementId: { type: mongoose.Schema.Types.ObjectId, ref: 'Movement', required: true },
   ticketNumber: { type: String, required: true, unique: true },
   amount: { type: Number, required: true },
   date: { type: Date, default: Date.now },

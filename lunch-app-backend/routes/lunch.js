@@ -135,17 +135,8 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
     }
     await lunch.save({ session });
 
-    const movement = await Movement.create([{
-      entityId: person.entityId,
-      change: delta,
-      reason,
-      note,
-      performedBy: req.user?.username || 'sistema',
-      userRole: req.user?.role || 'oficina',
-      timestamp: customDate ? new Date(customDate) : new Date()
-    }], { session });
-
     let paymentInfo = null;
+    let movement;
 
     if ((reason || '').toLowerCase() === 'pago' && delta > 0) {
       const freshPerson = await Person.findById(lunch.person).lean();
@@ -155,7 +146,7 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
       const amount = Number((delta * prices.priceToken).toFixed(2));
       const ticketNumber = await Payment.generateTicketNumber();
 
-      // 1. Crear Payment SIN movementId
+      // Crear Payment SIN movementId
       const payment = await Payment.create([{
         entityId: person.entityId,
         ticketNumber,
@@ -164,13 +155,29 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
         sentEmail: false
       }], { session });
 
-      // 2. Crear Movement y actualizar Payment con movementId
-      await Movement.findByIdAndUpdate(movement[0]._id, {
-        note: `Pago de tokens • Total: $${amount.toFixed(2)} MXN • Ticket ${ticketNumber}`
-      }, { session });
-      await Payment.findByIdAndUpdate(payment[0]._id, { movementId: movement[0]._id }, { session });
+      // Crear Movement después de Payment
+      movement = await Movement.create([{
+        entityId: person.entityId,
+        change: delta,
+        reason,
+        note: `Pago de tokens • Total: $${amount.toFixed(2)} MXN • Ticket ${ticketNumber}`,
+        performedBy: req.user?.username || 'sistema',
+        userRole: req.user?.role || 'oficina',
+        timestamp: customDate ? new Date(customDate) : new Date()
+      }], { session });
 
       paymentInfo = { ticketNumber, amount };
+    } else {
+      // Crear Movement normal si no es pago
+      movement = await Movement.create([{
+        entityId: person.entityId,
+        change: delta,
+        reason,
+        note,
+        performedBy: req.user?.username || 'sistema',
+        userRole: req.user?.role || 'oficina',
+        timestamp: customDate ? new Date(customDate) : new Date()
+      }], { session });
     }
 
     await session.commitTransaction();
