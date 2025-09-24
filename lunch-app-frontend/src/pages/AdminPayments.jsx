@@ -81,7 +81,7 @@ export default function AdminPayments() {
   const resendPending = async () => {
     try {
       const { fromISO, toISO } = rangeToISO(from, to);
-      const { data } = await axios.post(`${API}/payments/resend-mails`, {
+      const { data } = await axios.post(`${API}/movements/resend-mails`, {
         from: fromISO, to: toISO, entityId: entityId || undefined
       }, { headers });
       alert(`Reenviados: ${data.sent} / Intentados: ${data.attempted}`);

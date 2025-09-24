@@ -278,15 +278,27 @@ const PersonLunchActions = ({ person, onUpdate }) => {
   };
 
   const showConfirmation = () => {
+    // Bloqueo: no permitir periodo si saldo negativo
+    if (actionType === 'period') {
+      if (currentTokens < 0) {
+        showError('No se puede asignar un periodo especial si el usuario tiene saldo negativo.');
+        return;
+      }
+      if (!startDate || !endDate) {
+        showError('Especifica las fechas de inicio y fin.');
+        return;
+      }
+    }
+    // Bloqueo: no permitir agregar tokens si hay periodo activo
     if (actionType === 'tokens') {
+      if (person.lunch?.hasSpecialPeriod) {
+        showError('No se pueden asignar tokens mientras hay un periodo especial activo.');
+        return;
+      }
       if (!tokenAmountStr || tokenInputError || tokenAmountNum <= 0) {
         showError(tokenInputError || 'Especifica una cantidad válida de tokens.');
         return;
       }
-    }
-    if (actionType === 'period' && (!startDate || !endDate)) {
-      showError('Especifica las fechas de inicio y fin.');
-      return;
     }
     if (actionType === 'manual-consumption' && (!consumptionDate || !consumptionReason)) {
       showError('Debes seleccionar motivo y fecha para registrar el consumo.');

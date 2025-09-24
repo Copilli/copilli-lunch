@@ -8,8 +8,6 @@ const InvalidDate = require('../models/InvalidDate');
 const Payment = require('../models/Payment');
 const Movement = require('../models/Movement');
 const { verifyToken, allowRoles } = require('../middleware/auth');
-const { sendPaymentEmail } = require('../utils/sendPaymentEmail');
-const { sendUseEmail } = require('../utils/sendUseEmail');
 const dayjs = require('dayjs');
 const isSameOrBefore = require('dayjs/plugin/isSameOrBefore');
 const isSameOrAfter = require('dayjs/plugin/isSameOrAfter');
@@ -85,42 +83,54 @@ router.post('/:id/add-tokens', async (req, res) => {
 
 // PATCH /api/lunch/:id/tokens
 router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { delta, reason = 'ajuste manual', note = '', customDate } = req.body;
-    if (typeof delta !== 'number') {
+
+    if (typeof delta !== 'number' || Number.isNaN(delta)) {
       return res.status(400).json({ error: 'El campo delta debe ser un número' });
     }
-    // Bloquear delta negativo (consumo) y advertir al usuario
+
     if (delta < 0) {
       return res.status(400).json({
         error: 'No se permite disminuir tokens con este endpoint. Para registrar un consumo, usa POST /api/lunch/:id/use.'
       });
     }
 
-    const lunch = await Lunch.findById(req.params.id);
-    if (!lunch) return res.status(404).json({ error: 'Lunch info not found' });
-    // Bloquear asignación de tokens si hay un periodo especial activo
-    if (lunch.hasSpecialPeriod && lunch.specialPeriod) {
-      const today = dayjs().startOf('day');
-      const start = dayjs(lunch.specialPeriod.startDate).startOf('day');
-      const end = dayjs(lunch.specialPeriod.endDate).startOf('day');
-      if (today.isSameOrAfter(start) && today.isSameOrBefore(end)) {
+    const lunch = await Lunch.findById(req.params.id).session(session);
+    if (!lunch) {
+      return res.status(404).json({ error: 'Lunch info not found' });
+    }
+
+    // ===== BLOQUEO POR PERIODO ACTIVO =====
+    const sp = lunch?.specialPeriod;
+    if (sp?.startDate && sp?.endDate) {
+      const todayStr = dayjs().format('YYYY-MM-DD');
+      const startStr = dayjs(sp.startDate).format('YYYY-MM-DD');
+      const endStr   = dayjs(sp.endDate).format('YYYY-MM-DD');
+      const periodoActivo = (todayStr >= startStr && todayStr <= endStr);
+
+      if (periodoActivo) {
         return res.status(403).json({ error: 'No se pueden asignar tokens mientras hay un periodo especial activo.' });
       }
     }
-    // aplicar tokens
-    lunch.tokens += delta;
-    // actualizar status si no está bloqueado
+    // ===== FIN BLOQUEO =====
+
+    // Aplicar tokens
+    lunch.tokens = (lunch.tokens || 0) + delta;
     if (lunch.status !== 'bloqueado') {
       lunch.status = lunch.tokens > 0 ? 'con-fondos' : 'sin-fondos';
     }
-    await lunch.save();
-    // registrar movimiento
-    // Buscar entityId legacy
-    // Obtener nivel y grupo actualizados de la persona
-    const person = await Person.findById(lunch.person);
-    if (!person) return res.status(404).json({ error: 'Persona no encontrada para este Lunch' });
-    const movement = await Movement.create({
+    await lunch.save({ session });
+
+    const person = await Person.findById(lunch.person).session(session);
+    if (!person) {
+      return res.status(404).json({ error: 'Persona no encontrada para este Lunch' });
+    }
+
+    const movement = await Movement.create([{
       entityId: person.entityId,
       change: delta,
       reason,
@@ -128,42 +138,47 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
       performedBy: req.user?.username || 'sistema',
       userRole: req.user?.role || 'oficina',
       timestamp: customDate ? new Date(customDate) : new Date()
-    });
+    }], { session });
 
     let paymentInfo = null;
-    // 💸 AUTO-PAGO si es "pago" y delta > 0
+
     if ((reason || '').toLowerCase() === 'pago' && delta > 0) {
-      // Asegurarse de obtener el nivel y grupo más recientes y correctos
       const freshPerson = await Person.findById(lunch.person).lean();
-      // Usar group.level y group.name según el modelo
-      const level = freshPerson.group?.level || '';
-      const groupName = freshPerson.group?.name || '';
+      const level = freshPerson?.group?.level || '';
+      const groupName = freshPerson?.group?.name || '';
       const prices = getPricesForLevel(level, groupName);
       const amount = Number((delta * prices.priceToken).toFixed(2));
       const ticketNumber = await Payment.generateTicketNumber();
-      const payment = await Payment.create({
+
+      await Payment.create([{
         entityId: person.entityId,
-        movementId: movement._id,
+        movementId: movement[0]._id,
         ticketNumber,
         amount,
         date: new Date(),
         sentEmail: false
-      });
-      // Uniformar nota con ticket
-      await Movement.findByIdAndUpdate(movement._id, {
+      }], { session });
+
+      await Movement.findByIdAndUpdate(movement[0]._id, {
         note: `Pago de tokens • Total: $${amount.toFixed(2)} MXN • Ticket ${ticketNumber}`
-      });
-      await sendPaymentEmail(freshPerson, payment, 'MXN');
+      }, { session });
+
       paymentInfo = { ticketNumber, amount };
     }
 
-    res.json({
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.json({
       message: 'Tokens actualizados',
       tokens: lunch.tokens,
       ...(paymentInfo ? { paymentTicket: paymentInfo.ticketNumber, paymentAmount: paymentInfo.amount } : {})
     });
   } catch (err) {
-    res.status(500).json({ error: 'Error al actualizar tokens' });
+    await session.abortTransaction();
+    session.endSession();
+    console.error('PATCH /lunch/:id/tokens error:', err);
+    return res.status(500).json({ error: 'Error al actualizar tokens' });
   }
 });
 
@@ -215,7 +230,6 @@ router.post('/:id/use', async (req, res) => {
       }
     }
 
-    // Always send email, including admin/manual uses
     if (inPeriod) {
       // No descuenta token, solo permite comer
       await Movement.create({
@@ -227,19 +241,7 @@ router.post('/:id/use', async (req, res) => {
         userRole: userRole || 'cocina',
         timestamp: useDate.toDate()
       });
-      // Send use email (always) - pass Person (lean)
-      try {
-        await sendUseEmail(person, {
-          type: 'periodo',
-          date: useDate.toDate(),
-          performedBy: performedBy || 'sistema',
-          userRole: userRole || 'cocina',
-          tokens: lunch.tokens,
-          note: 'Consumo con periodo especial'
-        });
-      } catch (e) {
-        console.error('[❌ Use Email ERROR]', e);
-      }
+
       return res.json({
         canEat: true,
         method: 'period',
@@ -265,19 +267,7 @@ router.post('/:id/use', async (req, res) => {
       userRole: userRole || 'cocina',
       timestamp: useDate.toDate()
     });
-    // Send use email after successful use (always, including admin)
-    try {
-      await sendUseEmail(person, {
-        type: isDebt ? 'uso-con-deuda' : 'uso',
-        date: useDate.toDate(),
-        performedBy: performedBy || 'sistema',
-        userRole: userRole || 'cocina',
-        tokens: lunch.tokens,
-        note: isDebt ? 'Consumo con deuda' : 'Consumo registrado sin periodo activo'
-      });
-    } catch (e) {
-      console.error('[❌ Use Email ERROR]', e);
-    }
+
     res.json({
       canEat: true,
       method: isDebt ? 'deuda' : 'token',
@@ -291,12 +281,16 @@ router.post('/:id/use', async (req, res) => {
 
 // PATCH /api/lunch/:id/period
 router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (req, res) => {
+  const session = await require('mongoose').startSession();
+  session.startTransaction();
+
   try {
     const { startDate, endDate, reason, note } = req.body;
-    const lunch = await Lunch.findById(req.params.id);
-    if (!lunch) return res.status(404).json({ error: 'Lunch info not found' });
-    // Definir today solo una vez
+    const lunch = await Lunch.findById(req.params.id).session(session);
+    if (!lunch) return earlyReturnWithSession(res, 404, { error: 'Lunch info not found' }, session);
+
     const today = dayjs().startOf('day');
+
     // ❌ Eliminar periodo (solo si está activo)
     if (!startDate || !endDate) {
       const existingStart = dayjs(lunch.specialPeriod?.startDate);
@@ -305,17 +299,20 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
         existingStart.isValid() && existingEnd.isValid() &&
         existingStart.isSameOrBefore(today) && existingEnd.isSameOrAfter(today);
       if (!isCurrentActive) {
-        return res.status(403).json({ error: 'Solo se puede eliminar el periodo especial si está actualmente activo.' });
+        return earlyReturnWithSession(res, 403, { error: 'Solo se puede eliminar el periodo especial si está actualmente activo.' }, session);
       }
+
       lunch.hasSpecialPeriod = false;
       lunch.specialPeriod = { startDate: null, endDate: null };
       if (lunch.status === 'periodo-activo') {
         lunch.status = lunch.tokens > 0 ? 'con-fondos' : 'sin-fondos';
       }
-      await lunch.save();
-      // Get the person's entityId for Movement
-      const person = await Person.findById(lunch.person);
-      await Movement.create({
+      await lunch.save({ session });
+
+      const person = await Person.findById(lunch.person).session(session);
+      if (!person) return earlyReturnWithSession(res, 404, { error: 'Persona no encontrada para este Lunch' }, session);
+
+      await Movement.create([{
         entityId: person.entityId,
         change: 0,
         reason: 'periodo-removido',
@@ -323,86 +320,78 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
         performedBy: req.user?.username || 'sistema',
         userRole: req.user?.role || 'sistema',
         timestamp: new Date()
-      });
-      await PeriodLog.deleteMany({
-        lunchId: lunch._id,
-        startDate: {
-          $gte: existingStart.startOf('day').toDate(),
-          $lte: existingStart.endOf('day').toDate()
-        },
-        endDate: {
-          $gte: existingEnd.startOf('day').toDate(),
-          $lte: existingEnd.endOf('day').toDate()
-        }
-      });
-      return res.json({
-        message: 'Periodo especial eliminado',
-        hasSpecialPeriod: false,
-        specialPeriod: null
-      });
+      }], { session });
+
+      if (existingStart.isValid() && existingEnd.isValid()) {
+        await PeriodLog.deleteMany({
+          lunchId: lunch._id,
+          startDate: { $gte: existingStart.startOf('day').toDate(), $lte: existingStart.endOf('day').toDate() },
+          endDate:   { $gte: existingEnd.startOf('day').toDate(),   $lte: existingEnd.endOf('day').toDate() }
+        }).session(session);
+      }
+
+      await session.commitTransaction();
+      session.endSession();
+      return res.json({ message: 'Periodo especial eliminado', hasSpecialPeriod: false, specialPeriod: null });
     }
+
     // ✅ Crear/actualizar periodo
     const start = dayjs(startDate).startOf('day');
     const end   = dayjs(endDate).startOf('day');
     if (!start.isValid() || !end.isValid()) {
-      return res.status(400).json({ error: 'Fechas del periodo inválidas.' });
+      return earlyReturnWithSession(res, 400, { error: 'Fechas del periodo inválidas.' }, session);
     }
     if (end.isBefore(start)) {
-      return res.status(400).json({ error: 'La fecha de fin no puede ser anterior a la de inicio.' });
+      return earlyReturnWithSession(res, 400, { error: 'La fecha de fin no puede ser anterior a la de inicio.' }, session);
     }
     if (lunch.tokens < 0) {
-      return res.status(400).json({ error: 'No se puede asignar un periodo especial si el usuario tiene saldo negativo.' });
+      return earlyReturnWithSession(res, 400, { error: 'No se puede asignar un periodo especial si el usuario tiene saldo negativo.' }, session);
     }
-    // Solo admin puede crear periodos en fechas pasadas
+
     const isAdmin = req.user?.role === 'admin';
     if (!isAdmin && start.isBefore(today)) {
-      return res.status(403).json({ error: 'Solo un administrador puede crear periodos en fechas pasadas.' });
+      return earlyReturnWithSession(res, 403, { error: 'Solo un administrador puede crear periodos en fechas pasadas.' }, session);
     }
+
     const invalidSet = await getInvalidSet();
     if (invalidSet.has(start.format('YYYY-MM-DD')) || invalidSet.has(dayjs(endDate).format('YYYY-MM-DD'))) {
-      return res.status(400).json({ error: 'El periodo no puede comenzar ni terminar en un día inválido.' });
+      return earlyReturnWithSession(res, 400, { error: 'El periodo no puede comenzar ni terminar en un día inválido.' }, session);
     }
+
     const validDayCount = countValidDays(start, end, invalidSet);
     if (validDayCount < 5) {
-      return res.status(400).json({ error: `El periodo debe incluir al menos 5 días válidos. Actualmente incluye ${validDayCount}.` });
+      return earlyReturnWithSession(res, 400, { error: `El periodo debe incluir al menos 5 días válidos. Actualmente incluye ${validDayCount}.` }, session);
     }
-      // ❗ Evitar solapamiento con cualquier periodo anterior (no permitir crear periodos que se solapen, estén contenidos o contengan a otros)
-    const previousPeriods = await PeriodLog.find({ lunchId: lunch._id });
+
+    const previousPeriods = await PeriodLog.find({ lunchId: lunch._id }).session(session);
     const overlapPeriod = previousPeriods.some(log => {
       const logStart = dayjs(log.startDate).startOf('day');
-      const logEnd = dayjs(log.endDate).startOf('day');
-      // 1. Fechas exactamente iguales
+      const logEnd   = dayjs(log.endDate).startOf('day');
       if (start.isSame(logStart) && end.isSame(logEnd)) return true;
-      // 2. startDate o endDate dentro de un periodo existente
       if ((start.isAfter(logStart) && start.isBefore(logEnd)) || (end.isAfter(logStart) && end.isBefore(logEnd))) return true;
-      // 3. El nuevo periodo contiene completamente a uno existente
       if (start.isBefore(logStart) && end.isAfter(logEnd)) return true;
-      // 4. El nuevo periodo está completamente contenido en uno existente
       if (start.isAfter(logStart) && end.isBefore(logEnd)) return true;
-      // 5. El nuevo periodo empieza o termina exactamente en el inicio o fin de uno existente
       if (start.isSame(logStart) || start.isSame(logEnd) || end.isSame(logStart) || end.isSame(logEnd)) return true;
       return false;
     });
     if (overlapPeriod) {
-      return res.status(400).json({ error: 'El nuevo periodo se solapa, está contenido, contiene o coincide en fechas con uno ya registrado en el historial.' });
+      return earlyReturnWithSession(res, 400, { error: 'El nuevo periodo se solapa, está contenido, contiene o coincide en fechas con uno ya registrado en el historial.' }, session);
     }
-    // Buscar entityId legacy (antes de usar person)
-    const person = await Person.findById(lunch.person);
-    if (!person) return res.status(404).json({ error: 'Persona no encontrada para este Lunch' });
-    // Guardar periodo en lunch
+
     lunch.specialPeriod = { startDate: start.toDate(), endDate: end.toDate() };
-    // Calcular si el periodo es activo respecto a la fecha actual
     const isActivePeriod = start.isSameOrBefore(today) && end.isSameOrAfter(today);
     lunch.hasSpecialPeriod = isActivePeriod;
     if (isActivePeriod) {
       lunch.status = 'periodo-activo';
     } else if (lunch.status === 'periodo-activo') {
-      // Si el periodo ya no es activo, actualizar status según tokens
       lunch.status = lunch.tokens > 0 ? 'con-fondos' : 'sin-fondos';
     }
-    await lunch.save();
-    // Logs
-    await PeriodLog.create({
+    await lunch.save({ session });
+
+    const person = await Person.findById(lunch.person).session(session);
+    if (!person) return earlyReturnWithSession(res, 404, { error: 'Persona no encontrada para este Lunch' }, session);
+
+    await PeriodLog.create([{
       lunchId: lunch._id,
       entityId: person.entityId,
       startDate: start.toDate(),
@@ -411,8 +400,9 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       reason: reason || 'ajuste manual',
       performedBy: req.user?.username || 'sistema',
       userRole: req.user?.role || 'sistema'
-    });
-    const move = await Movement.create({
+    }], { session });
+
+    const move = await Movement.create([{
       entityId: person.entityId,
       change: 0,
       reason: reason || 'ajuste manual',
@@ -420,44 +410,46 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       performedBy: req.user?.username || 'sistema',
       userRole: req.user?.role || 'sistema',
       timestamp: new Date()
-    });
+    }], { session });
 
     let paymentInfo = null;
-    // 💸 AUTO-PAGO si reason === 'pago'
     if ((reason || '').toLowerCase() === 'pago') {
-      // Usar group.level y group.name según el modelo
       const freshPerson = await Person.findById(lunch.person).lean();
-      const level = freshPerson.group?.level || '';
-      const groupName = freshPerson.group?.name || '';
+      const level = freshPerson?.group?.level || '';
+      const groupName = freshPerson?.group?.name || '';
       const prices = getPricesForLevel(level, groupName);
       const amount = Number((validDayCount * prices.pricePeriod).toFixed(2));
       const ticketNumber = await Payment.generateTicketNumber();
-      const payment = await Payment.create({
+
+      const payment = await Payment.create([{
         entityId: person.entityId,
-        movementId: move._id,
+        movementId: move[0]._id,
         ticketNumber,
         amount,
         date: new Date(),
         sentEmail: false
-      });
+      }], { session });
 
-      // Dejar nota con ticket
-      await Movement.findByIdAndUpdate(move._id, {
+      await Movement.findByIdAndUpdate(move[0]._id, {
         note: `Pago de periodo (${start.format('YYYY-MM-DD')} → ${end.format('YYYY-MM-DD')}) • Total: $${amount.toFixed(2)} MXN • Ticket ${ticketNumber}`
-      });
+      }, { session });
 
-      await sendPaymentEmail(freshPerson, payment, 'MXN');
       paymentInfo = { ticketNumber, amount };
     }
 
-    res.json({
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.json({
       message: 'Periodo especial actualizado',
       hasSpecialPeriod: lunch.hasSpecialPeriod,
       specialPeriod: lunch.specialPeriod,
       ...(paymentInfo ? { paymentTicket: paymentInfo.ticketNumber, paymentAmount: paymentInfo.amount } : {})
     });
   } catch (err) {
-    res.status(500).json({ error: err.message || 'Error al actualizar el periodo' });
+    await session.abortTransaction();
+    session.endSession();
+    return res.status(500).json({ error: err.message || 'Error al actualizar el periodo' });
   }
 });
 
