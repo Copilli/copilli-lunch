@@ -60,7 +60,7 @@ router.post('/:id/add-tokens', async (req, res) => {
       const today = dayjs().startOf('day');
       const start = dayjs(lunch.specialPeriod.startDate).startOf('day');
       const end = dayjs(lunch.specialPeriod.endDate).startOf('day');
-      if (start.isSameOrBefore(today) && end.isSameOrAfter(today)) {
+      if (today.isSameOrAfter(start) && today.isSameOrBefore(end)) {
         return res.status(403).json({ error: 'No se pueden asignar tokens mientras hay un periodo especial activo.' });
       }
     }
@@ -104,7 +104,7 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
       const today = dayjs().startOf('day');
       const start = dayjs(lunch.specialPeriod.startDate).startOf('day');
       const end = dayjs(lunch.specialPeriod.endDate).startOf('day');
-      if (start.isSameOrBefore(today) && end.isSameOrAfter(today)) {
+      if (today.isSameOrAfter(start) && today.isSameOrBefore(end)) {
         return res.status(403).json({ error: 'No se pueden asignar tokens mientras hay un periodo especial activo.' });
       }
     }
