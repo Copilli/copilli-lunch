@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Movement = require('../models/Movement');
 const Lunch = require('../models/Lunch');
+const { verifyToken, allowRoles } = require('../middleware/auth');
 const { sendMovementEmail } = require('../utils/sendMovementEmail');
 const Payment = require('../models/Payment');
 const Person = require('../models/Person');
