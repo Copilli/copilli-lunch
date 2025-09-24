@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const Lunch = require('../models/Lunch');
 const Person = require('../models/Person');
@@ -156,18 +157,20 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
       const amount = Number((delta * prices.priceToken).toFixed(2));
       const ticketNumber = await Payment.generateTicketNumber();
 
-      await Payment.create([{
+      // 1. Crear Payment SIN movementId
+      const payment = await Payment.create([{
         entityId: person.entityId,
-        movementId: movement[0]._id,
         ticketNumber,
         amount,
         date: new Date(),
         sentEmail: false
       }], { session });
 
+      // 2. Crear Movement y actualizar Payment con movementId
       await Movement.findByIdAndUpdate(movement[0]._id, {
         note: `Pago de tokens • Total: $${amount.toFixed(2)} MXN • Ticket ${ticketNumber}`
       }, { session });
+      await Payment.findByIdAndUpdate(payment[0]._id, { movementId: movement[0]._id }, { session });
 
       paymentInfo = { ticketNumber, amount };
     }
@@ -379,8 +382,18 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
     const overlapPeriod = previousPeriods.some(log => {
       const logStart = dayjs(log.startDate).startOf('day');
       const logEnd   = dayjs(log.endDate).startOf('day');
-      // Intersección si start <= logEnd y end >= logStart
-      return start.isSameOrBefore(logEnd) && end.isSameOrAfter(logStart);
+      // No permitir si:
+      // - start está dentro de un periodo existente
+      // - end está dentro de un periodo existente
+      // - el nuevo periodo está contenido en uno existente
+      // - el nuevo periodo contiene a uno existente
+      // - las fechas coinciden exactamente
+      if (start.isSameOrAfter(logStart) && start.isSameOrBefore(logEnd)) return true; // start dentro
+      if (end.isSameOrAfter(logStart) && end.isSameOrBefore(logEnd)) return true; // end dentro
+      if (start.isSameOrBefore(logStart) && end.isSameOrAfter(logEnd)) return true; // contiene
+      if (start.isSame(logStart) || end.isSame(logEnd)) return true; // fechas iguales
+      if (logStart.isSameOrAfter(start) && logEnd.isSameOrBefore(end)) return true; // contenido
+      return false;
     });
     if (overlapPeriod) {
       return earlyReturnWithSession(res, 400, { error: 'El nuevo periodo se solapa, está contenido, contiene o coincide en fechas con uno ya registrado en el historial.' }, session);
@@ -429,18 +442,20 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       const amount = Number((validDayCount * prices.pricePeriod).toFixed(2));
       const ticketNumber = await Payment.generateTicketNumber();
 
+      // 1. Crear Payment SIN movementId
       const payment = await Payment.create([{
         entityId: person.entityId,
-        movementId: move[0]._id,
         ticketNumber,
         amount,
         date: new Date(),
         sentEmail: false
       }], { session });
 
+      // 2. Actualizar Payment con movementId
       await Movement.findByIdAndUpdate(move[0]._id, {
         note: `Pago de periodo (${start.format('YYYY-MM-DD')} → ${end.format('YYYY-MM-DD')}) • Total: $${amount.toFixed(2)} MXN • Ticket ${ticketNumber}`
       }, { session });
+      await Payment.findByIdAndUpdate(payment[0]._id, { movementId: move[0]._id }, { session });
 
       paymentInfo = { ticketNumber, amount };
     }
