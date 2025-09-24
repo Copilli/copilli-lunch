@@ -79,8 +79,8 @@ async function sendMovementEmail(movement, extra = {}) {
       ticket = payment.ticketNumber;
     }
   } else {
-    amount = extra.amount ? fmtMoney(extra.amount) : '';
-    ticket = extra.ticketNumber || '';
+    amount = extra.amount ? fmtMoney(extra.amount) : '<Monto no disponible>';
+    ticket = extra.ticketNumber || '<Ticket no disponible>';
   }
 
   // Corrige la fecha para evitar desfase por zona horaria

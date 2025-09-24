@@ -28,10 +28,15 @@ movementSchema.post('save', async function(doc) {
     const { sendMovementEmail } = require('../utils/sendMovementEmail');
     const Person = require('../models/Person');
     let extra = {};
-    // Si el movimiento es pago y tiene paymentId, busca Payment por paymentId
+    // Si el movimiento es pago y tiene paymentId, busca Payment por paymentId usando la sesión si existe
     if (doc.reason === 'pago' && doc.paymentId) {
       const Payment = require('../models/Payment');
-      const payment = await Payment.findById(doc.paymentId);
+      let payment;
+      if (typeof doc.$session === 'function' && doc.$session()) {
+        payment = await Payment.findById(doc.paymentId).session(doc.$session());
+      } else {
+        payment = await Payment.findById(doc.paymentId);
+      }
       if (payment) {
         extra.amount = payment.amount;
         extra.ticketNumber = payment.ticketNumber;
