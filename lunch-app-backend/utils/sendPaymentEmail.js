@@ -98,30 +98,20 @@ async function getConceptAndQty(payment) {
  */
 
 async function sendPaymentEmail(personObj, payment, currency = DEFAULT_CURRENCY) {
-  // Usar el objeto person recibido directamente
-  const person = personObj;
+  // Buscar Person por entityId (payment.entityId)
+  let person = null;
+  if (personObj && personObj.email) {
+    person = personObj;
+  } else if (payment && payment.entityId) {
+    person = await Person.findOne({ entityId: payment.entityId }).lean();
+  }
   if (!person?.email) {
     console.log(`[ℹ️ Email] ${person?.name || 'Alumno'} sin correo; no se envía.`);
     return false;
   }
 
-  // Buscar el movimiento relacionado por payment.movementId
-  let concept = 'Pago', qty = null, units = '', rangeLabel = '';
-  let mov = await Movement.findById(payment.movementId).lean();
-  if (mov) {
-    const prices = getPricesForPerson(person);
-    if (!mov.change || mov.change === 0) {
-      qty = Math.round((payment.amount || 0) / prices.pricePeriod) || 0;
-      const m = mov.note && mov.note.match(/(\d{4}-\d{2}-\d{2}).*?(\d{4}-\d{2}-\d{2})/);
-      if (m) rangeLabel = ` (${m[1]} → ${m[2]})`;
-      concept = 'Periodo';
-      units = `día${qty === 1 ? '' : 's'}`;
-    } else {
-      qty = Number(mov.change) || Math.round((payment.amount || 0) / prices.priceToken) || 0;
-      concept = 'Tokens';
-      units = `token${qty === 1 ? '' : 's'}`;
-    }
-  }
+  // Enriquecer: concepto (Tokens/Periodo), cantidad y rango si aplica
+  const { concept, qty, units, rangeLabel } = await getConceptAndQty(payment);
 
   const amountFmt = fmtMoney(payment.amount, currency);
   const dateStr = new Date(payment.date).toLocaleString('es-MX', {

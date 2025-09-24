@@ -22,7 +22,7 @@ function fmtDate(date) {
   return dayjs(date).tz(MX_TZ).format('YYYY-MM-DD HH:mm');
 }
 
-async function sendUseEmail(personOrEntityId, useInfo, lunch) {
+async function sendUseEmail(personOrEntityId, movement, lunch) {
   // Usar el objeto person recibido directamente
   const person = personOrEntityId;
   if (!person?.email) {
@@ -31,9 +31,9 @@ async function sendUseEmail(personOrEntityId, useInfo, lunch) {
   }
 
   // Extraer info del movimiento recibido
-  const dateStr = fmtDate(useInfo.timestamp);
+  const dateStr = fmtDate(movement.timestamp);
   // Determinar tipo de uso
-  let type = useInfo.reason || 'uso';
+  let type = movement.reason || 'uso';
   if (type === 'uso-con-deuda') type = 'Consumo con deuda';
   else if (type === 'uso-periodo') type = 'Consumo con periodo';
   else if (type === 'uso') type = 'Consumo';
@@ -45,7 +45,7 @@ async function sendUseEmail(personOrEntityId, useInfo, lunch) {
         <h2 style="color:#2c3e50; margin:0;">Ticket de Consumo - Copilli Lunch</h2>
       </div>
 
-      <p>Hola <strong>${person.name}</strong>,</p>
+  <p>Hola <strong>${person.name}</strong>,</p>
       <p>Se ha registrado un consumo en el sistema. Aquí están los detalles:</p>
 
       <table style="width:100%; border-collapse:collapse; margin-top:10px;">
@@ -67,7 +67,7 @@ async function sendUseEmail(personOrEntityId, useInfo, lunch) {
         </tr>
         <tr>
           <td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Nota</td>
-          <td style="border:1px solid #ddd; padding:8px;">${useInfo.note || '-'} </td>
+          <td style="border:1px solid #ddd; padding:8px;">${movement.note || '-'} </td>
         </tr>
       </table>
 
