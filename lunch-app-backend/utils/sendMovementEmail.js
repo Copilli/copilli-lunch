@@ -69,18 +69,24 @@ async function sendMovementEmail(movement, extra = {}) {
     return false;
   }
 
-  // Si es pago y tiene paymentId, obtener ticket y monto directamente
+  // Prioriza extra.amount y extra.ticketNumber si existen, luego busca Payment si es pago
   let amount = '';
   let ticket = '';
-  if (movement.reason === 'pago' && movement.paymentId) {
-    const payment = await Payment.findById(movement.paymentId);
-    if (payment) {
-      amount = fmtMoney(payment.amount);
-      ticket = payment.ticketNumber;
-    }
-  } else {
+  if (extra.amount || extra.ticketNumber) {
     amount = extra.amount ? fmtMoney(extra.amount) : '<Monto no disponible>';
     ticket = extra.ticketNumber || '<Ticket no disponible>';
+  } else if (movement.reason === 'pago' && movement.paymentId) {
+    const payment = await Payment.findById(movement.paymentId);
+    if (payment) {
+      amount = fmtMoney(payment.amount) || '<Monto no disponible>';
+      ticket = payment.ticketNumber || '<Ticket no disponible>';
+    } else {
+      amount = '<Monto no disponible>';
+      ticket = '<Ticket no disponible>';
+    }
+  } else {
+    amount = '<Monto no disponible>';
+    ticket = '<Ticket no disponible>';
   }
 
   // Corrige la fecha para evitar desfase por zona horaria
