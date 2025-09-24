@@ -38,6 +38,20 @@ async function sendUseEmail(personOrEntityId, movement, lunch) {
   else if (type === 'uso-periodo') type = 'Consumo con periodo';
   else if (type === 'uso') type = 'Consumo';
 
+  let extraLabel = '';
+  if (type === 'Consumo con periodo' && lunch?.specialPeriod?.endDate) {
+    const endDateStr = dayjs(lunch.specialPeriod.endDate).tz(MX_TZ).format('YYYY-MM-DD');
+    extraLabel = `<tr>
+      <td style="border:1px solid #ddd; padding:8px; background:#fafafa; color:#222;">Fin de periodo</td>
+      <td style="border:1px solid #ddd; padding:8px; color:#222;">${endDateStr}</td>
+    </tr>`;
+  } else {
+    extraLabel = `<tr>
+      <td style="border:1px solid #ddd; padding:8px; background:#fafafa; color:#222;">Tokens restantes</td>
+      <td style="border:1px solid #ddd; padding:8px; color:#222;">${lunch?.tokens ?? '-'} </td>
+    </tr>`;
+  }
+
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 640px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; color:#222;">
       <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
@@ -61,10 +75,7 @@ async function sendUseEmail(personOrEntityId, movement, lunch) {
           <td style="border:1px solid #ddd; padding:8px; background:#fafafa; color:#222;">Tipo de uso</td>
           <td style="border:1px solid #ddd; padding:8px; color:#222;">${type}</td>
         </tr>
-        <tr>
-          <td style="border:1px solid #ddd; padding:8px; background:#fafafa; color:#222;">Tokens restantes</td>
-          <td style="border:1px solid #ddd; padding:8px; color:#222;">${lunch?.tokens ?? '-'} </td>
-        </tr>
+        ${extraLabel}
         <tr>
           <td style="border:1px solid #ddd; padding:8px; background:#fafafa; color:#222;">Nota</td>
           <td style="border:1px solid #ddd; padding:8px; color:#222;">${movement.note || '-'} </td>
