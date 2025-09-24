@@ -38,20 +38,6 @@ router.post('/', async (req, res) => {
 
     await movement.save();
 
-    // Enviar email dinámico
-    const { sendMovementEmail } = require('../utils/sendMovementEmail');
-    let extra = {};
-    // Si el movimiento tiene payment info, buscar el Payment
-    if (movement.reason === 'pago' && req.body.paymentId) {
-      const Payment = require('../models/Payment');
-      const payment = await Payment.findById(req.body.paymentId);
-      if (payment) {
-        extra.amount = payment.amount;
-        extra.ticketNumber = payment.ticketNumber;
-      }
-    }
-    await sendMovementEmail(movement, extra);
-
     res.status(201).json({ message: 'Movimiento registrado', movement });
   } catch (err) {
     res.status(500).json({ error: 'Error al registrar movimiento' });

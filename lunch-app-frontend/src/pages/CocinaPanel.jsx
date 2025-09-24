@@ -146,27 +146,66 @@ const CocinaPanel = ({ setUser }) => {
       )
     : [];
 
+  // Helper para saber si ya tiene consumo ese día
+  const hasConsumptionToday = (student) => {
+    const lunch = student.lunch || {};
+    if (!lunch.movements) return false;
+    return lunch.movements.some(mov => {
+      const movDate = mov.timestamp ? dayjs(mov.timestamp).format('YYYY-MM-DD') : null;
+      return movDate === today && ['uso', 'uso-con-deuda', 'uso-periodo'].includes(mov.reason);
+    });
+  };
+
   const getStatus = (student) => {
     const lunch = student.lunch || {};
-    // Considerar periodo activo si las fechas de specialPeriod lo indican
     const start = lunch.specialPeriod?.startDate ? dayjs(lunch.specialPeriod.startDate) : null;
     const end = lunch.specialPeriod?.endDate ? dayjs(lunch.specialPeriod.endDate) : null;
     const isActivePeriod = start && end && dayjs(today).isSameOrAfter(start) && dayjs(today).isSameOrBefore(end);
-
     if (isActivePeriod) return 'periodo-activo';
     if (lunch.status === 'bloqueado') return 'bloqueado';
     if (lunch.tokens > 0) return 'con-fondos';
     return 'sin-fondos';
   };
 
-  // Click en tarjeta: prepara modal sin alterar la vista de fondo
-  const handleClick = (student) => {
+  // Click en tarjeta: para periodo activo, registra consumo especial; para otros, sigue igual
+  const handleClick = async (student) => {
     const lunch = student.lunch || {};
     const status = getStatus(student);
     const hasTokens = lunch.tokens > 0;
 
+    if (hasConsumptionToday(student)) {
+      showError('Ya se registró consumo para este alumno hoy.');
+      return;
+    }
+
     if (status === 'periodo-activo') {
-      showError('Tiene un periodo activo. No se requiere token.');
+      // Registrar movimiento especial
+      if (!lunch._id || !student.entityId) {
+        showError('No se encontró el registro de lunch para este estudiante');
+        return;
+      }
+      try {
+        const token = localStorage.getItem('token');
+        await axios.post(
+          `${import.meta.env.VITE_API_URL}/movements`,
+          {
+            entityId: student.entityId,
+            change: 0,
+            reason: 'uso-periodo',
+            note: 'Consumo con periodo activo',
+            performedBy: localStorage.getItem('username') || 'cocina',
+            userRole: 'cocina',
+            dateAffected: today
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        showSuccess('Consumo de periodo activo registrado');
+        await fetchStudents();
+      } catch (err) {
+        console.error(err);
+        const backendError = err?.response?.data?.error;
+        showError(backendError || 'Error al registrar consumo de periodo activo');
+      }
       return;
     }
 
@@ -228,6 +267,10 @@ const CocinaPanel = ({ setUser }) => {
     'con-fondos': '#cce5ff',     // azul
     'sin-fondos': '#f8d7da',     // rojo
     'bloqueado': '#c2c2c2'       // gris
+  };
+  const disabledStyle = {
+    opacity: 0.5,
+    pointerEvents: 'none'
   };
 
   const statusLabels = {
@@ -436,7 +479,7 @@ const CocinaPanel = ({ setUser }) => {
               <div className="row gx-3 gy-3 justify-content-center">
                 {studentsInGroup.map((student) => {
                   const status = getStatus(student);
-                  const disabled = status === 'periodo-activo';
+                  const disabled = hasConsumptionToday(student);
 
                   return (
                     <div
@@ -448,7 +491,8 @@ const CocinaPanel = ({ setUser }) => {
                         style={{
                           backgroundColor: statusColor[status],
                           width: 320,
-                          cursor: disabled ? 'default' : 'pointer'
+                          cursor: disabled ? 'not-allowed' : 'pointer',
+                          ...(disabled ? disabledStyle : {})
                         }}
                         onClick={() => !disabled && handleClick(student)}
                       >
