@@ -2,6 +2,11 @@
 const nodemailer = require('nodemailer');
 const Person = require('../models/Person');
 const Payment = require('../models/Payment');
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+dayjs.extend(utc);
+dayjs.extend(timezone);
 const MX_TZ = 'America/Mexico_City';
 let _transporter = null;
 
@@ -80,8 +85,7 @@ async function sendMovementEmail(movement, extra = {}) {
 
   // Corrige la fecha para evitar desfase por zona horaria
   let dateObj = movement.timestamp || movement.dateAffected || Date.now();
-  if (typeof dateObj === 'string' || typeof dateObj === 'number') dateObj = new Date(dateObj);
-  // Ajusta a MX_TZ correctamente
+  // Si es string o number, pásalo directo a dayjs (sin new Date)
   const dateStr = dayjs(dateObj).tz(MX_TZ).format('DD/MM/YYYY HH:mm');
 
   const type = getMovementType(movement);
