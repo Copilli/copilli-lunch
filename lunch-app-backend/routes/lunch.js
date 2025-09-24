@@ -223,18 +223,16 @@ router.post('/:id/use', async (req, res) => {
       dayjs(lunch.specialPeriod.endDate).isSameOrAfter(useDate);
 
 
-    // Previene doble uso en el día (solo si no está en periodo especial)
+    // Previene doble uso en el día (incluye periodo especial)
     let person = await Person.findById(lunch.person).lean();
     if (!person) return res.status(404).json({ error: 'Persona no encontrada para este Lunch' });
-    if (!inPeriod) {
-      const existingUse = await Movement.findOne({
-        entityId: person.entityId,
-        reason: { $in: ['uso', 'uso-con-deuda'] },
-        timestamp: { $gte: useDate.toDate(), $lt: useDate.add(1, 'day').toDate() }
-      });
-      if (existingUse) {
-        return res.status(409).json({ error: 'Ya existe un consumo registrado para esa fecha.' });
-      }
+    const existingUse = await Movement.findOne({
+      entityId: person.entityId,
+      reason: { $in: ['uso', 'uso-con-deuda', 'uso-periodo', 'periodo'] },
+      timestamp: { $gte: useDate.toDate(), $lt: useDate.add(1, 'day').toDate() }
+    });
+    if (existingUse) {
+      return res.status(409).json({ error: 'Ya existe un consumo registrado para esa fecha.' });
     }
 
     if (inPeriod) {
@@ -242,8 +240,8 @@ router.post('/:id/use', async (req, res) => {
       await Movement.create({
         entityId: person.entityId,
         change: 0,
-        reason: 'periodo',
-        note: 'Consumo con periodo especial',
+        reason: 'uso-periodo',
+        note: 'Consumo con periodo activo',
         performedBy: performedBy || 'sistema',
         userRole: userRole || 'cocina',
         timestamp: useDate.toDate()
