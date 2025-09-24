@@ -435,7 +435,7 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
           {personMovements.length === 0 && <p>No hay transacciones registradas.</p>}
           {personMovements.slice(0, visibleMovements).map((m, i) => (
             <div key={i} className="border rounded p-3 mb-2 bg-light">
-              <p><strong>Fecha:</strong> {dayjs.utc(m.timestamp).local().format('DD/MM/YYYY HH:mm')}</p>
+              <p><strong>Fecha:</strong> {dayjs.utc(m.timestamp).format('DD/MM/YYYY HH:mm')}</p>
               <p><strong>Motivo:</strong> {m.reason}</p>
               {m.note && <p><strong>Nota:</strong> {m.note}</p>}
               <p><strong>Responsable:</strong> {m.performedBy} ({m.userRole})</p>

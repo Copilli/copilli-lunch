@@ -334,7 +334,7 @@ const PersonLunchActions = ({ person, onUpdate }) => {
           >
             <option value="tokens">Agregar tokens</option>
             <option value="period">Agregar periodo</option>
-            {isAdmin && <option value="manual-consumption">Registrar consumo faltante</option>}
+            <option value="manual-consumption">Registrar consumo faltante</option>
           </select>
         </div>
 

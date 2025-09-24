@@ -7,6 +7,9 @@ const PeriodLog = require('../models/PeriodLog');
 const InvalidDate = require('../models/InvalidDate');
 const Payment = require('../models/Payment');
 const Movement = require('../models/Movement');
+const { verifyToken, allowRoles } = require('../middleware/auth');
+const { sendPaymentEmail } = require('../utils/sendPaymentEmail');
+const { sendUseEmail } = require('../utils/sendUseEmail');
 const dayjs = require('dayjs');
 const isSameOrBefore = require('dayjs/plugin/isSameOrBefore');
 const isSameOrAfter = require('dayjs/plugin/isSameOrAfter');
@@ -43,10 +46,6 @@ function countValidDays(start, end, invalidSet) {
   return valid;
 }
 
-const { verifyToken, allowRoles } = require('../middleware/auth');
-const { sendPaymentEmail } = require('../utils/sendPaymentEmail');
-const { sendUseEmail } = require('../utils/sendUseEmail');
-
 // POST /api/lunch/:id/add-tokens - add tokens and register movement
 router.post('/:id/add-tokens', async (req, res) => {
   try {
@@ -56,10 +55,19 @@ router.post('/:id/add-tokens', async (req, res) => {
     }
     const lunch = await Lunch.findById(req.params.id);
     if (!lunch) return res.status(404).json({ error: 'Lunch info not found' });
+    // Bloquear asignación de tokens si hay un periodo especial activo
+    if (lunch.hasSpecialPeriod && lunch.specialPeriod) {
+      const today = dayjs().startOf('day');
+      const start = dayjs(lunch.specialPeriod.startDate).startOf('day');
+      const end = dayjs(lunch.specialPeriod.endDate).startOf('day');
+      if (start.isSameOrBefore(today) && end.isSameOrAfter(today)) {
+        return res.status(403).json({ error: 'No se pueden asignar tokens mientras hay un periodo especial activo.' });
+      }
+    }
     lunch.tokens += amount;
     await lunch.save();
     // Buscar entityId legacy
-  const person = await Person.findById(lunch.person);
+    const person = await Person.findById(lunch.person);
     if (!person) return res.status(404).json({ error: 'Persona no encontrada para este Lunch' });
     const movement = await Movement.create({
       entityId: person.entityId,
@@ -157,28 +165,32 @@ router.post('/:id/use', async (req, res) => {
     const lunch = await Lunch.findById(req.params.id);
     if (!lunch) return res.status(404).json({ error: 'Lunch info not found' });
 
-    // Permitir customDate solo para admin
+
+    // Permitir customDate para admin y oficina
     const role = (userRole || '').toLowerCase();
-    let useDate = dayjs();
-    if (customDate && role === 'admin') {
+    let useDate = dayjs().startOf('day');
+    if (customDate && (role === 'admin' || role === 'oficina')) {
       useDate = dayjs(customDate).startOf('day');
       if (!useDate.isValid()) {
         return res.status(400).json({ error: 'Fecha personalizada inválida' });
       }
-    } else {
-      useDate = dayjs().startOf('day');
+      // No permitir fechas futuras
+      if (useDate.isAfter(dayjs().startOf('day'))) {
+        return res.status(400).json({ error: 'No se puede registrar consumo en fechas futuras.' });
+      }
     }
 
-    // Día inválido: solo admin puede registrar consumo en días inválidos
+    // Día inválido: no permitir registrar consumo en días inválidos
     const isInvalidDate = await InvalidDate.findOne({ date: useDate.toDate() });
-    if (isInvalidDate && role !== 'admin') {
-      return res.status(403).json({ error: 'La fecha seleccionada es un día inválido (fin de semana o puente). Solo un administrador puede registrar consumo en este día.' });
+    if (isInvalidDate) {
+      return res.status(403).json({ error: 'La fecha seleccionada es un día inválido (fin de semana o puente). No se permite registrar consumo en este día.' });
     }
 
     // Periodo especial activo
     const inPeriod = lunch.hasSpecialPeriod && lunch.specialPeriod &&
       dayjs(lunch.specialPeriod.startDate).isSameOrBefore(useDate) &&
       dayjs(lunch.specialPeriod.endDate).isSameOrAfter(useDate);
+
 
     // Previene doble uso en el día (solo si no está en periodo especial)
     let person = await Person.findById(lunch.person).lean();
