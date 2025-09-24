@@ -99,6 +99,15 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
 
     const lunch = await Lunch.findById(req.params.id);
     if (!lunch) return res.status(404).json({ error: 'Lunch info not found' });
+    // Bloquear asignación de tokens si hay un periodo especial activo
+    if (lunch.hasSpecialPeriod && lunch.specialPeriod) {
+      const today = dayjs().startOf('day');
+      const start = dayjs(lunch.specialPeriod.startDate).startOf('day');
+      const end = dayjs(lunch.specialPeriod.endDate).startOf('day');
+      if (start.isSameOrBefore(today) && end.isSameOrAfter(today)) {
+        return res.status(403).json({ error: 'No se pueden asignar tokens mientras hay un periodo especial activo.' });
+      }
+    }
     // aplicar tokens
     lunch.tokens += delta;
     // actualizar status si no está bloqueado
