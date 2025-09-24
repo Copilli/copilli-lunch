@@ -14,6 +14,13 @@ const isSameOrAfter = require('dayjs/plugin/isSameOrAfter');
 dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
 
+// Helper for early return with session cleanup
+function earlyReturnWithSession(res, status, body, session) {
+  session.abortTransaction && session.abortTransaction();
+  session.endSession && session.endSession();
+  return res.status(status).json(body);
+}
+
 // Helper: Get prices by level/group
 function getPricesForLevel(level, groupName) {
   level = (level || '').toLowerCase();
@@ -352,8 +359,8 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       return earlyReturnWithSession(res, 403, { error: 'Solo un administrador puede crear periodos en fechas pasadas.' }, session);
     }
 
-    const invalidSet = await getInvalidSet();
-    if (invalidSet.has(start.format('YYYY-MM-DD')) || invalidSet.has(dayjs(endDate).format('YYYY-MM-DD'))) {
+    const invalidSet = await getInvalidSet(); // (puedes pasar session si tu helper lo soporta)
+    if (invalidSet.has(start.format('YYYY-MM-DD')) || invalidSet.has(end.format('YYYY-MM-DD'))) {
       return earlyReturnWithSession(res, 400, { error: 'El periodo no puede comenzar ni terminar en un día inválido.' }, session);
     }
 
@@ -362,19 +369,24 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       return earlyReturnWithSession(res, 400, { error: `El periodo debe incluir al menos 5 días válidos. Actualmente incluye ${validDayCount}.` }, session);
     }
 
-  // person is already declared above for period log validation
-    const previousPeriods = await PeriodLog.find({ entityId: person.entityId }).session(session);
+    // 👉 OBTENER PERSONA ANTES DE USARLA
+    const person = await Person.findById(lunch.person).session(session);
+    if (!person) return earlyReturnWithSession(res, 404, { error: 'Persona no encontrada para este Lunch' }, session);
+
+    // 👉 Verificación de solapamientos usando lunchId (más preciso).
+    //    Si prefieres por persona, combina ambos: { lunchId: lunch._id, entityId: person.entityId }
+    const previousPeriods = await PeriodLog.find({ lunchId: lunch._id }).session(session);
     const overlapPeriod = previousPeriods.some(log => {
       const logStart = dayjs(log.startDate).startOf('day');
       const logEnd   = dayjs(log.endDate).startOf('day');
-      // Solapamiento total o parcial
-      if (start.isBefore(logEnd) && end.isAfter(logStart)) return true; // cualquier intersección
-      return false;
+      // Intersección si start <= logEnd y end >= logStart
+      return start.isSameOrBefore(logEnd) && end.isSameOrAfter(logStart);
     });
     if (overlapPeriod) {
       return earlyReturnWithSession(res, 400, { error: 'El nuevo periodo se solapa, está contenido, contiene o coincide en fechas con uno ya registrado en el historial.' }, session);
     }
 
+    // Guardar en Lunch
     lunch.specialPeriod = { startDate: start.toDate(), endDate: end.toDate() };
     const isActivePeriod = start.isSameOrBefore(today) && end.isSameOrAfter(today);
     lunch.hasSpecialPeriod = isActivePeriod;
@@ -385,9 +397,7 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
     }
     await lunch.save({ session });
 
-    const person = await Person.findById(lunch.person).session(session);
-    if (!person) return earlyReturnWithSession(res, 404, { error: 'Persona no encontrada para este Lunch' }, session);
-
+    // PeriodLog (histórico)
     await PeriodLog.create([{
       lunchId: lunch._id,
       entityId: person.entityId,
@@ -399,6 +409,7 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       userRole: req.user?.role || 'sistema'
     }], { session });
 
+    // Movimiento informativo
     const move = await Movement.create([{
       entityId: person.entityId,
       change: 0,
@@ -449,6 +460,7 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
     return res.status(500).json({ error: err.message || 'Error al actualizar el periodo' });
   }
 });
+
 
 // DELETE /api/lunch/:id/period
 router.delete('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (req, res) => {
