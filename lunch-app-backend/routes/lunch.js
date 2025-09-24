@@ -104,17 +104,16 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
       return res.status(404).json({ error: 'Lunch info not found' });
     }
 
-    // ===== BLOQUEO POR PERIODO ACTIVO =====
-    const sp = lunch?.specialPeriod;
-    if (sp?.startDate && sp?.endDate) {
-      const todayStr = dayjs().format('YYYY-MM-DD');
-      const startStr = dayjs(sp.startDate).format('YYYY-MM-DD');
-      const endStr   = dayjs(sp.endDate).format('YYYY-MM-DD');
-      const periodoActivo = (todayStr >= startStr && todayStr <= endStr);
-
-      if (periodoActivo) {
-        return res.status(403).json({ error: 'No se pueden asignar tokens mientras hay un periodo especial activo.' });
-      }
+    // ===== BLOQUEO POR PERIODO ACTIVO EN LOGS (usando entityId) =====
+    const today = dayjs().startOf('day');
+    // person is already declared above for period log validation
+    const activePeriodLog = await require('../models/PeriodLog').findOne({
+      entityId: person.entityId,
+      startDate: { $lte: today.toDate() },
+      endDate: { $gte: today.toDate() }
+    });
+    if (activePeriodLog) {
+      return res.status(403).json({ error: 'No se pueden asignar tokens mientras hay un periodo especial activo.' });
     }
     // ===== FIN BLOQUEO =====
 
@@ -363,15 +362,13 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       return earlyReturnWithSession(res, 400, { error: `El periodo debe incluir al menos 5 días válidos. Actualmente incluye ${validDayCount}.` }, session);
     }
 
-    const previousPeriods = await PeriodLog.find({ lunchId: lunch._id }).session(session);
+  // person is already declared above for period log validation
+    const previousPeriods = await PeriodLog.find({ entityId: person.entityId }).session(session);
     const overlapPeriod = previousPeriods.some(log => {
       const logStart = dayjs(log.startDate).startOf('day');
       const logEnd   = dayjs(log.endDate).startOf('day');
-      if (start.isSame(logStart) && end.isSame(logEnd)) return true;
-      if ((start.isAfter(logStart) && start.isBefore(logEnd)) || (end.isAfter(logStart) && end.isBefore(logEnd))) return true;
-      if (start.isBefore(logStart) && end.isAfter(logEnd)) return true;
-      if (start.isAfter(logStart) && end.isBefore(logEnd)) return true;
-      if (start.isSame(logStart) || start.isSame(logEnd) || end.isSame(logStart) || end.isSame(logEnd)) return true;
+      // Solapamiento total o parcial
+      if (start.isBefore(logEnd) && end.isAfter(logStart)) return true; // cualquier intersección
       return false;
     });
     if (overlapPeriod) {
