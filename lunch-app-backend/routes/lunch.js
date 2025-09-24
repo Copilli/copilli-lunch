@@ -114,7 +114,10 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
 
     // ===== BLOQUEO POR PERIODO ACTIVO EN LOGS (usando entityId) =====
     const today = dayjs().startOf('day');
-    // person is already declared above for period log validation
+    const person = await Person.findById(lunch.person).session(session);
+    if (!person) {
+      return res.status(404).json({ error: 'Persona no encontrada para este Lunch' });
+    }
     const activePeriodLog = await require('../models/PeriodLog').findOne({
       entityId: person.entityId,
       startDate: { $lte: today.toDate() },
@@ -131,11 +134,6 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
       lunch.status = lunch.tokens > 0 ? 'con-fondos' : 'sin-fondos';
     }
     await lunch.save({ session });
-
-    const person = await Person.findById(lunch.person).session(session);
-    if (!person) {
-      return res.status(404).json({ error: 'Persona no encontrada para este Lunch' });
-    }
 
     const movement = await Movement.create([{
       entityId: person.entityId,
