@@ -37,6 +37,20 @@ function getPricesForPerson(person) {
 const PersonLunchActions = ({ person, onUpdate }) => {
   const [actionType, setActionType] = useState('tokens');
 
+  // Helper: check if a new period overlaps with any existing period log
+  const isPeriodOverlap = (newStart, newEnd) => {
+    if (!person?.periodLogs || !newStart || !newEnd) return false;
+    const newStartDay = dayjs(newStart).startOf('day');
+    const newEndDay = dayjs(newEnd).startOf('day');
+    return person.periodLogs.some(log => {
+      if (!log?.startDate || !log?.endDate) return false;
+      const logStart = dayjs(log.startDate).startOf('day');
+      const logEnd = dayjs(log.endDate).startOf('day');
+      // Overlap: newStart <= logEnd && newEnd >= logStart
+      return newStartDay.isSameOrBefore(logEnd) && newEndDay.isSameOrAfter(logStart);
+    });
+  };
+
   // Input numérico como string (permite borrar/editar libremente)
   const [tokenAmountStr, setTokenAmountStr] = useState('1'); // por defecto 1
   const tokenAmountNum = Number.parseInt(tokenAmountStr, 10) || 0;
@@ -210,6 +224,11 @@ const PersonLunchActions = ({ person, onUpdate }) => {
         }
         if (validDaysForPeriod < 5) {
           showError('El periodo debe tener al menos 5 días válidos.');
+          closeModal();
+          return;
+        }
+        if (isPeriodOverlap(startDate, endDate)) {
+          showError('No se puede agregar un periodo que se traslape con uno existente.');
           closeModal();
           return;
         }

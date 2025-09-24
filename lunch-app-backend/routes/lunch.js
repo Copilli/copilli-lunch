@@ -1,9 +1,10 @@
-const express = require('express');
 const mongoose = require('mongoose');
+const { sendPaymentEmail } = require('../utils/sendPaymentEmail');
+const { sendUseEmail } = require('../utils/sendUseEmail');
+const express = require('express');
 const router = express.Router();
 const Lunch = require('../models/Lunch');
 const Person = require('../models/Person');
-// const TokenMovement = require('../models/TokenMovement');
 const PeriodLog = require('../models/PeriodLog');
 const InvalidDate = require('../models/InvalidDate');
 const Payment = require('../models/Payment');
@@ -167,6 +168,17 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
         paymentId: payment[0]._id
       }], { session });
 
+      // Actualizar Payment con movementId
+      payment[0].movementId = movement[0]._id;
+      await payment[0].save({ session });
+
+      // Enviar email de pago
+      try {
+        await sendPaymentEmail(person, payment[0]);
+      } catch (err) {
+        console.error('[Email Payment Error]', err);
+      }
+
       paymentInfo = { ticketNumber, amount };
     } else {
       // Crear Movement normal si no es pago
@@ -271,7 +283,7 @@ router.post('/:id/use', async (req, res) => {
     }
     await lunch.save();
     const isDebt = lunch.tokens < 0;
-    await Movement.create({
+    const movement = await Movement.create({
       entityId: person.entityId,
       change: -1,
       reason: isDebt ? 'uso-con-deuda' : 'uso',
@@ -280,6 +292,12 @@ router.post('/:id/use', async (req, res) => {
       userRole: userRole || 'cocina',
       timestamp: useDate.toDate()
     });
+    // Enviar email de consumo
+    try {
+      await sendUseEmail(person, movement);
+    } catch (err) {
+      console.error('[Email Use Error]', err);
+    }
 
     res.json({
       canEat: true,
@@ -445,6 +463,17 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
         timestamp: new Date(),
         paymentId: payment[0]._id
       }], { session });
+
+      // Actualizar Payment con movementId
+      payment[0].movementId = move[0]._id;
+      await payment[0].save({ session });
+
+      // Enviar email de pago
+      try {
+        await sendPaymentEmail(person, payment[0]);
+      } catch (err) {
+        console.error('[Email Payment Error]', err);
+      }
 
       paymentInfo = { ticketNumber, amount };
     } else {

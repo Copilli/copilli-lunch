@@ -59,6 +59,11 @@ function getMovementType(movement) {
 }
 
 async function sendMovementEmail(movement, extra = {}) {
+  // Escapa valores para HTML
+  function escapeHtml(str) {
+    if (typeof str !== 'string') return str;
+    return str.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
   // Buscar persona
   let person = null;
   if (movement.entityId) {
@@ -73,22 +78,15 @@ async function sendMovementEmail(movement, extra = {}) {
   let amount = '';
   let ticket = '';
   if (extra.amount || extra.ticketNumber) {
-    amount = extra.amount ? fmtMoney(extra.amount) : '<Monto no disponible>';
-    ticket = extra.ticketNumber || '<Ticket no disponible>';
+    amount = extra.amount ? fmtMoney(extra.amount) : 'Monto no disponible';
+    ticket = extra.ticketNumber ? extra.ticketNumber : 'Ticket no disponible';
+    console.log('[DEBUG][sendMovementEmail] extra.amount:', extra.amount, 'extra.ticketNumber:', extra.ticketNumber);
   } else if (movement.reason === 'pago' && movement.paymentId) {
     const payment = await Payment.findById(movement.paymentId);
-    if (payment) {
-      amount = fmtMoney(payment.amount) || '<Monto no disponible>';
-      ticket = payment.ticketNumber || '<Ticket no disponible>';
-    } else {
-      amount = '<Monto no disponible>';
-      ticket = '<Ticket no disponible>';
-    }
-  } else {
-    amount = '<Monto no disponible>';
-    ticket = '<Ticket no disponible>';
+    console.log('[DEBUG][sendMovementEmail] Payment.findById:', payment);
+    amount = payment ? fmtMoney(payment.amount) : 'Monto no disponible';
+    ticket = payment ? payment.ticketNumber : 'Ticket no disponible';
   }
-
   // Corrige la fecha para evitar desfase por zona horaria
   let dateObj = movement.timestamp || movement.dateAffected || Date.now();
   // Si es string o number, pásalo directo a dayjs (sin new Date)
@@ -97,8 +95,8 @@ async function sendMovementEmail(movement, extra = {}) {
   const type = getMovementType(movement);
   let details = '';
   if (type === 'Pago') {
-    details += `<tr><td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Ticket</td><td style="border:1px solid #ddd; padding:8px;">${ticket}</td></tr>`;
-    details += `<tr><td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Monto</td><td style="border:1px solid #ddd; padding:8px;">${amount}</td></tr>`;
+  details += `<tr><td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Ticket</td><td style="border:1px solid #ddd; padding:8px;">${ticket}</td></tr>`;
+  details += `<tr><td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Monto</td><td style="border:1px solid #ddd; padding:8px;">${amount}</td></tr>`;
   }
   details += `<tr><td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Motivo</td><td style="border:1px solid #ddd; padding:8px;">${movement.reason}</td></tr>`;
   details += `<tr><td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Nota</td><td style="border:1px solid #ddd; padding:8px;">${movement.note || '-'} </td></tr>`;
@@ -115,7 +113,6 @@ async function sendMovementEmail(movement, extra = {}) {
       <p style="color:#111;">Se ha registrado un ${type.toLowerCase()} en el sistema. Aquí están los detalles:</p>
 
       <table style="width:100%; border-collapse:collapse; margin-top:10px; color:#111;">
-        ${ticket ? `<tr><td style=\"border:1px solid #ddd; padding:8px; background:#fafafa; color:#111;\">Ticket</td><td style=\"border:1px solid #ddd; padding:8px; color:#111;\">${ticket}</td></tr>` : ''}
         <tr><td style="border:1px solid #ddd; padding:8px; background:#fafafa; color:#111;">Fecha</td><td style="border:1px solid #ddd; padding:8px; color:#111;">${dateStr}</td></tr>
         <tr><td style="border:1px solid #ddd; padding:8px; background:#fafafa; color:#111;">Alumno</td><td style="border:1px solid #ddd; padding:8px; color:#111;">${person.name}</td></tr>
         ${details}
@@ -134,9 +131,10 @@ async function sendMovementEmail(movement, extra = {}) {
   };
 
   try {
-    await getTransporter().sendMail(mailOptions);
-    console.log(`[✅ Email] ${type} registrado enviado a ${person.email}`);
-    return true;
+  console.log('[DEBUG][sendMovementEmail] Final ticket:', ticket, 'amount:', amount);
+  await getTransporter().sendMail(mailOptions);
+  console.log(`[✅ Email] ${type} registrado enviado a ${person.email}`);
+  return true;
   } catch (err) {
     console.error('[❌ Email ERROR]', err);
     return false;
