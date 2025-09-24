@@ -294,7 +294,7 @@ router.post('/:id/use', async (req, res) => {
     });
     // Enviar email de consumo
     try {
-      await sendUseEmail(person, movement);
+      await sendUseEmail(person, movement, lunch);
     } catch (err) {
       console.error('[Email Use Error]', err);
     }

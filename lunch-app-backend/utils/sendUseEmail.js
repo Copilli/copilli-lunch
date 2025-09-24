@@ -22,7 +22,7 @@ function fmtDate(date) {
   return dayjs(date).tz(MX_TZ).format('YYYY-MM-DD HH:mm');
 }
 
-async function sendUseEmail(personOrEntityId, useInfo) {
+async function sendUseEmail(personOrEntityId, useInfo, lunch) {
   // Usar el objeto person recibido directamente
   const person = personOrEntityId;
   if (!person?.email) {
@@ -63,7 +63,7 @@ async function sendUseEmail(personOrEntityId, useInfo) {
         </tr>
         <tr>
           <td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Tokens restantes</td>
-          <td style="border:1px solid #ddd; padding:8px;">${useInfo.tokens ?? '-'} </td>
+          <td style="border:1px solid #ddd; padding:8px;">${lunch?.tokens ?? '-'} </td>
         </tr>
         <tr>
           <td style="border:1px solid #ddd; padding:8px; background:#fafafa;">Nota</td>

@@ -12,8 +12,7 @@ const movementSchema = new mongoose.Schema({
   dateAffected: Date, // Día en que el movimiento aplica (ej. falta justificada)
   timestamp: { type: Date, default: Date.now },
   performedBy: String, // usuario que lo hizo
-  userRole: { type: String, enum: ['admin', 'oficina', 'cocina'] },
-  paymentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Payment', required: false }
+  userRole: { type: String, enum: ['admin', 'oficina', 'cocina'] }
 });
 
 module.exports = mongoose.model('Movement', movementSchema);

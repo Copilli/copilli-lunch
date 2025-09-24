@@ -105,12 +105,9 @@ async function sendPaymentEmail(personObj, payment, currency = DEFAULT_CURRENCY)
     return false;
   }
 
-  // Buscar el movimiento relacionado por payment.entityId y payment._id
+  // Buscar el movimiento relacionado por payment.movementId
   let concept = 'Pago', qty = null, units = '', rangeLabel = '';
-  let mov = await Movement.findOne({
-    entityId: payment.entityId,
-    paymentId: payment._id
-  }).lean();
+  let mov = await Movement.findById(payment.movementId).lean();
   if (mov) {
     const prices = getPricesForPerson(person);
     if (!mov.change || mov.change === 0) {
