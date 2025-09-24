@@ -155,7 +155,7 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
         sentEmail: false
       }], { session });
 
-      // Crear Movement después de Payment
+      // Crear Movement después de Payment, con paymentId
       movement = await Movement.create([{
         entityId: person.entityId,
         change: delta,
@@ -163,7 +163,8 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
         note: `Pago de tokens • Total: $${amount.toFixed(2)} MXN • Ticket ${ticketNumber}`,
         performedBy: req.user?.username || 'sistema',
         userRole: req.user?.role || 'oficina',
-        timestamp: customDate ? new Date(customDate) : new Date()
+        timestamp: customDate ? new Date(customDate) : new Date(),
+        paymentId: payment[0]._id
       }], { session });
 
       paymentInfo = { ticketNumber, amount };
@@ -414,17 +415,7 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
       userRole: req.user?.role || 'sistema'
     }], { session });
 
-    // Movimiento informativo
-    const move = await Movement.create([{
-      entityId: person.entityId,
-      change: 0,
-      reason: reason || 'ajuste manual',
-      note: `Periodo especial del ${start.format('YYYY-MM-DD')} al ${end.format('YYYY-MM-DD')} • Días válidos: ${validDayCount} - ${note || ''}`,
-      performedBy: req.user?.username || 'sistema',
-      userRole: req.user?.role || 'sistema',
-      timestamp: new Date()
-    }], { session });
-
+    let move;
     let paymentInfo = null;
     if ((reason || '').toLowerCase() === 'pago') {
       const freshPerson = await Person.findById(lunch.person).lean();
@@ -443,13 +434,30 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
         sentEmail: false
       }], { session });
 
-      // 2. Actualizar Payment con movementId
-      await Movement.findByIdAndUpdate(move[0]._id, {
-        note: `Pago de periodo (${start.format('YYYY-MM-DD')} → ${end.format('YYYY-MM-DD')}) • Total: $${amount.toFixed(2)} MXN • Ticket ${ticketNumber}`
-      }, { session });
-      await Payment.findByIdAndUpdate(payment[0]._id, { movementId: move[0]._id }, { session });
+      // 2. Crear Movement con paymentId y nota con ticket
+      move = await Movement.create([{
+        entityId: person.entityId,
+        change: 0,
+        reason: reason || 'ajuste manual',
+        note: `Pago de periodo (${start.format('YYYY-MM-DD')} → ${end.format('YYYY-MM-DD')}) • Total: $${amount.toFixed(2)} MXN • Ticket ${ticketNumber}`,
+        performedBy: req.user?.username || 'sistema',
+        userRole: req.user?.role || 'sistema',
+        timestamp: new Date(),
+        paymentId: payment[0]._id
+      }], { session });
 
       paymentInfo = { ticketNumber, amount };
+    } else {
+      // Movimiento informativo normal si no es pago
+      move = await Movement.create([{
+        entityId: person.entityId,
+        change: 0,
+        reason: reason || 'ajuste manual',
+        note: `Periodo especial del ${start.format('YYYY-MM-DD')} al ${end.format('YYYY-MM-DD')} • Días válidos: ${validDayCount} - ${note || ''}`,
+        performedBy: req.user?.username || 'sistema',
+        userRole: req.user?.role || 'sistema',
+        timestamp: new Date()
+      }], { session });
     }
 
     await session.commitTransaction();

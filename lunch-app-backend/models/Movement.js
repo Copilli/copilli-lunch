@@ -12,7 +12,8 @@ const movementSchema = new mongoose.Schema({
   dateAffected: Date, // Día en que el movimiento aplica (ej. falta justificada)
   timestamp: { type: Date, default: Date.now },
   performedBy: String, // usuario que lo hizo
-  userRole: { type: String, enum: ['admin', 'oficina', 'cocina'] }
+  userRole: { type: String, enum: ['admin', 'oficina', 'cocina'] },
+  paymentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Payment', required: false }
 });
 
 // Post-save hook para enviar email tras guardar un movimiento
@@ -27,10 +28,10 @@ movementSchema.post('save', async function(doc) {
     const { sendMovementEmail } = require('../utils/sendMovementEmail');
     const Person = require('../models/Person');
     let extra = {};
-    // Si el movimiento es pago, agrega info extra
-    if (doc.reason === 'pago') {
+    // Si el movimiento es pago y tiene paymentId, busca Payment por paymentId
+    if (doc.reason === 'pago' && doc.paymentId) {
       const Payment = require('../models/Payment');
-      const payment = await Payment.findOne({ movementId: doc._id });
+      const payment = await Payment.findById(doc.paymentId);
       if (payment) {
         extra.amount = payment.amount;
         extra.ticketNumber = payment.ticketNumber;

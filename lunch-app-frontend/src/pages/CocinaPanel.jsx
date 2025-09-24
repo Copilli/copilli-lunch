@@ -447,14 +447,14 @@ const CocinaPanel = ({ setUser }) => {
               ) : (
                 <div className="row gx-3 gy-3 justify-content-center">
                   {groupsInLevel.map((group) => {
-                    const count = students.filter(
-                      (s) =>
-                        s.level &&
-                        s.groupName &&
-                        typeof s.level === 'string' &&
-                        typeof s.groupName === 'string' &&
-                        s.level.toLowerCase() === selectedLevel.toLowerCase() &&
-                        s.groupName === group
+                    const count = persons.filter(
+                      (p) =>
+                        p.level &&
+                        p.groupName &&
+                        typeof p.level === 'string' &&
+                        typeof p.groupName === 'string' &&
+                        p.level.toLowerCase() === selectedLevel.toLowerCase() &&
+                        p.groupName === group
                     ).length;
                     return (
                       <div key={group} className="col-12 col-sm-6 col-md-4">
