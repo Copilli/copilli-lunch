@@ -227,7 +227,7 @@ router.patch('/:id/tokens', verifyToken, allowRoles('admin', 'oficina'), async (
 // POST /api/lunch/:id/use
 router.post('/:id/use', async (req, res) => {
   try {
-    const { performedBy, userRole, customDate } = req.body;
+  const { performedBy, userRole, customDate, reason: customReason, note: customNote } = req.body;
     const lunch = await Lunch.findById(req.params.id);
     if (!lunch) return res.status(404).json({ error: 'Lunch info not found' });
 
@@ -301,11 +301,12 @@ router.post('/:id/use', async (req, res) => {
     }
     await lunch.save();
     const isDebt = lunch.tokens < 0;
+    // Permitir reason y note personalizados si vienen en el payload
     const movement2 = await Movement.create({
       entityId: person.entityId,
       change: -1,
-      reason: isDebt ? 'uso-con-deuda' : 'uso',
-      note: isDebt ? 'Consumo con deuda' : 'Consumo registrado sin periodo activo',
+      reason: customReason || (isDebt ? 'uso-con-deuda' : 'uso'),
+      note: customNote || (isDebt ? 'Consumo con deuda' : 'Consumo registrado sin periodo activo'),
       performedBy: performedBy || 'sistema',
       userRole: userRole || 'cocina',
       timestamp: useDate.toDate()
