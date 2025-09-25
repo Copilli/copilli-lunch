@@ -152,8 +152,15 @@ router.post(
         }
         // Minimal data: allow creation with just name, email, type, group
         if (!p.type) p.type = 'student';
-        if (!p.group) p.group = { level: '', name: '' };
-  if (!p.lunch) p.lunch = { tokens: 0, specialPeriod: { startDate: null, endDate: null }, status: 'sin-fondos' };
+        // Map flat fields to group if needed
+        if (!p.group) p.group = {};
+        if (!p.group.level && p.level) p.group.level = p.level;
+        if (!p.group.name && p.groupName) p.group.name = p.groupName;
+        // Validate group fields
+        if (!p.group.level || !p.group.name) {
+          throw new Error(`Faltan campos obligatorios (level, groupName) para registro de ${p.name || ''}`);
+        }
+        if (!p.lunch) p.lunch = { tokens: 0, specialPeriod: { startDate: null, endDate: null }, status: 'sin-fondos' };
         if (!p.name || !p.email) {
           throw new Error(`Faltan campos obligatorios (name, email) para registro`);
         }
