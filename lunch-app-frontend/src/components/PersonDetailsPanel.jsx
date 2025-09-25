@@ -34,7 +34,6 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
           startDate: specialPeriod.startDate || null,
           endDate: specialPeriod.endDate || null
         },
-        hasSpecialPeriod: isActive
       });
 
       setOriginalTokens(lunch.tokens ?? 0);
@@ -100,14 +99,14 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
 
   const handleSave = async () => {
     // Validar fechas inválidas en el periodo especial
-    if (form.hasSpecialPeriod && (isDateInvalid(form.specialPeriod?.startDate) || isDateInvalid(form.specialPeriod?.endDate))
+    if (form.status === 'periodo-activo' && (isDateInvalid(form.specialPeriod?.startDate) || isDateInvalid(form.specialPeriod?.endDate))
     ) {
       showError('El periodo especial tiene fechas no válidas.');
       return;
     }
 
     // Validar que haya al menos 5 días válidos si hay periodo especial
-    if (form.hasSpecialPeriod && form.specialPeriod?.startDate && form.specialPeriod?.endDate) {
+    if (form.status === 'periodo-activo' && form.specialPeriod?.startDate && form.specialPeriod?.endDate) {
       const validCount = getValidDaysCount(form.specialPeriod.startDate, form.specialPeriod.endDate);
       if (validCount < 5) {
         showError('El periodo especial debe tener al menos 5 días válidos.');
@@ -140,13 +139,11 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
         lunch: {
           tokens: form.tokens,
           status: form.status,
-          hasSpecialPeriod: form.hasSpecialPeriod,
           specialPeriod: form.specialPeriod
         }
       };
       delete payload.tokens;
       delete payload.status;
-      delete payload.hasSpecialPeriod;
       delete payload.specialPeriod;
 
       await axios.put(`${import.meta.env.VITE_API_URL}/persons/${person._id}`, payload, {
@@ -198,7 +195,7 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
   const handleLoadMore = () => setVisibleMovements(prev => prev + 5);
 
   const handleDeletePeriod = async () => {
-    if (!form.hasSpecialPeriod) return;
+  if (form.status !== 'periodo-activo') return;
     setSaving(true);
     const token = localStorage.getItem('token');
     try {
@@ -210,7 +207,7 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
       });
       setForm(prev => ({
         ...prev,
-        hasSpecialPeriod: false,
+        status: 'sin-fondos',
         specialPeriod: { startDate: null, endDate: null }
       }));
       if (fetchPersons) fetchPersons();
@@ -332,7 +329,7 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
 
           <div className="mb-3">
             <label className="form-label">Estado:</label>
-            {form.hasSpecialPeriod ? (
+            {form.status === 'periodo-activo' ? (
               <input
                 type="text"
                 className="form-control-plaintext text-muted fst-italic"
@@ -364,7 +361,7 @@ const PersonDetailsPanel = ({ person, movements, onClose, fetchPersons, fetchMov
             </div>
           )}
 
-          {form.hasSpecialPeriod && (
+          {form.status === 'periodo-activo' && (
             <>
               <div className="row mb-3">
                 <div className="col-md-6">

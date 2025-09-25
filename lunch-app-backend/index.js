@@ -72,29 +72,28 @@ app.get('/api/cron/wake', async (req, res) => {
   try {
     const today = dayjs().startOf('day').toDate();
 
-    // 🔴 Desactivar periodos expirados
+    // 🔴 Desactivar periodos expirados (ahora usando status y specialPeriod)
     const expiredLunches = await Lunch.find({
-      hasSpecialPeriod: true,
+      status: 'periodo-activo',
       'specialPeriod.endDate': { $lt: today }
     });
 
     let desactivados = 0;
     for (const lunch of expiredLunches) {
-    lunch.hasSpecialPeriod = false;
-    lunch.specialPeriod = { startDate: null, endDate: null };
-    lunch.status = lunch.tokens > 0 ? 'con-fondos' : 'sin-fondos';
-    await lunch.save();
+      lunch.specialPeriod = { startDate: null, endDate: null };
+      lunch.status = lunch.tokens > 0 ? 'con-fondos' : 'sin-fondos';
+      await lunch.save();
 
-    // Find the person for this lunch to get entityId
-    const person = await Person.findById(lunch.person).lean();
-    await Movement.create({
-      entityId: person && person.entityId ? person.entityId : '',
-      change: 0,
-      reason: 'periodo-expirado',
-      note: 'Periodo especial expirado automáticamente por cron',
-      performedBy: 'sistema',
-      userRole: 'sistema'
-    });
+      // Find the person for this lunch to get entityId
+      const person = await Person.findById(lunch.person).lean();
+      await Movement.create({
+        entityId: person && person.entityId ? person.entityId : '',
+        change: 0,
+        reason: 'periodo-expirado',
+        note: 'Periodo especial expirado automáticamente por cron',
+        performedBy: 'sistema',
+        userRole: 'sistema'
+      });
 
       desactivados++;
     }
@@ -104,27 +103,26 @@ app.get('/api/cron/wake', async (req, res) => {
 
     let activados = 0;
     for (const log of logs) {
-    const lunch = await Lunch.findById(log.lunchId);
-    if (!lunch) continue;
+      const lunch = await Lunch.findById(log.lunchId);
+      if (!lunch) continue;
 
-    lunch.specialPeriod = {
-      startDate: log.startDate,
-      endDate: log.endDate
-    };
-    lunch.hasSpecialPeriod = true;
-    lunch.status = 'periodo-activo';
-    await lunch.save();
+      lunch.specialPeriod = {
+        startDate: log.startDate,
+        endDate: log.endDate
+      };
+      lunch.status = 'periodo-activo';
+      await lunch.save();
 
-    // Find the person for this lunch to get entityId
-    const person = await Person.findById(lunch.person).lean();
-    await Movement.create({
-      entityId: person && person.entityId ? person.entityId : '',
-      change: 0,
-      reason: 'periodo-activado',
-      note: 'Periodo activado automáticamente desde PeriodLog',
-      performedBy: 'sistema',
-      userRole: 'sistema'
-    });
+      // Find the person for this lunch to get entityId
+      const person = await Person.findById(lunch.person).lean();
+      await Movement.create({
+        entityId: person && person.entityId ? person.entityId : '',
+        change: 0,
+        reason: 'periodo-activado',
+        note: 'Periodo activado automáticamente desde PeriodLog',
+        performedBy: 'sistema',
+        userRole: 'sistema'
+      });
 
       activados++;
     }
@@ -155,13 +153,12 @@ cron.schedule('5 0 * * 1-5', async () => {
     const today = dayjs().startOf('day').toDate();
 
     const expiredLunches = await Lunch.find({
-      hasSpecialPeriod: true,
+      status: 'periodo-activo',
       'specialPeriod.endDate': { $lt: today }
     });
 
     let desactivados = 0;
     for (const lunch of expiredLunches) {
-      lunch.hasSpecialPeriod = false;
       lunch.specialPeriod = { startDate: null, endDate: null };
       lunch.status = lunch.tokens > 0 ? 'con-fondos' : 'sin-fondos';
       await lunch.save();
@@ -195,27 +192,26 @@ cron.schedule('5 0 * * 1-5', async () => {
 
     let activados = 0;
     for (const log of logs) {
-    const lunch = await Lunch.findById(log.lunchId);
-    if (!lunch) continue;
+      const lunch = await Lunch.findById(log.lunchId);
+      if (!lunch) continue;
 
-    lunch.specialPeriod = {
-      startDate: log.startDate,
-      endDate: log.endDate
-    };
-    lunch.hasSpecialPeriod = true;
-    lunch.status = 'periodo-activo';
-    await lunch.save();
+      lunch.specialPeriod = {
+        startDate: log.startDate,
+        endDate: log.endDate
+      };
+      lunch.status = 'periodo-activo';
+      await lunch.save();
 
-    // Find the person for this lunch to get entityId
-    const person = await Person.findById(lunch.person).lean();
-    await Movement.create({
-      entityId: person && person.entityId ? person.entityId : '',
-      change: 0,
-      reason: 'periodo-activado',
-      note: 'Periodo activado automáticamente desde PeriodLog',
-      performedBy: 'sistema',
-      userRole: 'sistema'
-    });
+      // Find the person for this lunch to get entityId
+      const person = await Person.findById(lunch.person).lean();
+      await Movement.create({
+        entityId: person && person.entityId ? person.entityId : '',
+        change: 0,
+        reason: 'periodo-activado',
+        note: 'Periodo activado automáticamente desde PeriodLog',
+        performedBy: 'sistema',
+        userRole: 'sistema'
+      });
 
       activados++;
     }

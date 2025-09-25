@@ -97,7 +97,12 @@ async function getConceptAndQty(payment) {
  * @returns {Promise<boolean>} true si se envió; false si no había email
  */
 
+// EMAIL SENDING TEMPORARILY DISABLED (SMTP blocked on Render Free)
 async function sendPaymentEmail(personObj, payment, currency = DEFAULT_CURRENCY) {
+  // Email sending is temporarily disabled due to SMTP restrictions on Render Free tier.
+  // Remove this block when switching to SendGrid or a paid plan.
+  return;
+
   // Buscar Person por entityId (payment.entityId)
   let person = null;
   if (personObj && personObj.email) {

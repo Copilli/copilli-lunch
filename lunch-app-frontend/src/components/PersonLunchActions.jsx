@@ -310,7 +310,7 @@ const PersonLunchActions = ({ person, onUpdate }) => {
     }
     // Bloqueo: no permitir agregar tokens si hay periodo activo
     if (actionType === 'tokens') {
-      if (person.lunch?.hasSpecialPeriod) {
+      if (person.lunch?.status === 'periodo-activo') {
         showError('No se pueden asignar tokens mientras hay un periodo especial activo.');
         return;
       }

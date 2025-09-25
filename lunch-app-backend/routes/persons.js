@@ -137,14 +137,12 @@ router.post(
         }
         if (!p.lunch && (
           p['lunch.tokens'] !== undefined ||
-          p['lunch.hasSpecialPeriod'] !== undefined ||
           p['lunch.specialPeriod.startDate'] !== undefined ||
           p['lunch.specialPeriod.endDate'] !== undefined ||
           p['lunch.status'] !== undefined
         )) {
           p.lunch = {
             tokens: Number(p['lunch.tokens']) || 0,
-            hasSpecialPeriod: (p['lunch.hasSpecialPeriod'] === true || p['lunch.hasSpecialPeriod'] === 'TRUE' || p['lunch.hasSpecialPeriod'] === 'true'),
             specialPeriod: {
               startDate: p['lunch.specialPeriod.startDate'] || null,
               endDate: p['lunch.specialPeriod.endDate'] || null
@@ -155,15 +153,15 @@ router.post(
         // Minimal data: allow creation with just name, email, type, group
         if (!p.type) p.type = 'student';
         if (!p.group) p.group = { level: '', name: '' };
-        if (!p.lunch) p.lunch = { tokens: 0, hasSpecialPeriod: false, specialPeriod: { startDate: null, endDate: null }, status: 'sin-fondos' };
+  if (!p.lunch) p.lunch = { tokens: 0, specialPeriod: { startDate: null, endDate: null }, status: 'sin-fondos' };
         if (!p.name || !p.email) {
           throw new Error(`Faltan campos obligatorios (name, email) para registro`);
         }
         // Validate lunch status
         const VALID_STATUSES = ['periodo-activo', 'con-fondos', 'sin-fondos', 'bloqueado'];
         if (!VALID_STATUSES.includes(p.lunch.status)) p.lunch.status = 'sin-fondos';
-        // Validate period if present
-        if (p.lunch.hasSpecialPeriod) {
+        // Validar periodo especial si el status es 'periodo-activo'
+        if (p.lunch.status === 'periodo-activo') {
           const dayjs = require('dayjs');
           const start = dayjs(p.lunch.specialPeriod?.startDate);
           const end = dayjs(p.lunch.specialPeriod?.endDate);

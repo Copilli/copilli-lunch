@@ -23,6 +23,9 @@ function fmtDate(date) {
 }
 
 async function sendUseEmail(personOrEntityId, movement, lunch) {
+  // EMAIL SENDING TEMPORARILY DISABLED (SMTP blocked on Render Free)
+  // Remove this block when switching to SendGrid or unblocking SMTP.
+  return;
   // Usar el objeto person recibido directamente
   const person = personOrEntityId;
   if (!person?.email) {

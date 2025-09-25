@@ -90,9 +90,10 @@ const CocinaPanel = ({ setUser }) => {
         let tokenCount = 0;
         persons.forEach(p => {
           const lunch = p.lunch || {};
-          const inPeriod = lunch.hasSpecialPeriod &&
-            dayjs(date).isSameOrAfter(dayjs(lunch.specialPeriod?.startDate)) &&
-            dayjs(date).isSameOrBefore(dayjs(lunch.specialPeriod?.endDate));
+          const start = lunch.specialPeriod?.startDate ? dayjs(lunch.specialPeriod.startDate) : null;
+          const end = lunch.specialPeriod?.endDate ? dayjs(lunch.specialPeriod.endDate) : null;
+          const inPeriod = lunch.status === 'periodo-activo' && start && end &&
+            dayjs(date).isSameOrAfter(start) && dayjs(date).isSameOrBefore(end);
           if (inPeriod) {
             periodCount++;
           } else if (lunch.tokens > 0) {

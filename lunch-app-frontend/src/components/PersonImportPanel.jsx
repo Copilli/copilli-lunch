@@ -6,7 +6,7 @@ import dayjs from 'dayjs';
 
 const CSV_HEADERS_FULL = [
   'entityId','name','email','type','level','groupName','photoUrl',
-  'lunch.tokens','lunch.hasSpecialPeriod','lunch.specialPeriod.startDate','lunch.specialPeriod.endDate','lunch.status'
+  'lunch.tokens','lunch.specialPeriod.startDate','lunch.specialPeriod.endDate','lunch.status'
 ];
 
 // Solo campos mínimos requeridos
@@ -58,7 +58,6 @@ const PersonImportPanel = ({ onSuccess, onCancel }) => {
         s.groupName || '',
         s.photoUrl || '',
         s.lunch?.tokens ?? s['lunch.tokens'] ?? '',
-        s.lunch?.hasSpecialPeriod ?? s['lunch.hasSpecialPeriod'] ?? '',
         s.lunch?.specialPeriod?.startDate || s['lunch.specialPeriod.startDate'] || '',
         s.lunch?.specialPeriod?.endDate || s['lunch.specialPeriod.endDate'] || '',
         s.lunch?.status || s['lunch.status'] || ''
@@ -106,12 +105,10 @@ const PersonImportPanel = ({ onSuccess, onCancel }) => {
               level: (level || '').toLowerCase(),
               groupName: groupName || '',
               tokens: parseInt(row.tokens || 0, 10),
-              hasSpecialPeriod: row.hasSpecialPeriod === 'TRUE' || row.hasSpecialPeriod === true,
-              specialPeriod:
-                (row.hasSpecialPeriod === 'TRUE' || row.hasSpecialPeriod === true)
-                  ? { startDate: startDate || row['specialPeriod.startDate'] || null,
-                      endDate: endDate || row['specialPeriod.endDate'] || null }
-                  : undefined
+              specialPeriod: (startDate || endDate)
+                ? { startDate: startDate || row['specialPeriod.startDate'] || null,
+                    endDate: endDate || row['specialPeriod.endDate'] || null }
+                : undefined
             };
           });
 

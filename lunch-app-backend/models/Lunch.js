@@ -8,7 +8,6 @@ const lunchSchema = new mongoose.Schema({
     enum: ['periodo-activo', 'con-fondos', 'sin-fondos', 'bloqueado'],
     default: 'sin-fondos'
   },
-  hasSpecialPeriod: { type: Boolean, default: false },
   specialPeriod: {
     startDate: Date,
     endDate: Date

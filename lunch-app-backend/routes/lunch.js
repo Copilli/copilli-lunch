@@ -64,7 +64,12 @@ router.post('/:id/add-tokens', async (req, res) => {
     const lunch = await Lunch.findById(req.params.id);
     if (!lunch) return res.status(404).json({ error: 'Lunch info not found' });
     // Bloquear asignación de tokens si hay un periodo especial activo
-    if (lunch.hasSpecialPeriod && lunch.specialPeriod) {
+    if (
+      lunch.status === 'periodo-activo' &&
+      lunch.specialPeriod &&
+      lunch.specialPeriod.startDate &&
+      lunch.specialPeriod.endDate
+    ) {
       const today = dayjs().startOf('day');
       const start = dayjs(lunch.specialPeriod.startDate).startOf('day');
       const end = dayjs(lunch.specialPeriod.endDate).startOf('day');
@@ -246,8 +251,8 @@ router.post('/:id/use', async (req, res) => {
       return res.status(403).json({ error: 'La fecha seleccionada es un día inválido (fin de semana o puente). No se permite registrar consumo en este día.' });
     }
 
-    // Periodo especial activo
-    const inPeriod = lunch.hasSpecialPeriod && lunch.specialPeriod &&
+    // Periodo especial activo usando status
+    const inPeriod = lunch.status === 'periodo-activo' && lunch.specialPeriod &&
       dayjs(lunch.specialPeriod.startDate).isSameOrBefore(useDate) &&
       dayjs(lunch.specialPeriod.endDate).isSameOrAfter(useDate);
 
@@ -339,14 +344,13 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
     if (!startDate || !endDate) {
       const existingStart = dayjs(lunch.specialPeriod?.startDate);
       const existingEnd = dayjs(lunch.specialPeriod?.endDate);
-      const isCurrentActive = lunch.hasSpecialPeriod &&
+      const isCurrentActive =
         existingStart.isValid() && existingEnd.isValid() &&
         existingStart.isSameOrBefore(today) && existingEnd.isSameOrAfter(today);
       if (!isCurrentActive) {
         return earlyReturnWithSession(res, 403, { error: 'Solo se puede eliminar el periodo especial si está actualmente activo.' }, session);
       }
 
-      lunch.hasSpecialPeriod = false;
       lunch.specialPeriod = { startDate: null, endDate: null };
       if (lunch.status === 'periodo-activo') {
         lunch.status = lunch.tokens > 0 ? 'con-fondos' : 'sin-fondos';
@@ -376,7 +380,7 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
 
       await session.commitTransaction();
       session.endSession();
-      return res.json({ message: 'Periodo especial eliminado', hasSpecialPeriod: false, specialPeriod: null });
+      return res.json({ message: 'Periodo especial eliminado', specialPeriod: null });
     }
 
     // ✅ Crear/actualizar periodo
@@ -425,7 +429,6 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
     // Guardar en Lunch
     lunch.specialPeriod = { startDate: start.toDate(), endDate: end.toDate() };
     const isActivePeriod = start.isSameOrBefore(today) && end.isSameOrAfter(today);
-    lunch.hasSpecialPeriod = isActivePeriod;
     if (isActivePeriod) {
       lunch.status = 'periodo-activo';
     } else if (lunch.status === 'periodo-activo') {
@@ -516,7 +519,6 @@ router.patch('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async (
 
     return res.json({
       message: 'Periodo especial actualizado',
-      hasSpecialPeriod: lunch.hasSpecialPeriod,
       specialPeriod: lunch.specialPeriod,
       ...(paymentInfo ? { paymentTicket: paymentInfo.ticketNumber, paymentAmount: paymentInfo.amount } : {})
     });
@@ -535,7 +537,6 @@ router.delete('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async 
     // Guardar fechas previas para borrar el log
     const prevStart = lunch.specialPeriod?.startDate;
     const prevEnd = lunch.specialPeriod?.endDate;
-    lunch.hasSpecialPeriod = false;
     lunch.specialPeriod = { startDate: null, endDate: null };
     if (lunch.status === 'periodo-activo') {
       lunch.status = lunch.tokens > 0 ? 'con-fondos' : 'sin-fondos';
@@ -561,7 +562,7 @@ router.delete('/:id/period', verifyToken, allowRoles('admin', 'oficina'), async 
         endDate: { $gte: new Date(prevEnd), $lte: new Date(prevEnd) }
       });
     }
-    res.json({ message: 'Periodo especial eliminado', hasSpecialPeriod: false, specialPeriod: null });
+  res.json({ message: 'Periodo especial eliminado', specialPeriod: null });
   } catch (err) {
     res.status(500).json({ error: err.message || 'Error al eliminar el periodo especial' });
   }
